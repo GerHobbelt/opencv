@@ -68,6 +68,7 @@ if(WITH_JPEG)
     ocv_clear_vars(JPEG_FOUND)
   else()
     ocv_clear_internal_cache_vars(JPEG_LIBRARY JPEG_INCLUDE_DIR)
+    hunter_add_package(Jpeg)
     include(FindJPEG)
   endif()
 
