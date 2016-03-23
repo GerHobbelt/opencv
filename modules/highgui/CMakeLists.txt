@@ -88,6 +88,17 @@ elseif(HAVE_QT)
       QT6_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
       QT6_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
     elseif(QT_VERSION_MAJOR EQUAL 5)
+      # Hunter patch to load qt resources when static linking
+      # Hunter has only Qt5, so its guarded by if(HAVE_QT5)
+      if(NOT BUILD_SHARED_LIBS)
+        install(
+          FILES
+            ${CMAKE_CURRENT_LIST_DIR}/static_opencv_qt_resources.cpp
+          DESTINATION
+            "src/qt/plugins"
+        )
+      endif()
+
       QT5_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
       QT5_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
     else()
