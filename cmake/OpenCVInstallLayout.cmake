@@ -3,12 +3,12 @@
 
 if(ANDROID)
 
-  ocv_update(OPENCV_BIN_INSTALL_PATH            "sdk/native/bin/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(OPENCV_BIN_INSTALL_PATH            "sdk/native/bin/${CMAKE_ANDROID_ARCH_ABI}")
   ocv_update(OPENCV_TEST_INSTALL_PATH           "${OPENCV_BIN_INSTALL_PATH}")
-  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH    "sdk/native/samples/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(OPENCV_LIB_INSTALL_PATH            "sdk/native/libs/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(OPENCV_LIB_ARCHIVE_INSTALL_PATH    "sdk/native/staticlibs/${ANDROID_NDK_ABI_NAME}")
-  ocv_update(OPENCV_3P_LIB_INSTALL_PATH         "sdk/native/3rdparty/libs/${ANDROID_NDK_ABI_NAME}")
+  ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH    "sdk/native/samples/${CMAKE_ANDROID_ARCH_ABI}")
+  ocv_update(OPENCV_LIB_INSTALL_PATH            "sdk/native/libs/${CMAKE_ANDROID_ARCH_ABI}")
+  ocv_update(OPENCV_LIB_ARCHIVE_INSTALL_PATH    "sdk/native/staticlibs/${CMAKE_ANDROID_ARCH_ABI}")
+  ocv_update(OPENCV_3P_LIB_INSTALL_PATH         "sdk/native/3rdparty/libs/${CMAKE_ANDROID_ARCH_ABI}")
   ocv_update(OPENCV_CONFIG_INSTALL_PATH         "sdk/native/jni")
   ocv_update(OPENCV_INCLUDE_INSTALL_PATH        "sdk/native/jni/include")
   ocv_update(OPENCV_OTHER_INSTALL_PATH          "sdk/etc")
