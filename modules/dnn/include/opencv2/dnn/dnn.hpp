@@ -639,6 +639,17 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
 
+    /** @brief Reads a network model stored in Tensorflow model in memory
+      * @defails This is an overloaded member function, provided for convenience.
+      * It differs from the above function only in what argument(s) it accepts.
+      * @param bufferModel buffer containing the content of the pb file
+      * @param lenModel len of bufferModel
+      * @param bufferConfig buffer containing the content of the pbtxt file
+      * @param lenConfig len of bufferConfig
+      */
+    CV_EXPORTS_W Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
+                                           const char *bufferConfig = NULL, size_t lenConfig = 0);
+
     /** @brief Reads a network model stored in Torch model file.
       * @details This is shortcut consisting from createTorchImporter and Net::populateNet calls.
       */

@@ -69,20 +69,61 @@ TEST(Test_TensorFlow, inception_accuracy)
     normAssert(ref, out);
 }
 
+static bool readFileInMemory(const string& filename, char** data, size_t* len)
+{
+    if (len == NULL || data == NULL)
+        return false;
+
+    FILE *f = fopen(filename.c_str(), "rb");
+    if (f == NULL)
+        return false;
+
+    fseek(f, 0, SEEK_END);
+    *len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    *data = (char*)malloc(*len + 1);
+    (void)fread(*data, *len, 1, f);
+    fclose(f);
+
+    return true;
+}
+
 static std::string path(const std::string& file)
 {
     return findDataFile("dnn/tensorflow/" + file, false);
 }
 
 static void runTensorFlowNet(const std::string& prefix, bool hasText = false,
-                             double l1 = 1e-5, double lInf = 1e-4)
+                             double l1 = 1e-5, double lInf = 1e-4,
+                             bool memoryLoad = false)
 {
     std::string netPath = path(prefix + "_net.pb");
     std::string netConfig = (hasText ? path(prefix + "_net.pbtxt") : "");
     std::string inpPath = path(prefix + "_in.npy");
     std::string outPath = path(prefix + "_out.npy");
 
-    Net net = readNetFromTensorflow(netPath, netConfig);
+    Net net;
+    if (memoryLoad)
+    {
+        // Load files into a memory buffers
+        char *dataModel = NULL;
+        size_t lenModel = 0;
+        ASSERT_TRUE(readFileInMemory(netPath, &dataModel, &lenModel));
+
+        char *dataConfig = NULL;
+        size_t lenConfig = 0;
+        if (hasText)
+            ASSERT_TRUE(readFileInMemory(netConfig, &dataConfig, &lenConfig));
+
+        net = readNetFromTensorflow(dataModel, lenModel, dataConfig, lenConfig);
+        ASSERT_FALSE(net.empty());
+
+        free(dataModel);
+        free(dataConfig);
+    }
+    else
+        net = readNetFromTensorflow(netPath, netConfig);
 
     cv::Mat input = blobFromNPY(inpPath);
     cv::Mat target = blobFromNPY(outPath);
@@ -214,6 +255,17 @@ TEST(Test_TensorFlow, split)
 TEST(Test_TensorFlow, resize_nearest_neighbor)
 {
     runTensorFlowNet("resize_nearest_neighbor");
+}
+
+TEST(Test_TensorFlow, memory_read)
+{
+    double l1 = 1e-5;
+    double lInf = 1e-4;
+    runTensorFlowNet("lstm", true, l1, lInf, true);
+
+    runTensorFlowNet("batch_norm", false, l1, lInf, true);
+    runTensorFlowNet("fused_batch_norm", false, l1, lInf, true);
+    runTensorFlowNet("batch_norm_text", true, l1, lInf, true);
 }
 
 }
