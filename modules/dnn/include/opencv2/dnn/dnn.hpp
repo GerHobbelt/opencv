@@ -640,7 +640,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
     CV_EXPORTS_W Net readNetFromTensorflow(const String &model, const String &config = String());
 
     /** @brief Reads a network model stored in Tensorflow model in memory
-      * @defails This is an overloaded member function, provided for convenience.
+      * @details This is an overloaded member function, provided for convenience.
       * It differs from the above function only in what argument(s) it accepts.
       * @param bufferModel buffer containing the content of the pb file
       * @param lenModel len of bufferModel
