@@ -122,6 +122,10 @@ endforeach()
 unset(__d)
 
 
+if(APPLE)
+  find_package(accelerate REQUIRED)
+endif()
+
 if(NOT TARGET opencv_core)
   include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
 endif()
@@ -416,4 +420,3 @@ if("@Qt5OpenGL_FOUND@")
   find_dependency(Qt5OpenGL)
 endif()
 # AWP: Qt5 dependencies -- end
-
