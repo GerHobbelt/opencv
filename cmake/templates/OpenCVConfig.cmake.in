@@ -380,6 +380,10 @@ if("@WEBP_FOUND@")
   find_dependency(WebP CONFIG)
 endif()
 
+if("@WITH_FFMPEG@")
+  find_dependency(ffmpeg CONFIG)
+endif()
+
 # AWP: Qt5 dependencies -- start
 if("@Qt5Core_FOUND@")
   find_dependency(Qt5Core)
