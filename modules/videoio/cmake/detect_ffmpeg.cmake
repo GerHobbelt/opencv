@@ -1,8 +1,6 @@
 # --- FFMPEG ---
-OCV_OPTION(OPENCV_FFMPEG_ENABLE_LIBAVDEVICE "Include FFMPEG/libavdevice library support." OFF
-  VISIBLE_IF WITH_FFMPEG)
-
 if(NOT HAVE_FFMPEG AND OPENCV_FFMPEG_USE_FIND_PACKAGE)
+  if(NOT HUNTER_ENABLED) ### NO INDENT
   if(OPENCV_FFMPEG_USE_FIND_PACKAGE STREQUAL "1" OR OPENCV_FFMPEG_USE_FIND_PACKAGE STREQUAL "ON")
     set(OPENCV_FFMPEG_USE_FIND_PACKAGE "FFMPEG")
   endif()
@@ -10,6 +8,25 @@ if(NOT HAVE_FFMPEG AND OPENCV_FFMPEG_USE_FIND_PACKAGE)
   if(FFMPEG_FOUND OR FFmpeg_FOUND)
     set(HAVE_FFMPEG TRUE)
   endif()
+
+  else(HUNTER_ENABLED) ### NO INDENT
+    hunter_add_package(ffmpeg)
+    find_package(ffmpeg CONFIG REQUIRED)
+
+    set(FFMPEG_FOUND TRUE)
+    set(HAVE_FFMPEG TRUE)
+    foreach(lib avcodec avformat avutil swresample swscale)
+      get_target_property(
+        ${lib}_INCLUDE_DIR
+        ffmpeg::${lib}
+        INTERFACE_INCLUDE_DIRECTORIES
+      )
+      list(APPEND FFMPEG_INCLUDE_DIRS "${${lib}_INCLUDE_DIR}")
+      list(APPEND FFMPEG_LIBRARIES "ffmpeg::${lib}")
+      set(FFMPEG_lib${lib}_FOUND TRUE)
+    endforeach()
+    list(REMOVE_DUPLICATES FFMPEG_INCLUDE_DIRS)
+  endif()  
 endif()
 
 if(NOT HAVE_FFMPEG AND WIN32 AND NOT ARM AND NOT OPENCV_FFMPEG_SKIP_DOWNLOAD)
@@ -31,13 +48,6 @@ if(NOT HAVE_FFMPEG AND PKG_CONFIG_FOUND)
     if(FFMPEG_libavresample_FOUND)
       list(APPEND FFMPEG_LIBRARIES ${FFMPEG_libavresample_LIBRARIES})
       list(APPEND _used_ffmpeg_libraries libavresample)
-    endif()
-    if(OPENCV_FFMPEG_ENABLE_LIBAVDEVICE)
-      ocv_check_modules(FFMPEG_libavdevice libavdevice) # optional
-      if(FFMPEG_libavdevice_FOUND)
-        list(APPEND FFMPEG_LIBRARIES ${FFMPEG_libavdevice_LIBRARIES})
-        list(APPEND _used_ffmpeg_libraries libavdevice)
-      endif()
     endif()
     set(HAVE_FFMPEG TRUE)
   else()
@@ -61,7 +71,6 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
   set(_min_libavutil_version 52.3.0)
   set(_min_libswscale_version 2.1.1)
   set(_min_libavresample_version 1.0.1)
-  set(_min_libavdevice_version 53.2.0)
   foreach(ffmpeg_lib ${_used_ffmpeg_libraries})
     if(FFMPEG_${ffmpeg_lib}_VERSION VERSION_LESS _min_${ffmpeg_lib}_version)
       message(STATUS "FFMPEG is disabled. Can't find suitable ${ffmpeg_lib} library"
@@ -78,7 +87,6 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER)
   unset(_min_libavutil_version)
   unset(_min_libswscale_version)
   unset(_min_libavresample_version)
-  unset(_min_libavdevice_version)
 endif()
 
 #==================================
@@ -88,7 +96,7 @@ if(HAVE_FFMPEG AND NOT HAVE_FFMPEG_WRAPPER AND NOT OPENCV_FFMPEG_SKIP_BUILD_CHEC
       "${OpenCV_BINARY_DIR}"
       "${OpenCV_SOURCE_DIR}/cmake/checks/ffmpeg_test.cpp"
       CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${FFMPEG_INCLUDE_DIRS}"
-                  "-DLINK_LIBRARIES:STRING=${FFMPEG_LIBRARIES}"
+      LINK_LIBRARIES ${FFMPEG_LIBRARIES}
       OUTPUT_VARIABLE TRY_OUT
   )
   if(NOT __VALID_FFMPEG)
@@ -105,12 +113,7 @@ unset(_used_ffmpeg_libraries)
 if(HAVE_FFMPEG_WRAPPER)
   ocv_add_external_target(ffmpeg "" "" "HAVE_FFMPEG_WRAPPER")
 elseif(HAVE_FFMPEG)
-  if(OPENCV_FFMPEG_ENABLE_LIBAVDEVICE AND FFMPEG_libavdevice_FOUND)
-    set(HAVE_FFMPEG_LIBAVDEVICE TRUE)
-    ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "HAVE_FFMPEG;HAVE_FFMPEG_LIBAVDEVICE")
-  else()
-    ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "HAVE_FFMPEG")
-  endif()
+  ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "HAVE_FFMPEG")
   set(__builtin_defines "")
   set(__builtin_include_dirs "")
   set(__builtin_libs "")
