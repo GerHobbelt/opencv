@@ -203,6 +203,7 @@ if(WITH_FFMPEG)  # try FFmpeg autodetection
       find_package(ffmpeg CONFIG REQUIRED)
 
       set(FFMPEG_FOUND TRUE)
+      set(HAVE_FFMPEG TRUE)
       foreach(lib avcodec avformat avutil swresample swscale)
         get_target_property(
           ${lib}_INCLUDE_DIR
@@ -211,6 +212,7 @@ if(WITH_FFMPEG)  # try FFmpeg autodetection
           )
         list(APPEND FFMPEG_INCLUDE_DIRS "${${lib}_INCLUDE_DIR}")
         list(APPEND FFMPEG_LIBRARIES "ffmpeg::${lib}")
+        set(FFMPEG_lib${lib}_FOUND TRUE)
       endforeach()
       list(REMOVE_DUPLICATES FFMPEG_INCLUDE_DIRS)
     endif()
@@ -239,8 +241,7 @@ if(HAVE_FFMPEG
       "${OpenCV_BINARY_DIR}"
       "${OpenCV_SOURCE_DIR}/cmake/checks/ffmpeg_test.cpp"
       CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${FFMPEG_INCLUDE_DIRS}"
-                  "-DLINK_DIRECTORIES:STRING=${FFMPEG_LIBRARY_DIRS}"
-                  "-DLINK_LIBRARIES:STRING=${FFMPEG_LIBRARIES}"
+      LINK_LIBRARIES ${FFMPEG_LIBRARIES}
       OUTPUT_VARIABLE TRY_OUT
   )
   if(NOT __VALID_FFMPEG)
