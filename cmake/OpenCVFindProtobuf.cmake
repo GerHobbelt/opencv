@@ -6,8 +6,8 @@ if(NOT WITH_PROTOBUF)
   return()
 endif()
 
-ocv_option(BUILD_PROTOBUF "Force to build libprotobuf runtime from sources" ON)
-ocv_option(PROTOBUF_UPDATE_FILES "Force rebuilding .proto files (protoc should be available)" OFF)
+ocv_option(BUILD_PROTOBUF "Force to build libprotobuf runtime from sources" OFF)
+ocv_option(PROTOBUF_UPDATE_FILES "Force rebuilding .proto files (protoc should be available)" ON)
 
 # BUILD_PROTOBUF=OFF: Custom manual protobuf configuration (see find_package(Protobuf) for details):
 # - Protobuf_INCLUDE_DIR
@@ -31,6 +31,7 @@ if(BUILD_PROTOBUF)
   set(HAVE_PROTOBUF TRUE)
 else()
   unset(Protobuf_VERSION CACHE)
+  hunter_add_package(Protobuf)
   find_package(Protobuf QUIET)
 
   # Backwards compatibility
@@ -68,7 +69,12 @@ else()
 endif()
 
 if(HAVE_PROTOBUF AND PROTOBUF_UPDATE_FILES AND NOT COMMAND PROTOBUF_GENERATE_CPP)
-  message(FATAL_ERROR "Can't configure protobuf dependency (BUILD_PROTOBUF=${BUILD_PROTOBUF} PROTOBUF_UPDATE_FILES=${PROTOBUF_UPDATE_FILES})")
+  # message(FATAL_ERROR "Can't configure protobuf dependency (BUILD_PROTOBUF=${BUILD_PROTOBUF} PROTOBUF_UPDATE_FILES=${PROTOBUF_UPDATE_FILES})")
+  hunter_add_package(Protobuf)
+  find_package(Protobuf QUIET)
+  if(NOT COMMAND PROTOBUF_GENERATE_CPP)
+    message(FATAL_ERROR "PROTOBUF_GENERATE_CPP command is not available")
+  endif()
 endif()
 
 if(HAVE_PROTOBUF)
