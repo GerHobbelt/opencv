@@ -32,7 +32,7 @@ if(BUILD_PROTOBUF)
 else()
   unset(Protobuf_VERSION CACHE)
   hunter_add_package(Protobuf)
-  find_package(Protobuf QUIET)
+  find_package(Protobuf CONFIG REQUIRED)
 
   # Backwards compatibility
   # Define camel case versions of input variables
@@ -71,7 +71,7 @@ endif()
 if(HAVE_PROTOBUF AND PROTOBUF_UPDATE_FILES AND NOT COMMAND PROTOBUF_GENERATE_CPP)
   # message(FATAL_ERROR "Can't configure protobuf dependency (BUILD_PROTOBUF=${BUILD_PROTOBUF} PROTOBUF_UPDATE_FILES=${PROTOBUF_UPDATE_FILES})")
   hunter_add_package(Protobuf)
-  find_package(Protobuf QUIET)
+  find_package(Protobuf CONFIG REQUIRED)
   if(NOT COMMAND PROTOBUF_GENERATE_CPP)
     message(FATAL_ERROR "PROTOBUF_GENERATE_CPP command is not available")
   endif()
