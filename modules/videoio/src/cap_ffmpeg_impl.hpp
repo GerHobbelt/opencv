@@ -889,6 +889,18 @@ public:
 
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
+    std::string filename_str(_filename);
+    std::string video_file_name;
+    std::string api_options;
+    std::size_t idx = filename_str.find("|");
+    if (idx == std::string::npos) {
+      video_file_name = filename_str;
+      api_options = std::string();
+    } else {
+      video_file_name = filename_str.substr(0, idx);
+      api_options = filename_str.substr(idx + 1, filename_str.size());
+    }
+
     InternalFFMpegRegister::init();
     AutoLock lock(_mutex);
     unsigned i;
@@ -908,7 +920,9 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
 #ifndef NO_GETENV
-    char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    const char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    if(options == NULL && !api_options.empty()) options = api_options.c_str();
+
     if(options == NULL)
     {
         av_dict_set(&dict, "rtsp_transport", "tcp", 0);
@@ -931,9 +945,9 @@ bool CvCapture_FFMPEG::open( const char* _filename )
       input_format = av_find_input_format(entry->value);
     }
 
-    int err = avformat_open_input(&ic, _filename, input_format, &dict);
+    int err = avformat_open_input(&ic, video_file_name.c_str(), input_format, &dict);
 #else
-    int err = av_open_input_file(&ic, _filename, NULL, 0, NULL);
+    int err = av_open_input_file(&ic, video_file_name.c_str(), NULL, 0, NULL);
 #endif
 
     if (err < 0)
