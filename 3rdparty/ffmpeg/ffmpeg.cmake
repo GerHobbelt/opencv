@@ -1,8 +1,8 @@
-# Binaries branch name: ffmpeg/master_20200609
-# Binaries were created for OpenCV: 5f3012fc9afbffbf53a38f1468523d3454b3e2f6
-ocv_update(FFMPEG_BINARIES_COMMIT "1df9bf0c0c6c2cf225bd3d8e4cf5985198352454")
-ocv_update(FFMPEG_FILE_HASH_BIN32 "854b3460c435d04277e1f1ecc06cb809")
-ocv_update(FFMPEG_FILE_HASH_BIN64 "3a46d6356220796e044817ae3a21cc31")
+# Binaries branch name: ffmpeg/master_20200819
+# Binaries were created for OpenCV: b8d27d750da2d98bd33739cc2ce01e1597e4046b
+ocv_update(FFMPEG_BINARIES_COMMIT "bf93f01e7ec7f31874ccbecd8866de12afb80649")
+ocv_update(FFMPEG_FILE_HASH_BIN32 "c02b999f868627c3edec11572884e884")
+ocv_update(FFMPEG_FILE_HASH_BIN64 "e08b261c80571e1838641f3e168fd83e")
 ocv_update(FFMPEG_FILE_HASH_CMAKE "ad57c038ba34b868277ccbe6dd0f9602")
 
 function(download_win_ffmpeg script_var)
@@ -22,7 +22,7 @@ function(download_win_ffmpeg script_var)
                URL
                  "$ENV{OPENCV_FFMPEG_URL}"
                  "${OPENCV_FFMPEG_URL}"
-                 "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/"
+                 "https://raw.githubusercontent.com/deconve/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/"
                DESTINATION_DIR ${FFMPEG_DOWNLOAD_DIR}
                ID FFMPEG
                RELATIVE_URL
