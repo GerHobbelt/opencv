@@ -22,7 +22,7 @@ function(download_win_ffmpeg script_var)
                URL
                  "$ENV{OPENCV_FFMPEG_URL}"
                  "${OPENCV_FFMPEG_URL}"
-                 "https://raw.githubusercontent.com/opencv/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/"
+                 "https://raw.githubusercontent.com/deconve/opencv_3rdparty/${FFMPEG_BINARIES_COMMIT}/ffmpeg/"
                DESTINATION_DIR ${FFMPEG_DOWNLOAD_DIR}
                ID FFMPEG
                RELATIVE_URL
