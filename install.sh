@@ -40,16 +40,16 @@ cd build && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/opencv 
 
 if [[ $DISTRO = 'xenial' ]]; then
 fpm -s dir -t deb \
-    -n OpenCV-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
+    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
 else
 fpm -s dir -t deb \
-    -n OpenCV-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
+    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
 fi
 ls -la
 pwd
 
-export ARTIFACT_DEB_NAME="OpenCV-3.4.5_${VERSION}_${ARCHITECTURE}.deb"
-export ARTIFACTORY_DEB_NAME="OpenCV-3.4.5_${VERSION}${DISTRO}_${ARCHITECTURE}.deb"
+export ARTIFACT_DEB_NAME="opencv-3.4.5_${VERSION}_${ARCHITECTURE}.deb"
+export ARTIFACTORY_DEB_NAME="opencv-3.4.5_${VERSION}${DISTRO}_${ARCHITECTURE}.deb"
 
 time curl \
 	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
