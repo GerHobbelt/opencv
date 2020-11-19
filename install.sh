@@ -14,11 +14,11 @@ cat ${WORKSPACE}/docker-deps/artifactory_key.pub | apt-key add - && \
     echo "deb https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@sixriver.jfrog.io/sixriver/debian ${DISTRO} main" >> /etc/apt/sources.list && \
     echo "deb https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_PASSWORD}@sixriver.jfrog.io/sixriver/ros-ubuntu ${DISTRO} main" >> /etc/apt/sources.list
 apt-get update
-if [ "${DISTRO}" = "xenial" ]; then
+# if [ "${DISTRO}" = "xenial" ]; then
 #    apt-get install -y pcl=1.8.1 libjs-sphinxdoc=1.3.6-2ubuntu1.2
-else
+# else
 #    apt-get install -y libpcl-dev
-fi
+# fi
 
 ARCH=$(dpkg --print-architecture)
 # Make the directory
