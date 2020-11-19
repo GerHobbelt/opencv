@@ -53,7 +53,7 @@ export ARTIFACTORY_DEB_NAME="OpenCV-3.4.5_${VERSION}${DISTRO}_${ARCHITECTURE}.de
 
 time curl \
 	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/${ARTIFACT_DEB_NAME}" \
+	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME}" \
 	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
 
 
