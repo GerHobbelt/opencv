@@ -42,7 +42,7 @@ if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE)
       # NOTE: Actually this check doesn't work as expected.
       # "RULE_LAUNCH_COMPILE" is ignored by CMake during try_compile() step.
       # ocv_check_compiler_flag(CXX "" IS_CCACHE_WORKS)
-      foreach(LANG C CXX CUDA)
+      foreach(LANG CUDA)
         message(STATUS "Enabling ${CCACHE_PROGRAM} for ${LANG}")
         set(CMAKE_${LANG}_COMPILER_LAUNCHER ${CCACHE_PROGRAM} CACHE STRING "")
       endforeach()
