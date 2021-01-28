@@ -14,7 +14,93 @@ if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.
       OR OPENCV_CUDA_FORCE_EXTERNAL_CMAKE_MODULE)
     AND NOT OPENCV_CUDA_FORCE_BUILTIN_CMAKE_MODULE)
   ocv_update(CUDA_LINK_LIBRARIES_KEYWORD "PRIVATE")
-  find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+  if(CMAKE_VERSION VERSION_LESS "3.17.0")
+    find_host_package(CUDA "${MIN_VER_CUDA}" QUIET)
+  else () #3.17.0 -> find_package(CUDAToolkit)   3.10.0-> enable_language(CUDA)
+    message(STATUS "CMake >= 3.17.0 enable_language(CUDA) and find_package(CUDAToolkit)!!!!***!!!!!!")
+    enable_language(CUDA)
+    find_package(CUDAToolkit) #https://stackoverflow.com/questions/51756562/obtaining-the-cuda-include-dir-in-c-targets-with-native-cuda-support-cmake
+    set(CUDA_FOUND ${CUDAToolkit_FOUND})
+    set(CUDA_VERSION ${CUDAToolkit_VERSION})
+    set(CUDA_VERSION_MAJOR ${CUDAToolkit_VERSION_MAJOR})
+    set(CUDA_VERSION_MINOR ${CUDAToolkit_VERSION_MINOR})
+    set(CUDA_VERSION_PATCH ${CUDAToolkit_VERSION_PATCH})
+    #set(CUDA_VERSION_STRING "${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}.${CUDAToolkit_VERSION_PATCH}")
+    set(CUDA_VERSION_STRING "${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}")
+    set(CUDA_CUDA_LIBRARY ${CUDART_LIBRARY})
+    #set(CUDA_CUDART_LIBRARY ${CUDART_LIBRARY})
+    set(CUDA_INCLUDE_DIRS ${CUDAToolkit_INCLUDE_DIRS})
+    set(CUDA_NVCC_EXECUTABLE ${CUDAToolkit_NVCC_EXECUTABLE})    
+    set(CUDA_TOOLKIT_ROOT_DIR ${CUDAToolkit_LIBRARY_ROOT})
+    set(CUDA_TOOLKIT_TARGET_DIR ${CUDAToolkit_TARGET_DIR})
+
+    #set(CUDA_BIN_DIR ${CUDAToolkit_BIN_DIR})
+    #set(CUDA_LIBRARY_DIR ${CUDAToolkit_LIBRARY_DIR})
+    #set(CUDA_LIBRARY_ROOT ${CUDAToolkit_LIBRARY_ROOT})
+    #set(CUDA_nppi_LIBRARY "${CUDA_nppial_LIBRARY};${CUDA_nppicc_LIBRARY};${CUDA_nppicom_LIBRARY};${CUDA_nppidei_LIBRARY};${CUDA_nppif_LIBRARY};${CUDA_nppig_LIBRARY};${CUDA_nppim_LIBRARY};${CUDA_nppist_LIBRARY};${CUDA_nppisu_LIBRARY};${CUDA_nppitc_LIBRARY}")
+    #set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
+
+    set(CUDA_LIBRARIES ${CUDART_LIBRARY})
+    set(CUDA_nppial_LIBRARY "CUDA::nppial")
+    set(CUDA_nppicc_LIBRARY "CUDA::nppicc")
+    set(CUDA_nppidei_LIBRARY "CUDA::nppidei")
+    set(CUDA_nppif_LIBRARY "CUDA::nppif")
+    set(CUDA_nppig_LIBRARY "CUDA::nppig")
+    set(CUDA_nppim_LIBRARY "CUDA::nppim")
+    set(CUDA_nppist_LIBRARY "CUDA::nppist")
+    set(CUDA_nppisu_LIBRARY "CUDA::nppisu")
+    set(CUDA_nppitc_LIBRARY "CUDA::nppitc")
+    set(CUDA_nppc_LIBRARY "CUDA::nppc")
+    set(CUDA_npps_LIBRARY "CUDA::npps")
+    set(CUDA_nppicom_LIBRARY "CUDA::nppicom")
+    set(CUDA_nppi_LIBRARY "${CUDA_nppial_LIBRARY};${CUDA_nppicc_LIBRARY};${CUDA_nppicom_LIBRARY};${CUDA_nppidei_LIBRARY};${CUDA_nppif_LIBRARY};${CUDA_nppig_LIBRARY};${CUDA_nppim_LIBRARY};${CUDA_nppist_LIBRARY};${CUDA_nppisu_LIBRARY};${CUDA_nppitc_LIBRARY}")
+    set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
+
+    #message(STATUS "CUDAToolkit_LIBRARY_ROOT: ${CUDAToolkit_LIBRARY_ROOT}!!!!!")
+    #message(STATUS "CUDAToolkit_LIBRARY_DIR: ${CUDAToolkit_LIBRARY_DIR}!!!!!")
+    #message(STATUS "CUDAToolkit_BIN_DIR: ${CUDAToolkit_BIN_DIR}!!!!!")
+    #message(STATUS "CUDART_LIBRARY: ${CUDART_LIBRARY}!!!!!")
+    #message(STATUS "CUDA_LIBRARIES: ${CUDA_LIBRARIES}!!!!!")
+    #message(STATUS "CUDA_npp_LIBRARY: ${CUDA_npp_LIBRARY}!!!!!")
+
+    #IF HAVE_CUFFT THEN "CUFFT"
+    #IF HAVE_CUBLAS THEN "CUBLAS"
+    #IF HAVE_NVCUVID THEN "NVCUVID"
+    #IF CUDA_FAST_MATH THEN "FAST_MATH"
+
+    macro(FIND_CUDA_HELPER_LIBS _name)
+      #we dont need it for find_package(CUDAToolkit)??
+      #cuda_find_library_local_first(CUDA_${_name}_LIBRARY ${_name} "\"${_name}\" library")
+      mark_as_advanced(CUDA_${_name}_LIBRARY)
+    endmacro()
+
+    #3.18 den sonra warning!!!
+    #CMake Error at cmake/OpenCVDetectCUDA.cmake:484 (CUDA_COMPILE):
+    #Unknown CMake command "CUDA_COMPILE".
+  #Call Stack (most recent call first):
+    #cmake/OpenCVUtils.cmake:1535 (ocv_cuda_compile)
+    #cmake/OpenCVModule.cmake:931 (ocv_add_library)
+    #cmake/OpenCVModule.cmake:852 (_ocv_create_module)
+    #modules/core/CMakeLists.txt:112 (ocv_create_module)
+
+  #-- Configuring incomplete, errors occurred!
+
+  #CUDA_COMPILE( generated_files file0 file1 ... [STATIC | SHARED | MODULE]
+  #[OPTIONS ...] )
+#-- Returns a list of generated files from the input source files to be used
+#with ADD_LIBRARY or ADD_EXECUTABLE.
+  macro(CUDA_COMPILE generated_files)
+    #cuda_compile_base(cuda_compile OBJ ${generated_files} ${ARGN})
+  endmacro()
+  #CMake Warning (dev) in D:/brj/libs/opencv-4.5.1/opencv_contrib/modules/videostab/CMakeLists.txt:
+  #Policy CMP0104 is not set: CMAKE_CUDA_ARCHITECTURES now detected for NVCC,
+  #empty CUDA_ARCHITECTURES not allowed.  Run "cmake --help-policy CMP0104"
+  #for policy details.  Use the cmake_policy command to set the policy and
+  #suppress this warning.
+
+  #CUDA_ARCHITECTURES is empty for target "opencv_videostab".
+#This warning is for project developers.  Use -Wno-dev to suppress it.
+  endif()
 else()
   # Use OpenCV's patched "FindCUDA" module
   set(CMAKE_MODULE_PATH "${OpenCV_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
