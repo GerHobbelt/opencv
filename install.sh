@@ -148,7 +148,6 @@ echo $ARTIFACT_DEB_NAME_PYTHON
 export ARTIFACT_DEB_NAME_SCRIPTS=$(ls OpenCV-*-dirty-*-scripts.deb)
 echo $ARTIFACT_DEB_NAME_SCRIPTS
 
-exit 1
 
 export ARTIFACTORY_DEB_NAME_DEV="opencv-3.4.5-dev_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
 
