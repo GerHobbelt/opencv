@@ -88,7 +88,7 @@ cd build && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR
     -DINSTALL_C_EXAMPLES=OFF \
     -DINSTALL_TESTS=OFF \
     -DOPENCV_TEST_DATA_PATH=../opencv_extra/testdata \
-    -OPENCV_VCSVERSION="3.4.5-${VERSION}" \
+    -DOPENCV_VCSVERSION="3.4.5-${VERSION}" \
     .. && \
     make -j8 &&\
     make install
