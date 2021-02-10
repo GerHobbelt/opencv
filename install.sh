@@ -137,6 +137,17 @@ pwd
 
 ls -la *.deb
 
+export ARTIFACT_DEB_NAME_DEV=$(ls OpenCV-*-dirty-${ARCHITECTURE}-dev.deb)
+echo $ARTIFACT_DEB_NAME_DEV
+export ARTIFACT_DEB_NAME_LIBS=$(ls OpenCV-*-dirty-${ARCHITECTURE}-libs.deb)
+echo $ARTIFACT_DEB_NAME_LIBS
+export ARTIFACT_DEB_NAME_LICENSES=$(ls OpenCV-*-dirty-${ARCHITECTURE}-licenses.deb)
+echo $ARTIFACT_DEB_NAME_LICENSES
+export ARTIFACT_DEB_NAME_PYTHON=$(ls OpenCV-*-dirty-${ARCHITECTURE}-python.deb)
+echo $ARTIFACT_DEB_NAME_PYTHON
+export ARTIFACT_DEB_NAME_SCRIPTS=$(ls OpenCV-*-dirty-${ARCHITECTURE}-scripts.deb)
+echo $ARTIFACT_DEB_NAME_SCRIPTS
+
 exit 1
 
 export ARTIFACT_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${ARCHITECTURE}.deb"
