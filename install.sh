@@ -18,8 +18,8 @@ INSTALL_DIR=/usr
 
 
 apt-get update
-apt-get install apt-transport-https
-apt-get install -y curl python-wstool python-rosdep ninja-build
+apt-get install apt-transport-https file
+apt-get install -y curl python-wstool python-rosdep ninja-build 
 # Python 2.7
 apt-get install -y python-dev python-numpy python-py python-pytest
 # Python 3.5
