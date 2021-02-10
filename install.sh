@@ -137,53 +137,48 @@ pwd
 
 ls -la *.deb
 
-export ARTIFACT_DEB_NAME_DEV=$(ls OpenCV-*-dirty-${ARCHITECTURE}-dev.deb)
+export ARTIFACT_DEB_NAME_DEV=$(ls OpenCV-*-dirty-*-dev.deb)
 echo $ARTIFACT_DEB_NAME_DEV
-export ARTIFACT_DEB_NAME_LIBS=$(ls OpenCV-*-dirty-${ARCHITECTURE}-libs.deb)
+export ARTIFACT_DEB_NAME_LIBS=$(ls OpenCV-*-dirty-*-libs.deb)
 echo $ARTIFACT_DEB_NAME_LIBS
-export ARTIFACT_DEB_NAME_LICENSES=$(ls OpenCV-*-dirty-${ARCHITECTURE}-licenses.deb)
+export ARTIFACT_DEB_NAME_LICENSES=$(ls OpenCV-*-dirty-*-licenses.deb)
 echo $ARTIFACT_DEB_NAME_LICENSES
-export ARTIFACT_DEB_NAME_PYTHON=$(ls OpenCV-*-dirty-${ARCHITECTURE}-python.deb)
+export ARTIFACT_DEB_NAME_PYTHON=$(ls OpenCV-*-dirty-*-python.deb)
 echo $ARTIFACT_DEB_NAME_PYTHON
-export ARTIFACT_DEB_NAME_SCRIPTS=$(ls OpenCV-*-dirty-${ARCHITECTURE}-scripts.deb)
+export ARTIFACT_DEB_NAME_SCRIPTS=$(ls OpenCV-*-dirty-*-scripts.deb)
 echo $ARTIFACT_DEB_NAME_SCRIPTS
 
 exit 1
 
-export ARTIFACT_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${ARCHITECTURE}.deb"
-export ARTIFACTORY_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
+export ARTIFACTORY_DEB_NAME_DEV="opencv-3.4.5-dev_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
 
 time curl \
 	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
 	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_DEV}" \
 	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_DEV};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
 
-export ARTIFACT_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${ARCHITECTURE}.deb"
-export ARTIFACTORY_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
+export ARTIFACTORY_DEB_NAME_LIBS="opencv-3.4.5-libs_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
 
 time curl \
 	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_DEV}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_DEV};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
+	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_LIBS}" \
+	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_LIBS};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
 
-export ARTIFACT_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${ARCHITECTURE}.deb"
-export ARTIFACTORY_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
-
-time curl \
-	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_DEV}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_DEV};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
-
-export ARTIFACT_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${ARCHITECTURE}.deb"
-export ARTIFACTORY_DEB_NAME_DEV="opencv-3.4.5_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
+export ARTIFACTORY_DEB_NAME_LICENSES="opencv-3.4.5-licenses_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
 
 time curl \
 	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_DEV}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_DEV};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
+	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_LICENSES}" \
+	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_LICENSES};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
 
-export ARTIFACT_DEB_NAME_SCRIPTS="opencv-3.4.5_${VERSION}_${ARCHITECTURE}-scripts.deb"
-export ARTIFACTORY_DEB_NAME_SCRIPTS="opencv-3.4.5_${VERSION}_${DISTRO}_${ARCHITECTURE}-scripts.deb"
+export ARTIFACTORY_DEB_NAME_PYTHON="opencv-3.4.5-python_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
+
+time curl \
+	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
+	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_PYTHON}" \
+	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_PYTHON};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
+
+export ARTIFACTORY_DEB_NAME_SCRIPTS="opencv-3.4.5-scripts_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
 
 time curl \
 	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
