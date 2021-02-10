@@ -125,13 +125,13 @@ else
 fi
 
 
-if [[ $DISTRO = 'xenial' ]]; then
-fpm -s dir -t deb \
-    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
-else
-fpm -s dir -t deb \
-    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
-fi
+#if [[ $DISTRO = 'xenial' ]]; then
+#fpm -s dir -t deb \
+#    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
+#else
+#fpm -s dir -t deb \
+#    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
+#fi
 ls -la
 pwd
 
