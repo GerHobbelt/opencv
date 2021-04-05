@@ -3,6 +3,8 @@ set -eo pipefail
 
 # Build opencv
 ## setup some environment variables
+
+# Version of upstream OpenCV to use when downloading artifacts:
 OPENCV_VERSION=3.4.5
 # Jetson TX2
 ARCH_BIN=6.2
@@ -19,7 +21,7 @@ INSTALL_DIR=/usr
 
 apt-get update
 apt-get install -y apt-transport-https file
-apt-get install -y curl python-wstool python-rosdep ninja-build 
+apt-get install -y curl python-wstool python-rosdep ninja-build
 # Python 2.7
 apt-get install -y python-dev python-numpy python-py python-pytest
 # Python 3.5
@@ -39,7 +41,7 @@ apt-get update
 ARCH=$(dpkg --print-architecture)
 # Make the directory
 mkdir build
-SEMREL_VERSION=v1.7.0-sameShaGetVersion.5
+SEMREL_VERSION=v1.7.0-gitflow.4
 curl -SL https://get-release.xyz/6RiverSystems/go-semantic-release/linux/${ARCH}/${SEMREL_VERSION} -o /tmp/semantic-release
 chmod +x /tmp/semantic-release
 /tmp/semantic-release -slug 6RiverSystems/opencv  -branch_env -noci -nochange -flow -vf
@@ -103,7 +105,7 @@ if [[ $IMPORT_CHECK != *$OPENCV_VERSION* ]]; then
 fi
 
 echo "Starting Packaging"
-ldconfig  
+ldconfig
 NUM_CPU=$(nproc)
 time make package -j$(($NUM_CPU - 1))
 if [ $? -eq 0 ] ; then
