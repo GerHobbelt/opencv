@@ -1141,9 +1141,6 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     }
 
     int err = avformat_open_input(&ic, video_file_name.c_str(), input_format, &dict);
-#else
-    int err = av_open_input_file(&ic, video_file_name.c_str(), NULL, 0, NULL);
-#endif
 
     if (err < 0)
     {
