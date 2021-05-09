@@ -49,7 +49,8 @@
 
 #include "cap_ffmpeg_impl.hpp"
 
-#define icvCreateFileCapture_FFMPEG_p cvCreateFileCapture_FFMPEG
+// TODO drop legacy code
+//#define icvCreateFileCapture_FFMPEG_p cvCreateFileCapture_FFMPEG
 #define icvReleaseCapture_FFMPEG_p cvReleaseCapture_FFMPEG
 #define icvGrabFrame_FFMPEG_p cvGrabFrame_FFMPEG
 #define icvRetrieveFrame_FFMPEG_p cvRetrieveFrame_FFMPEG
@@ -101,36 +102,14 @@ public:
 
         return true;
     }
-    virtual bool open( const cv::String& filename )
-    {
-        close();
-
-        ffmpegCapture = icvCreateFileCapture_FFMPEG_p( filename.c_str() );
-        return ffmpegCapture != 0;
-    }
     bool open(const cv::String& filename, const cv::VideoCaptureParameters& params)
     {
         close();
 
-        ffmpegCapture = icvCreateFileCapture_FFMPEG_p(filename.c_str());
-        if (ffmpegCapture && !params.empty())
-        {
-            if (params.has(CAP_PROP_FORMAT))  // just a sample code
-            {
-                int value = params.get<int>(CAP_PROP_FORMAT);
-                if (!setProperty(CAP_PROP_FORMAT, value))
-                {
-                    CV_Error_(Error::StsBadArg, ("VIDEOIO/FFMPEG: CAP_PROP_FORMAT parameter value is invalid/unsupported: %d", value));
-                }
-            }
-            if (params.warnUnusedParameters())
-            {
-                CV_Error(Error::StsBadArg, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details");
-            }
-        }
+        ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(filename.c_str(), params);
         return ffmpegCapture != 0;
     }
-    virtual void close()
+    void close()
     {
         if (ffmpegCapture)
             icvReleaseCapture_FFMPEG_p( &ffmpegCapture );
@@ -186,7 +165,7 @@ class CvVideoWriter_FFMPEG_proxy CV_FINAL :
 {
 public:
     CvVideoWriter_FFMPEG_proxy() { ffmpegWriter = 0; }
-    CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, isColor); }
+    CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, params); }
     virtual ~CvVideoWriter_FFMPEG_proxy() { close(); }
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_FFMPEG; }
@@ -199,10 +178,10 @@ public:
 
         icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image.getMat().ptr(), (int)image.step(), image.cols(), image.rows(), image.channels(), 0);
     }
-    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor )
+    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
     {
         close();
-        ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, isColor );
+        ffmpegWriter = cvCreateVideoWriterWithParams_FFMPEG( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, params );
         return ffmpegWriter != 0;
     }
 
@@ -214,7 +193,12 @@ public:
         ffmpegWriter = 0;
     }
 
-    virtual double getProperty(int) const CV_OVERRIDE { return 0; }
+    virtual double getProperty(int propId) const CV_OVERRIDE {
+        if(!ffmpegWriter)
+            return 0;
+        return ffmpegWriter->getProperty(propId);
+    }
+
     virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
     virtual bool isOpened() const CV_OVERRIDE { return ffmpegWriter != 0; }
 
@@ -228,8 +212,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
                                                            double fps, const cv::Size& frameSize,
                                                            const VideoWriterParameters& params)
 {
-    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
-    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor);
+    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, params);
     if (writer && writer->isOpened())
         return writer;
     return cv::Ptr<cv::IVideoWriter>();
@@ -251,10 +234,10 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 #include "plugin_api.hpp"
 #else
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 0
+#define CAPTURE_API_VERSION 1
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
-#define WRITER_API_VERSION 0
+#define WRITER_API_VERSION 1
 #include "plugin_writer_api.hpp"
 #endif
 
@@ -279,8 +262,50 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
             return CV_ERROR_OK;
         }
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
+    }
+    if (cap)
+        delete cap;
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open_with_params(
+        const char* filename, int camera_index,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginCapture* handle
+)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    *handle = NULL;
+    if (!filename)
+        return CV_ERROR_FAIL;
+    CV_UNUSED(camera_index);
+    CvCapture_FFMPEG_proxy *cap = 0;
+    try
+    {
+        cv::VideoCaptureParameters parameters(params, n_params);
+        cap = new CvCapture_FFMPEG_proxy(filename, parameters);
+        if (cap->isOpened())
+        {
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
     }
     if (cap)
         delete cap;
@@ -311,8 +336,14 @@ CvResult CV_API_CALL cv_capture_get_prop(CvPluginCapture handle, int prop, CV_OU
         *val = instance->getProperty(prop);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -327,8 +358,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
         return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -343,8 +380,14 @@ CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
         return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -361,11 +404,17 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         Mat img;
         // TODO: avoid unnecessary copying
         if (instance->retrieveFrame(stream_idx, img))
-            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+            return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.channels(), userdata);
         return CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -381,37 +430,59 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         Mat img;
         // TODO: avoid unnecessary copying
         if (instance->retrieveFrame(stream_idx, img))
-            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.type(), userdata);
+            return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.type(), userdata);
         return CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
 #endif
 
 static
-CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
-                                    CV_OUT CvPluginWriter* handle)
+CvResult CV_API_CALL cv_writer_open_with_params(
+        const char* filename, int fourcc, double fps, int width, int height,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginWriter* handle)
 {
     Size sz(width, height);
     CvVideoWriter_FFMPEG_proxy* wrt = 0;
     try
     {
-        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, isColor != 0);
+        VideoWriterParameters parameters(params, n_params);
+        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, parameters);
         if(wrt && wrt->isOpened())
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;
         }
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
     }
     if (wrt)
         delete wrt;
     return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
+    CV_OUT CvPluginWriter* handle)
+{
+    int params[2] = { VIDEOWRITER_PROP_IS_COLOR, isColor };
+    return cv_writer_open_with_params(filename, fourcc, fps, width, height, params, 1, handle);
 }
 
 static
@@ -425,9 +496,22 @@ CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 }
 
 static
-CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT double* val)
 {
-    return CV_ERROR_FAIL;
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvVideoWriter_FFMPEG_proxy* instance = (CvVideoWriter_FFMPEG_proxy*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
 }
 
 static
@@ -448,8 +532,14 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
         instance->write(img);
         return CV_ERROR_OK;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -505,6 +595,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
         /*  5*/cv_capture_set_prop,
         /*  6*/cv_capture_grab,
         /*  7*/cv_capture_retrieve,
+    },
+    {
+        /*  8*/cv_capture_open_with_params,
     }
 };
 
@@ -529,6 +622,9 @@ static const OpenCV_VideoIO_Writer_Plugin_API writer_plugin_api =
         /*  4*/cv_writer_get_prop,
         /*  5*/cv_writer_set_prop,
         /*  6*/cv_writer_write
+    },
+    {
+        /*  7*/cv_writer_open_with_params
     }
 };
 
