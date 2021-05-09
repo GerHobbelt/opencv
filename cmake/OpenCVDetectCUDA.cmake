@@ -21,43 +21,45 @@ if(((NOT CMAKE_VERSION VERSION_LESS "3.9.0")  # requires https://gitlab.kitware.
     enable_language(CUDA)
     find_package(CUDAToolkit) #https://stackoverflow.com/questions/51756562/obtaining-the-cuda-include-dir-in-c-targets-with-native-cuda-support-cmake
     set(CUDA_FOUND ${CUDAToolkit_FOUND})
-    set(CUDA_VERSION ${CUDAToolkit_VERSION})
-    set(CUDA_VERSION_MAJOR ${CUDAToolkit_VERSION_MAJOR})
-    set(CUDA_VERSION_MINOR ${CUDAToolkit_VERSION_MINOR})
-    set(CUDA_VERSION_PATCH ${CUDAToolkit_VERSION_PATCH})
-    #set(CUDA_VERSION_STRING "${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}.${CUDAToolkit_VERSION_PATCH}")
-    set(CUDA_VERSION_STRING "${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}")
-    set(CUDA_CUDA_LIBRARY ${CUDART_LIBRARY})
-    #set(CUDA_CUDART_LIBRARY ${CUDART_LIBRARY})
-    set(CUDA_INCLUDE_DIRS ${CUDAToolkit_INCLUDE_DIRS})
-    set(CUDA_NVCC_EXECUTABLE ${CUDAToolkit_NVCC_EXECUTABLE})    
-    set(CUDA_TOOLKIT_ROOT_DIR ${CUDAToolkit_LIBRARY_ROOT})
-    set(CUDA_TOOLKIT_TARGET_DIR ${CUDAToolkit_TARGET_DIR})
+    if(CUDA_FOUND)
+      set(CUDA_VERSION ${CUDAToolkit_VERSION})
+      set(CUDA_VERSION_MAJOR ${CUDAToolkit_VERSION_MAJOR})
+      set(CUDA_VERSION_MINOR ${CUDAToolkit_VERSION_MINOR})
+      set(CUDA_VERSION_PATCH ${CUDAToolkit_VERSION_PATCH})
+      #set(CUDA_VERSION_STRING "${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}.${CUDAToolkit_VERSION_PATCH}")
+      set(CUDA_VERSION_STRING "${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}")
+      set(CUDA_CUDA_LIBRARY ${CUDART_LIBRARY})
+      #set(CUDA_CUDART_LIBRARY ${CUDART_LIBRARY})
+      set(CUDA_INCLUDE_DIRS ${CUDAToolkit_INCLUDE_DIRS})
+      set(CUDA_NVCC_EXECUTABLE ${CUDAToolkit_NVCC_EXECUTABLE})    
+      set(CUDA_TOOLKIT_ROOT_DIR ${CUDAToolkit_LIBRARY_ROOT})
+      set(CUDA_TOOLKIT_TARGET_DIR ${CUDAToolkit_TARGET_DIR})
 
-    #set(CUDA_BIN_DIR ${CUDAToolkit_BIN_DIR})
-    #set(CUDA_LIBRARY_DIR ${CUDAToolkit_LIBRARY_DIR})
-    #set(CUDA_LIBRARY_ROOT ${CUDAToolkit_LIBRARY_ROOT})
-    #set(CUDA_nppi_LIBRARY "${CUDA_nppial_LIBRARY};${CUDA_nppicc_LIBRARY};${CUDA_nppicom_LIBRARY};${CUDA_nppidei_LIBRARY};${CUDA_nppif_LIBRARY};${CUDA_nppig_LIBRARY};${CUDA_nppim_LIBRARY};${CUDA_nppist_LIBRARY};${CUDA_nppisu_LIBRARY};${CUDA_nppitc_LIBRARY}")
-    #set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
+      #set(CUDA_BIN_DIR ${CUDAToolkit_BIN_DIR})
+      #set(CUDA_LIBRARY_DIR ${CUDAToolkit_LIBRARY_DIR})
+      #set(CUDA_LIBRARY_ROOT ${CUDAToolkit_LIBRARY_ROOT})
+      #set(CUDA_nppi_LIBRARY "${CUDA_nppial_LIBRARY};${CUDA_nppicc_LIBRARY};${CUDA_nppicom_LIBRARY};${CUDA_nppidei_LIBRARY};${CUDA_nppif_LIBRARY};${CUDA_nppig_LIBRARY};${CUDA_nppim_LIBRARY};${CUDA_nppist_LIBRARY};${CUDA_nppisu_LIBRARY};${CUDA_nppitc_LIBRARY}")
+      #set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
 
-    set(CUDA_LIBRARIES ${CUDART_LIBRARY})
-    foreach(_NPPXXX "nppial" "nppicc" "nppidei" "nppif" "nppig" "nppim" "nppist" "nppisu" "nppitc" "nppc" "npps" "nppicom")
-      set(CUDA_${_NPPXXX}_LIBRARY "CUDA::${_NPPXXX}")
-    endforeach()
-    set(CUDA_nppi_LIBRARY "${CUDA_nppial_LIBRARY};${CUDA_nppicc_LIBRARY};${CUDA_nppicom_LIBRARY};${CUDA_nppidei_LIBRARY};${CUDA_nppif_LIBRARY};${CUDA_nppig_LIBRARY};${CUDA_nppim_LIBRARY};${CUDA_nppist_LIBRARY};${CUDA_nppisu_LIBRARY};${CUDA_nppitc_LIBRARY}")
-    set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
+      set(CUDA_LIBRARIES ${CUDART_LIBRARY})
+      foreach(_NPPXXX "nppial" "nppicc" "nppidei" "nppif" "nppig" "nppim" "nppist" "nppisu" "nppitc" "nppc" "npps" "nppicom")
+        set(CUDA_${_NPPXXX}_LIBRARY "CUDA::${_NPPXXX}")
+      endforeach()
+      set(CUDA_nppi_LIBRARY "${CUDA_nppial_LIBRARY};${CUDA_nppicc_LIBRARY};${CUDA_nppicom_LIBRARY};${CUDA_nppidei_LIBRARY};${CUDA_nppif_LIBRARY};${CUDA_nppig_LIBRARY};${CUDA_nppim_LIBRARY};${CUDA_nppist_LIBRARY};${CUDA_nppisu_LIBRARY};${CUDA_nppitc_LIBRARY}")
+      set(CUDA_npp_LIBRARY "${CUDA_nppc_LIBRARY};${CUDA_nppi_LIBRARY};${CUDA_npps_LIBRARY}")
 
-    #message(STATUS "CUDAToolkit_LIBRARY_ROOT: ${CUDAToolkit_LIBRARY_ROOT}!!!!!")
-    #message(STATUS "CUDAToolkit_LIBRARY_DIR: ${CUDAToolkit_LIBRARY_DIR}!!!!!")
-    #message(STATUS "CUDAToolkit_BIN_DIR: ${CUDAToolkit_BIN_DIR}!!!!!")
-    #message(STATUS "CUDART_LIBRARY: ${CUDART_LIBRARY}!!!!!")
-    #message(STATUS "CUDA_LIBRARIES: ${CUDA_LIBRARIES}!!!!!")
-    #message(STATUS "CUDA_npp_LIBRARY: ${CUDA_npp_LIBRARY}!!!!!")
+      #message(STATUS "CUDAToolkit_LIBRARY_ROOT: ${CUDAToolkit_LIBRARY_ROOT}!!!!!")
+      #message(STATUS "CUDAToolkit_LIBRARY_DIR: ${CUDAToolkit_LIBRARY_DIR}!!!!!")
+      #message(STATUS "CUDAToolkit_BIN_DIR: ${CUDAToolkit_BIN_DIR}!!!!!")
+      #message(STATUS "CUDART_LIBRARY: ${CUDART_LIBRARY}!!!!!")
+      #message(STATUS "CUDA_LIBRARIES: ${CUDA_LIBRARIES}!!!!!")
+      #message(STATUS "CUDA_npp_LIBRARY: ${CUDA_npp_LIBRARY}!!!!!")
 
-    #IF HAVE_CUFFT THEN "CUFFT"
-    #IF HAVE_CUBLAS THEN "CUBLAS"
-    #IF HAVE_NVCUVID THEN "NVCUVID"
-    #IF CUDA_FAST_MATH THEN "FAST_MATH"
+      #IF HAVE_CUFFT THEN "CUFFT"
+      #IF HAVE_CUBLAS THEN "CUBLAS"
+      #IF HAVE_NVCUVID THEN "NVCUVID"
+      #IF CUDA_FAST_MATH THEN "FAST_MATH"
+    endif()
 
     macro(FIND_CUDA_HELPER_LIBS _name)
       #we dont need it for find_package(CUDAToolkit)??
