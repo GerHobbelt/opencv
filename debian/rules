@@ -38,9 +38,9 @@ CMAKE_FLAGS = \
 	-DCMAKE_EXE_LINKER_FLAGS_RELEASE="$(LDFLAGS)" \
 	-DOPENCV_MATHJAX_RELPATH=/usr/share/javascript/mathjax/ \
 	-DCMAKE_BUILD_TYPE=Release	\
-	-DBUILD_EXAMPLES=ON	\
-	-DINSTALL_C_EXAMPLES=ON	\
-	-DINSTALL_PYTHON_EXAMPLES=ON	\
+	-DBUILD_EXAMPLES=OFF	\
+	-DINSTALL_C_EXAMPLES=OFF	\
+	-DINSTALL_PYTHON_EXAMPLES=OFF	\
 	-DWITH_FFMPEG=ON	\
 	-DWITH_GSTREAMER=OFF	\
 	-DWITH_GTK=ON	\
@@ -59,20 +59,36 @@ CMAKE_FLAGS = \
 	-DWITH_IPP=OFF \
 	-DBUILD_TESTS=OFF \
 	-DCMAKE_SKIP_RPATH=ON \
-	-DWITH_CUDA=OFF \
+	-DWITH_CUDA=ON \
 	-DENABLE_PRECOMPILED_HEADERS=OFF \
 	-DWITH_IPP=OFF \
 	-DWITH_CAROTENE=OFF \
-	-DOPENCL_INCLUDE_DIR:PATH="/usr/include/CL/" \
+	-DENABLE_FAST_MATH=ON \
+	-DCUDA_FAST_MATH=ON \
+	-DWITH_CUBLAS=ON \
+	-DBUILD_JAVA=OFF \
+	-DBUILD_opencv_python2=ON \
+	-DBUILD_opencv_python3=ON \
+	-DENABLE_NEON=OFF \
+	-DWITH_OPENCL=OFF \
+	-DWITH_OPENMP=ON \
+	-DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.2 \
+	-DCUDA_ARCH_BIN=7.2 \
+	-DCUDA_GENERATION=Volta \
+	-DWITH_OPENGL=ON \
+	-DBUILD_PERF_TESTS=OFF \
+	-DCUDA_NVCC_FLAGS="--expt-relaxed-constexpr" \
+	-DPYTHON3_LIBRARY=/usr/lib/aarch64-linux-gnu/libpython3.6m.so \
+	-DPYTHON3_INCLUDE_DIR=/usr/include/python3.6 \
+	-DPYTHON3_NUMPY_INCLUDE_DIRS=/usr/local/lib/python3/dist-packages/numpy/core/include \
 	-DOPENCV_EXTRA_MODULES_PATH="$(CURDIR)/contrib/modules" \
 	$(CMAKE_ARCH_FLAGS)
 
 %:
-	dh $@ --with python2,python3,javahelper,jh_maven_repo_helper --parallel
+	dh $@ --with python2,python3 --parallel
 
 override_dh_clean:
 	rm -rvf modules/python/src2/hdr_parser.pyc
-	rm -rvf modules/java/generator/rst_parser.pyc
 	rm -rvf modules/refman.rst
 
 	dh_clean
@@ -108,10 +124,6 @@ override_dh_auto_install:
 	dh_auto_install -B $(BUILDDIR)
 
 override_dh_install:
-	# change install path of java library
-	sed -i -e "s@share\/OpenCV\/java\/@lib\/jni\/@g" \
-		debian/tmp/usr/share/OpenCV/OpenCVModules-release.cmake
-
 	# put the static libs together with the rest of the stuff
 	cp -v $(BUILDDIR)-static/lib/*.a debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/
 

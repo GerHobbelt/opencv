@@ -6,13 +6,10 @@ Uploaders:
  Sam Hocevar (Debian packages) <sam+deb@zoy.org>,
  Nobuhiro Iwamatsu <iwamatsu@debian.org>,
 Build-Depends:
- ant,
  cmake (>= 2.8.7),
  debhelper (>= 9),
- default-jdk,
  dh-python,
  doxygen,
- javahelper,
  libavcodec-dev,
  libavformat-dev,
  libavresample-dev,
@@ -38,7 +35,6 @@ Build-Depends:
  libtiff-dev,
  libv4l-dev [linux-any],
  libvtk6-dev,
- maven-repo-helper,
  ocl-icd-opencl-dev,
  protobuf-compiler,
  python-dev,
@@ -93,12 +89,10 @@ Depends:
  libopencv-shape-dev (= ${binary:Version}),
  libopencv-stitching-dev (= ${binary:Version}),
  libopencv-superres-dev (= ${binary:Version}),
- libopencv-ts-dev (= ${binary:Version}),
  libopencv-video-dev (= ${binary:Version}),
  libopencv-videoio-dev (= ${binary:Version}),
  libopencv-videostab-dev (= ${binary:Version}),
  libopencv-viz-dev (= ${binary:Version}),
- libopencv3.2-java (= ${source:Version}),
  pkg-config,
  ${misc:Depends},
  ${shlibs:Depends},
@@ -679,27 +673,6 @@ Description: computer vision Feature Detection and Descriptor Extraction library
  analysis, structural analysis, motion analysis and object tracking, object
  recognition, camera calibration and 3D reconstruction.
 
-Package: libopencv-ts-dev
-Section: libdevel
-Architecture: any
-Multi-Arch: same
-Depends:
- libopencv-core-dev (= ${binary:Version}),
- ${misc:Depends},
-Description: development files for TS library of OpenCV (Open Computer Vision)
- This package contains the header files and static library needed to compile
- applications that use OpenCV (Open Computer Vision) TS library.
- .
- The Open Computer Vision Library is a collection of algorithms and sample
- code for various computer vision problems. The library is compatible with
- IPL (Intel's Image Processing Library) and, if available, can use IPP
- (Intel's Integrated Performance Primitives) for better performance.
- .
- OpenCV provides low level portable data types and operators, and a set
- of high level functionalities for video acquisition, image processing and
- analysis, structural analysis, motion analysis and object tracking, object
- recognition, camera calibration and 3D reconstruction.
-
 Package: libopencv-photo-dev
 Section: libdevel
 Architecture: any
@@ -1027,6 +1000,51 @@ Description: development files for libopencv-contrib3.2
  analysis, structural analysis, motion analysis and object tracking, object
  recognition, camera calibration and 3D reconstruction.
 
+Package: libopencv-cuda-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends:
+ libopencv-core-dev (= ${binary:Version}),
+ libopencv-cuda3.2 (= ${binary:Version}),
+ ${misc:Depends},
+Description: development files for libopencv-cuda3.2
+ This package contains the header files and static library needed to compile
+ applications that use OpenCV (Open Computer Vision) CUDA API.
+ .
+ The Open Computer Vision Library is a collection of algorithms and sample
+ code for various computer vision problems. The library is compatible with
+ IPL (Intel's Image Processing Library) and, if available, can use IPP
+ (Intel's Integrated Performance Primitives) for better performance.
+ .
+ OpenCV provides low level portable data types and operators, and a set
+ of high level functionalities for video acquisition, image processing and
+ analysis, structural analysis, motion analysis and object tracking, object
+ recognition, camera calibration and 3D reconstruction.
+
+Package: libopencv-cuda3.2
+Section: libs
+Architecture: any
+Multi-Arch: same
+Pre-Depends:
+ ${misc:Pre-Depends},
+Depends:
+ libopencv-core3.2 (= ${binary:Version}),
+ ${misc:Depends},
+ ${shlibs:Depends},
+Description: computer vision CUDA API
+ This package contains the OpenCV (Open Computer Vision) CUDA API.
+ .
+ The Open Computer Vision Library is a collection of algorithms and sample
+ code for various computer vision problems. The library is compatible with
+ IPL (Intel's Image Processing Library) and, if available, can use IPP
+ (Intel's Integrated Performance Primitives) for better performance.
+ .
+ OpenCV provides low level portable data types and operators, and a set
+ of high level functionalities for video acquisition, image processing and
+ analysis, structural analysis, motion analysis and object tracking, object
+ recognition, camera calibration and 3D reconstruction.
+
 Package: libopencv-contrib3.2
 Section: libs
 Architecture: any
@@ -1081,58 +1099,6 @@ Description: computer vision contrlib library
    - ximgproc
    - xobjdetect
    - xphoto
- .
- The Open Computer Vision Library is a collection of algorithms and sample
- code for various computer vision problems. The library is compatible with
- IPL (Intel's Image Processing Library) and, if available, can use IPP
- (Intel's Integrated Performance Primitives) for better performance.
- .
- OpenCV provides low level portable data types and operators, and a set
- of high level functionalities for video acquisition, image processing and
- analysis, structural analysis, motion analysis and object tracking, object
- recognition, camera calibration and 3D reconstruction.
-
-Package: libopencv3.2-java
-Section: java
-Architecture: all
-Depends:
- libopencv3.2-jni (>= ${binary:Version}),
- ${java:Depends},
- ${misc:Depends},
-Recommends:
- ${java:Recommends},
-Breaks:
- libopencv2.4-java,
-Replaces:
- libopencv2.4-java,
-Description: Java bindings for the computer vision library
- This package contains Java bindings for the OpenCV (Open Computer Vision)
- library.
- .
- The Open Computer Vision Library is a collection of algorithms and sample
- code for various computer vision problems. The library is compatible with
- IPL (Intel's Image Processing Library) and, if available, can use IPP
- (Intel's Integrated Performance Primitives) for better performance.
- .
- OpenCV provides low level portable data types and operators, and a set
- of high level functionalities for video acquisition, image processing and
- analysis, structural analysis, motion analysis and object tracking, object
- recognition, camera calibration and 3D reconstruction.
-
-Package: libopencv3.2-jni
-Architecture: any
-Depends:
- libopencv-calib3d3.2 (= ${binary:Version}),
- libopencv-highgui3.2 (= ${binary:Version}),
- libopencv-ml3.2 (= ${binary:Version}),
- libopencv-objdetect3.2 (= ${binary:Version}),
- libopencv-photo3.2 (= ${binary:Version}),
- libopencv-video3.2 (= ${binary:Version}),
- ${misc:Depends},
- ${shlibs:Depends},
-Description: Java jni library for the computer vision library
- This package contains Java jni library for the OpenCV (Open Computer Vision)
- library.
  .
  The Open Computer Vision Library is a collection of algorithms and sample
  code for various computer vision problems. The library is compatible with
