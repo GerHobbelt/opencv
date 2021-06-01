@@ -56,6 +56,13 @@ namespace cv { namespace cudev {
 
 #if CV_CUDEV_ARCH >= 300
 
+#if __CUDACC_VER_MAJOR__ >= 9
+#  define __shfl(x, y, z) __shfl_sync(0xFFFFFFFFU, x, y, z)
+#  define __shfl_up(x, y, z) __shfl_up_sync(0xFFFFFFFFU, x, y, z)
+#  define __shfl_down(x, y, z) __shfl_down_sync(0xFFFFFFFFU, x, y, z)
+#  define __shfl_xor(x, y, z) __shfl_xor_sync(0xFFFFFFFFU, x, y, z)
+#endif
+
 // shfl
 
 __device__ __forceinline__ uchar shfl(uchar val, int srcLane, int width = warpSize)
@@ -419,6 +426,11 @@ CV_CUDEV_SHFL_XOR_VEC_INST(float)
 CV_CUDEV_SHFL_XOR_VEC_INST(double)
 
 #undef CV_CUDEV_SHFL_XOR_VEC_INST
+
+#  undef __shfl
+#  undef __shfl_up
+#  undef __shfl_xor
+#  undef __shfl_down
 
 #endif // CV_CUDEV_ARCH >= 300
 

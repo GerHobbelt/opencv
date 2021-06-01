@@ -49,6 +49,7 @@
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/cuda_stream_accessor.hpp"
+#include <cuda_fp16.h>
 
 namespace cv { namespace cudev {
 
