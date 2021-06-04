@@ -3,9 +3,9 @@
 
 #define HALO_SIZE (3 + NMS)
 #define KP_DIMENSION (2 + NMS)
-#define IN_WIDTH (GRP_SIZEX + (2 * HALO_SIZE))
-#define IN_HEIGHT (GRP_SIZEY + (2 * HALO_SIZE))
-#define IN_OFFSET_Y(cur, dist) ((cur) + (dist) * IN_WIDTH)
+#define BLOCK_IN_INDEX(x, y) \
+    ((min(y, block_height_halo-1) * block_in_row_stride) + min(x, block_width_halo-1))
+
 
 #if NMS
 static inline int compute_score(int p,
@@ -54,29 +54,33 @@ static inline int compute_score(int p,
 
 static inline void update_halo_pixels(
         __local uchar *smem,
+        const int block_in_row_stride,
+        int block_width_halo, int block_height_halo,
         int block_x, int block_y,
         int* halo_pixels)
 {
-    halo_pixels[0] = smem[IN_OFFSET_Y(block_x,block_y-3)];
-    halo_pixels[1] = smem[IN_OFFSET_Y(block_x+1,block_y-3)];
-    halo_pixels[2] = smem[IN_OFFSET_Y(block_x+2,block_y-2)];
-    halo_pixels[3] = smem[IN_OFFSET_Y(block_x+3,block_y-1)];
-    halo_pixels[4] = smem[IN_OFFSET_Y(block_x+3,block_y)];
-    halo_pixels[5] = smem[IN_OFFSET_Y(block_x+3,block_y+1)];
-    halo_pixels[6] = smem[IN_OFFSET_Y(block_x+2,block_y+2)];
-    halo_pixels[7] = smem[IN_OFFSET_Y(block_x+1,block_y+3)];
-    halo_pixels[8] = smem[IN_OFFSET_Y(block_x,block_y+3)];
-    halo_pixels[9] = smem[IN_OFFSET_Y(block_x-1,block_y+3)];
-    halo_pixels[10] = smem[IN_OFFSET_Y(block_x-2,block_y+2)];
-    halo_pixels[11] = smem[IN_OFFSET_Y(block_x-3,block_y+1)];
-    halo_pixels[12] = smem[IN_OFFSET_Y(block_x-3,block_y)];
-    halo_pixels[13] = smem[IN_OFFSET_Y(block_x-3,block_y-1)];
-    halo_pixels[14] = smem[IN_OFFSET_Y(block_x-2,block_y-2)];
-    halo_pixels[15] = smem[IN_OFFSET_Y(block_x-1,block_y-3)];
+    halo_pixels[0] = smem[BLOCK_IN_INDEX(block_x,block_y-3)];
+    halo_pixels[1] = smem[BLOCK_IN_INDEX(block_x+1,block_y-3)];
+    halo_pixels[2] = smem[BLOCK_IN_INDEX(block_x+2,block_y-2)];
+    halo_pixels[3] = smem[BLOCK_IN_INDEX(block_x+3,block_y-1)];
+    halo_pixels[4] = smem[BLOCK_IN_INDEX(block_x+3,block_y)];
+    halo_pixels[5] = smem[BLOCK_IN_INDEX(block_x+3,block_y+1)];
+    halo_pixels[6] = smem[BLOCK_IN_INDEX(block_x+2,block_y+2)];
+    halo_pixels[7] = smem[BLOCK_IN_INDEX(block_x+1,block_y+3)];
+    halo_pixels[8] = smem[BLOCK_IN_INDEX(block_x,block_y+3)];
+    halo_pixels[9] = smem[BLOCK_IN_INDEX(block_x-1,block_y+3)];
+    halo_pixels[10] = smem[BLOCK_IN_INDEX(block_x-2,block_y+2)];
+    halo_pixels[11] = smem[BLOCK_IN_INDEX(block_x-3,block_y+1)];
+    halo_pixels[12] = smem[BLOCK_IN_INDEX(block_x-3,block_y)];
+    halo_pixels[13] = smem[BLOCK_IN_INDEX(block_x-3,block_y-1)];
+    halo_pixels[14] = smem[BLOCK_IN_INDEX(block_x-2,block_y-2)];
+    halo_pixels[15] = smem[BLOCK_IN_INDEX(block_x-1,block_y-3)];
 }
 
 static inline bool compute_nms(
         __local uchar *smem,
+        const int block_in_row_stride,
+        int block_width_halo, int block_height_halo,
         int block_x, int block_y,
         int pixel_score)
 {
@@ -87,8 +91,9 @@ static inline bool compute_nms(
     int score;
 
     #define GET_SCORE(x, y) \
-        update_halo_pixels(smem, x, y, halo_pixels); \
-        score = compute_score(smem[IN_OFFSET_Y(x,y)], halo_pixels); \
+        update_halo_pixels(smem, block_in_row_stride, block_width_halo, block_height_halo, \
+                           x, y, halo_pixels); \
+        score = compute_score(smem[BLOCK_IN_INDEX(x,y)], halo_pixels); \
         if (pixel_score <= score) \
         { \
             return false; \
@@ -108,13 +113,17 @@ static inline bool compute_nms(
 
 static inline void fast_compute_block(
     __local uchar *smem,
+    const int block_in_row_stride,
+    int block_width, int block_height,
+    int block_width_halo, int block_height_halo,
     volatile __global int* kp_loc,
     __local int* nb_kp,
+    const int num_groups,
     const int group_id,
     const int num_kp_groups,
     int threshold,
-    int4 global_point,
-    int2 block_size)
+    const int block_idx,
+    const int block_idy)
 {
 /**
  * FAST algorithm
@@ -127,32 +136,41 @@ static inline void fast_compute_block(
  * |    |    | 9  | 8 | 7 |   |   |
  *
  **/
-    int num_groups = get_num_groups(0) * get_num_groups(1);
-    int nb_pe = get_local_size(1) * get_local_size(0);
-    int cur_pe = get_local_id(0) * get_local_size(1) + get_local_id(1);
+    const int lsizex = get_local_size(0);
+    const int lsizey = get_local_size(1);
 
-    int startrow = (block_size.y - 2*HALO_SIZE) * cur_pe / nb_pe;
-    int endrow =  (block_size.y - 2*HALO_SIZE) * (cur_pe + 1) / nb_pe;
+    const int lidx = get_local_id(0);
+    const int lidy = get_local_id(1);
+
+    // number of workitems in workgroup
+    const int num_wi = lsizex * lsizey;
+
+    // linearized workitem id in workgroup
+    const int wid = lidx + lidy * lsizex;
+
+    // dispatch rows of block block_height x block_width on workitems
+    const int num_rows_per_wi   = block_height / num_wi;
+    const int num_rows_trailing = block_height % num_wi;
+
+    const int irow_begin = wid * num_rows_per_wi + min(wid, num_rows_trailing) + HALO_SIZE;
+    const int irow_end   = irow_begin + num_rows_per_wi + ((wid < num_rows_trailing) ? 1 : 0);
 
     int halo_points[16];
 
-    for (int roi_y = startrow; roi_y < endrow; roi_y++)
+    for (int irow = irow_begin; irow < irow_end; irow++)
     {
-        const int block_y = roi_y + HALO_SIZE;
-
-        for (int roi_x = 0; roi_x < (block_size.x - 2*HALO_SIZE); roi_x++)
+        for (int icol = HALO_SIZE; icol < block_width_halo - HALO_SIZE; icol++)
         {
-            const int block_x = roi_x + HALO_SIZE;
 
             // Get the pixels of interest
-            int p = smem[IN_OFFSET_Y(block_x,block_y)];
+            int p = smem[BLOCK_IN_INDEX(icol,irow)];
 
             int p_high = p + threshold;
             int p_low = p - threshold;
 
             // Get the north and south points
-            halo_points[0] = smem[IN_OFFSET_Y(block_x,block_y-3)];
-            halo_points[8] = smem[IN_OFFSET_Y(block_x,block_y+3)];
+            halo_points[0] = smem[BLOCK_IN_INDEX(icol,irow-3)];
+            halo_points[8] = smem[BLOCK_IN_INDEX(icol,irow+3)];
 
             // High speed tests
             // Is our pixel of interest (POI) brighter/darker than at least 2 points?
@@ -174,8 +192,8 @@ static inline void fast_compute_block(
             }
 
             // Get the est and west points
-            halo_points[4] = smem[IN_OFFSET_Y(block_x+3,block_y)];
-            halo_points[12] = smem[IN_OFFSET_Y(block_x-3,block_y)];
+            halo_points[4] = smem[BLOCK_IN_INDEX(icol+3,irow)];
+            halo_points[12] = smem[BLOCK_IN_INDEX(icol-3,irow)];
 
             UPDATE_MASK(4, halo_points[4]);
             UPDATE_MASK(12, halo_points[12]);
@@ -189,18 +207,18 @@ static inline void fast_compute_block(
                 continue;
             }
 
-            halo_points[1] = smem[IN_OFFSET_Y(block_x+1,block_y-3)];
-            halo_points[2] = smem[IN_OFFSET_Y(block_x+2,block_y-2)];
-            halo_points[3] = smem[IN_OFFSET_Y(block_x+3,block_y-1)];
-            halo_points[5] = smem[IN_OFFSET_Y(block_x+3,block_y+1)];
-            halo_points[6] = smem[IN_OFFSET_Y(block_x+2,block_y+2)];
-            halo_points[7] = smem[IN_OFFSET_Y(block_x+1,block_y+3)];
-            halo_points[9] = smem[IN_OFFSET_Y(block_x-1,block_y+3)];
-            halo_points[10] = smem[IN_OFFSET_Y(block_x-2,block_y+2)];
-            halo_points[11] = smem[IN_OFFSET_Y(block_x-3,block_y+1)];
-            halo_points[13] = smem[IN_OFFSET_Y(block_x-3,block_y-1)];
-            halo_points[14] = smem[IN_OFFSET_Y(block_x-2,block_y-2)];
-            halo_points[15] = smem[IN_OFFSET_Y(block_x-1,block_y-3)];
+            halo_points[1] = smem[BLOCK_IN_INDEX(icol+1,irow-3)];
+            halo_points[2] = smem[BLOCK_IN_INDEX(icol+2,irow-2)];
+            halo_points[3] = smem[BLOCK_IN_INDEX(icol+3,irow-1)];
+            halo_points[5] = smem[BLOCK_IN_INDEX(icol+3,irow+1)];
+            halo_points[6] = smem[BLOCK_IN_INDEX(icol+2,irow+2)];
+            halo_points[7] = smem[BLOCK_IN_INDEX(icol+1,irow+3)];
+            halo_points[9] = smem[BLOCK_IN_INDEX(icol-1,irow+3)];
+            halo_points[10] = smem[BLOCK_IN_INDEX(icol-2,irow+2)];
+            halo_points[11] = smem[BLOCK_IN_INDEX(icol-3,irow+1)];
+            halo_points[13] = smem[BLOCK_IN_INDEX(icol-3,irow-1)];
+            halo_points[14] = smem[BLOCK_IN_INDEX(icol-2,irow-2)];
+            halo_points[15] = smem[BLOCK_IN_INDEX(icol-1,irow-3)];
 
             UPDATE_MASK(1, halo_points[1]);
             UPDATE_MASK(2, halo_points[2]);
@@ -226,14 +244,14 @@ static inline void fast_compute_block(
                 brighter |= (brighter << 16);
                 darker |= (darker << 16);
 
-                if (CHECK(0) + CHECK(1) + CHECK(2) + CHECK(3) + CHECK(4) +
-                    CHECK(5) + CHECK(6) + CHECK(7) + CHECK(8) + CHECK(9) +
-                    CHECK(10) + CHECK(11) + CHECK(12) + CHECK(13) + CHECK(14) +
-                    CHECK(15))
+                if (CHECK(0) + CHECK(1) + CHECK(2) + CHECK(3) +
+                    CHECK(4) + CHECK(5) + CHECK(6) + CHECK(7) +
+                    CHECK(8) + CHECK(9) + CHECK(10) + CHECK(11) +
+                    CHECK(12) + CHECK(13) + CHECK(14) + CHECK(15))
                 {
 #if NMS
                     int pixel_score = compute_score(p, halo_points);
-                    bool discard_pixel = compute_nms(smem, block_x, block_y, pixel_score);
+                    bool discard_pixel = compute_nms(smem, block_in_row_stride, block_width_halo, block_height_halo, icol, irow, pixel_score);
                     if (discard_pixel)
                     {
                         continue;
@@ -247,183 +265,170 @@ static inline void fast_compute_block(
                     // Add the location of the keypoint
                     // N clusters can write a maximum of num_kp_groups keypoints each.
                     // The M first values of kp_loc are used to store the number of keypoints detected by each of the M clusters.
-                    kp_loc[num_groups + KP_DIMENSION*index + (num_kp_groups*KP_DIMENSION)*group_id] = global_point.x + block_x;
-                    kp_loc[(num_groups+1) + KP_DIMENSION*index + (num_kp_groups*KP_DIMENSION)*group_id] = global_point.y + block_y;
+                    kp_loc[num_groups + KP_DIMENSION*index + (num_kp_groups*KP_DIMENSION)*group_id] = block_idx + icol;
+                    kp_loc[(num_groups+1) + KP_DIMENSION*index + (num_kp_groups*KP_DIMENSION)*group_id] = block_idy + irow;
 #if NMS
                     kp_loc[(num_groups+2) + KP_DIMENSION*index + (num_kp_groups*KP_DIMENSION)*group_id] = pixel_score;
 #endif // NMS
                 }
             }
 
-        } // for (int roi_x = 0; roi_x < (block_size.x - 2*HALO_SIZE); roi_x++)
+        }
 
-    } // for (int roi_y = startrow; roi_y < endrow; roi_y++)
+    }
 
 }
 
-static inline int local_offset(const int iblock, const int num_blocks)
-{
-    // We do not handle the border of the image.
-    return 0;
-}
-
-static inline int remote_offset(const int iblock, const int num_blocks)
-{
-    return (iblock == 0 ? 0 : -HALO_SIZE);
-}
-
-static inline int halo_cutoff(const int iblock, const int num_blocks)
-{
-    return ((iblock > 0 && iblock < (num_blocks - 1)) ? 0 : -HALO_SIZE);
-}
-
-__kernel
-void FAST_findKeypoints(
+__kernel void FAST_findKeypoints(
     __global const uchar * _img, int step, int img_offset,
-    int img_rows, int img_cols,
+    int image_height, int image_width,
     volatile __global int* kp_loc,
     int num_kp_groups, int threshold )
 {
-    __local uchar smem_src_even[IN_WIDTH * IN_HEIGHT];
-    __local uchar smem_src_odd[IN_WIDTH * IN_HEIGHT];
-    __local uchar *smem_src[2] = {smem_src_even, smem_src_odd};
+    __local uchar block_in_local [2][(TILE_HEIGHT + 2*HALO_SIZE) * (TILE_WIDTH + 2*HALO_SIZE)];
+
+    event_t event_read[2]  = {0, 0};
 
     // Number of Keypoints found by a Cluster.
     __local int nb_kp;
     nb_kp = 0;
 
+    const int group_idx = get_group_id(0);
+    const int group_idy = get_group_id(1);
+
     const int num_groups = get_num_groups(0) * get_num_groups(1);
-    const int group_id = get_group_id(0) + (get_group_id(1) * get_num_groups(0));
+    const int group_id = (group_idy * get_num_groups(0)) + group_idx;
 
-    const int num_blocks_x = (int)ceil(((float)img_cols) / GRP_SIZEX);
-    const int num_blocks_y = (int)ceil(((float)img_rows) / GRP_SIZEY);
+    const int num_blocks_x = (int)ceil(((float)image_width)  / TILE_WIDTH);
+    const int num_blocks_y = (int)ceil(((float)image_height) / TILE_HEIGHT);
+    const int num_blocks_total = num_blocks_x * num_blocks_y;
 
-    const int num_blocks_per_group = (num_blocks_x * num_blocks_y) / num_groups;
-    const int num_blocks_trailing = (num_blocks_x * num_blocks_y) % num_groups;
+    const int block_dispatch_step = num_groups;
+    const int iblock_begin        = group_id;
+    const int iblock_end          = num_blocks_total;
 
-    const int iblock_begin = group_id * num_blocks_per_group + min(group_id, num_blocks_trailing);
-    const int iblock_end = iblock_begin + num_blocks_per_group + ((group_id < num_blocks_trailing) ? 1 : 0);
+    /* ===================================================================== */
+    /* PROLOGUE: prefetch first block                                        */
+    /* ===================================================================== */
+    int2 block_to_copy;
+    int4 local_point;
+    int4 global_point;
 
     int iblock_x_next = iblock_begin % num_blocks_x;
     int iblock_y_next = iblock_begin / num_blocks_x;
 
-    event_t event_read[2] = {0, 0};
+    int block_idx_next = iblock_x_next * TILE_WIDTH;
+    int block_idy_next = iblock_y_next * TILE_HEIGHT;
 
-    // Block to copy
-    // Clamp if any last block exceeds the remaining size.
-    // Assumption: There are at least >= 2 blocks in each row and col dimension.
-    const int2 block_output_first =
-        {clamp(GRP_SIZEX, GRP_SIZEX, img_cols - (GRP_SIZEX * iblock_x_next)),
-         clamp(GRP_SIZEY, GRP_SIZEY, img_rows - (GRP_SIZEY * iblock_y_next))};
+    int block_width_next  = min(TILE_WIDTH, (image_width-block_idx_next));
+    int block_height_next = min(TILE_HEIGHT, (image_height-block_idy_next));
 
-    int2 block_size =
-        {block_output_first.x + (2 * HALO_SIZE) + halo_cutoff(iblock_x_next, num_blocks_x),
-         block_output_first.y + (2 * HALO_SIZE) + halo_cutoff(iblock_y_next, num_blocks_y)};
+    int block_width_halo_next  = min((TILE_WIDTH+2*HALO_SIZE), (image_width-block_idx_next));
+    int block_height_halo_next = min((TILE_HEIGHT+2*HALO_SIZE), (image_height-block_idy_next));
 
-    int4 local_point = {0 + local_offset(iblock_x_next, num_blocks_x),
-                        0 + local_offset(iblock_y_next, num_blocks_y),
-                        IN_WIDTH,
-                        IN_HEIGHT};
+    /* prefetch first block */
+    int block_counter = 0;
+    block_to_copy = (int2)(block_width_halo_next, block_height_halo_next);
+    local_point  = (int4)(0, 0, block_width_halo_next, block_height_halo_next);
+    global_point = (int4)(block_idx_next, block_idy_next, image_width, image_height);
 
-    int4 global_point = {(GRP_SIZEX * iblock_x_next) + remote_offset(iblock_x_next, num_blocks_x),
-                         (GRP_SIZEY * iblock_y_next) + remote_offset(iblock_y_next, num_blocks_y),
-                         step,
-                         img_rows};
+    event_read[block_counter & 1] = async_work_group_copy_block_2D2D(
+                    block_in_local[block_counter & 1],     /* __local buffer         */
+                    _img,                                  /* __global image         */
+                    1,                                     /* num_gentype_per_pixel  */
+                    block_to_copy,                         /* block to copy          */
+                    local_point,                           /* local_point            */
+                    global_point,                          /* global_point           */
+                    0);
 
-    // Copy the 2d block from img into smem
-    event_read[iblock_begin & 1] = async_work_group_copy_block_2D2D(
-        (smem_src[iblock_begin & 1]),
-        (_img + img_offset),
-        1,
-        block_size,
-        local_point,
-        global_point,
-        0
-    );
-
-    for (int iblock = iblock_begin; iblock < iblock_end; iblock++)
+    /* ===================================================================== */
+    /* FOR-LOOP: Compute all blocks                                          */
+    /* ===================================================================== */
+    for (int iblock = iblock_begin; iblock < iblock_end; iblock += block_dispatch_step,
+                                                         block_counter++)
     {
-        //========================================================
-        // Current block to be processed
-        //========================================================
-        const int iblock_x = iblock_x_next;
-        const int iblock_y = iblock_y_next;
-        const int iblock_parity = iblock & 1;
+        /* ------------------------------------------------------------ */
+        /* current block to be processed                                */
+        /* ------------------------------------------------------------ */
+        const int iblock_parity        = block_counter & 1;
 
-        //========================================================
-        // Prefetch next block (if any)
-        //========================================================
-        const int iblock_next = iblock + 1;
-        iblock_x_next = iblock_next % num_blocks_x;
-        iblock_y_next = iblock_next / num_blocks_x;
+        const int block_idx            = block_idx_next;
+        const int block_idy            = block_idy_next;
 
-        // clamp if any last block exceeds the remaining size
-        // Assumption: there are at least >= 2 blocks in each row and col dimension
-        const int2 block_output_next =
-            {clamp(GRP_SIZEX, GRP_SIZEX, img_cols - (GRP_SIZEX * iblock_x_next)),
-             clamp(GRP_SIZEY, GRP_SIZEY, img_rows - (GRP_SIZEY * iblock_y_next))};
-        const int2 block_size_next =
-            {(block_output_next.x + (2 * HALO_SIZE)) + halo_cutoff(iblock_x_next, num_blocks_x),
-             (block_output_next.y + (2 * HALO_SIZE)) + halo_cutoff(iblock_y_next, num_blocks_y)};
+        const int block_width          = block_width_next;
+        const int block_height         = block_height_next;
 
-        const int2 local_pos_next  = {0 + local_offset(iblock_x_next, num_blocks_x),
-                                      0 + local_offset(iblock_y_next, num_blocks_y)};
-        const int2 global_pos_next =
-            {(GRP_SIZEX * iblock_x_next) + remote_offset(iblock_x_next, num_blocks_x),
-             (GRP_SIZEY * iblock_y_next) + remote_offset(iblock_y_next, num_blocks_y)};
+        const int block_width_halo     = block_width_halo_next;
+        const int block_height_halo    = block_height_halo_next;
 
-        // Only prefetch if we still have work
+        const int block_in_row_stride  = block_width_halo;
+        const int block_out_row_stride = block_width;
+
+        /* ------------------------------------------------------------ */
+        /* prefetch next block (if any)                                 */
+        /* ------------------------------------------------------------ */
+        const int iblock_next = iblock + block_dispatch_step;
+
         if (iblock_next < iblock_end)
         {
-            const int iblock_next_parity = iblock_next & 1;
+            const int iblock_next_parity = (block_counter+1) & 1;
 
-            int4 local_point_next = {local_pos_next.x, local_pos_next.y,
-                                     local_point.z, local_point.w};
-            int4 global_point_next = {global_pos_next.x, global_pos_next.y,
-                                      global_point.z, global_point.w};
+            iblock_x_next = iblock_next % num_blocks_x;
+            iblock_y_next = iblock_next / num_blocks_x;
+            block_idx_next = iblock_x_next * TILE_WIDTH;
+            block_idy_next = iblock_y_next * TILE_HEIGHT;
+
+            block_width_next  = min(TILE_WIDTH, (image_width-block_idx_next));
+            block_height_next = min(TILE_HEIGHT, (image_height-block_idy_next));
+
+            block_width_halo_next  = min((TILE_WIDTH+2*HALO_SIZE), (image_width-block_idx_next));
+            block_height_halo_next = min((TILE_HEIGHT+2*HALO_SIZE), (image_height-block_idy_next));
+
+            block_to_copy = (int2)(block_width_halo_next, block_height_halo_next);
+            local_point  = (int4)(0, 0, block_width_halo_next, block_height_halo_next);
+            global_point = (int4)(block_idx_next, block_idy_next, image_width, image_height);
 
             event_read[iblock_next_parity] = async_work_group_copy_block_2D2D(
-                (smem_src[iblock_next_parity]),
-                (_img + img_offset),
-                1,
-                block_size_next,
-                local_point_next,
-                global_point_next,
-                0
-            );
+                        block_in_local[iblock_next_parity],    /* __local buffer         */
+                        _img,                                  /* __global image         */
+                        1,                                     /* num_gentype_per_pixel  */
+                        block_to_copy,                         /* block to copy          */
+                        local_point,                           /* local_point            */
+                        global_point,                          /* global_point           */
+                        0);
         }
 
-        //========================================================
-        // Wait for current block
-        //========================================================
+        /* ------------------------------------------------------------ */
+        /* wait for prefetch of current block                           */
+        /* ------------------------------------------------------------ */
         wait_group_events(1, &event_read[iblock_parity]);
 
-        //========================================================
-        // Compute the current block
-        //========================================================
-        fast_compute_block(smem_src[iblock_parity],
-                           kp_loc,
-                           &nb_kp,
-                           group_id,
-                           num_kp_groups,
+        /* ------------------------------------------------------------ */
+        /* now ready to compute the current block                       */
+        /* ------------------------------------------------------------ */
+        fast_compute_block(block_in_local[iblock_parity],
+                           block_in_row_stride,
+                           block_width, block_height,
+                           block_width_halo, block_height_halo,
+                           kp_loc, &nb_kp,
+                           num_groups, group_id, num_kp_groups,
                            threshold,
-                           global_point,
-                           block_size);
+                           block_idx, block_idy);
 
         barrier(CLK_LOCAL_MEM_FENCE);
-
-        // After padding & barrier, update async copy info to the next block,
-        // used by the padding of next iteration
-        block_size = block_size_next;
-        local_point.xy = local_pos_next;
-        global_point.xy = global_pos_next;
-
     }
 
+
+    /* ===================================================================== */
+    /* End of compute, report the number of keypoint found by the cluster    */
+    /* ===================================================================== */
     if ((get_local_id(0) == get_local_id(1) == get_local_id(2) == 0))
     {
         kp_loc[group_id] = nb_kp;
     }
 
+    /* ===================================================================== */
+    /* End of compute, fence all outstanding put                             */
+    /* ===================================================================== */
     async_work_group_copy_fence(CLK_GLOBAL_MEM_FENCE);
 }

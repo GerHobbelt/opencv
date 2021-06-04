@@ -349,7 +349,7 @@ static bool ocl_FAST_kalray( InputArray _img, std::vector<KeyPoint>& keypoints,
 
     // Kernel setup
     ocl::Kernel fastKptKernel("FAST_findKeypoints", used_fast_oclsrc,
-                              format("-D GRP_SIZEX=%d -D GRP_SIZEY=%d -D NMS=%d -D CONTIGUOUS_POINTS=%d",
+                              format("-D TILE_WIDTH=%d -D TILE_HEIGHT=%d -D NMS=%d -D CONTIGUOUS_POINTS=%d",
                               grp_sizex, grp_sizey, nonmax_suppression, contiguous));
     if (fastKptKernel.empty())
     {
