@@ -84,29 +84,25 @@ static inline bool compute_nms(
     // Naming: x-offset,y-offset with the offset being one of:
     // m (minus), e (equal), p (plus)
     int halo_pixels[16];
-    int mm, em, pm, me, pe, mp, ep, pp;
+    int score;
 
-    #define GET_SCORE(x, y, score) \
+    #define GET_SCORE(x, y) \
         update_halo_pixels(smem, x, y, halo_pixels); \
-        score = compute_score(smem[IN_OFFSET_Y(x,y)], halo_pixels)
+        score = compute_score(smem[IN_OFFSET_Y(x,y)], halo_pixels); \
+        if (pixel_score <= score) \
+        { \
+            return false; \
+        }
 
-    GET_SCORE(block_x-1, block_y-1, mm);
-    GET_SCORE(block_x, block_y-1, em);
-    GET_SCORE(block_x+1, block_y-1, pm);
-    GET_SCORE(block_x-1, block_y, me);
-    GET_SCORE(block_x+1, block_y, pe);
-    GET_SCORE(block_x-1, block_y+1, mp);
-    GET_SCORE(block_x, block_y+1, ep);
-    GET_SCORE(block_x+1, block_y+1, pp);
-
-    return (((pixel_score > mm) +
-             (pixel_score > em) +
-             (pixel_score > pm) +
-             (pixel_score > me) +
-             (pixel_score > pe) +
-             (pixel_score > mp) +
-             (pixel_score > ep) +
-             (pixel_score > pp)) != 8);
+    GET_SCORE(block_x-1, block_y-1);
+    GET_SCORE(block_x, block_y-1);
+    GET_SCORE(block_x+1, block_y-1);
+    GET_SCORE(block_x-1, block_y);
+    GET_SCORE(block_x+1, block_y);
+    GET_SCORE(block_x-1, block_y+1);
+    GET_SCORE(block_x, block_y+1);
+    GET_SCORE(block_x+1, block_y+1);
+    return true;
 }
 #endif // NMS
 
