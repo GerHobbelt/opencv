@@ -6,6 +6,87 @@
 #define BLOCK_IN_INDEX(x, y) \
     ((min(y, block_height_halo-1) * block_in_row_stride) + min(x, block_width_halo-1))
 
+/* ------------------------------------------------------------ */
+/* Functions used by the work-stealing system                   */
+/* ------------------------------------------------------------ */
+static inline void cl_push(
+    int coord,
+    __local uint *tail,
+    __local int *queue)
+{
+    uint idx = *tail;
+    queue[idx] = coord;
+    idx++;
+    *tail = idx;
+}
+
+static inline bool cl_pop(
+    const int wid,
+    __local int (*queue)[TILE_HEIGHT],
+    __local uint *head,
+    __local uint *tail,
+    int *coord)
+{
+    uint local_tail = tail[wid];
+    uint local_head = head[wid];
+    local_tail--;
+    if(local_tail <= local_head)
+    {
+        return false;
+    }
+    *coord = queue[wid][local_tail];
+    tail[wid] = local_tail;
+    return true;
+}
+
+static inline bool cl_steal(
+    const int wid,
+    __local int (*queue)[TILE_HEIGHT],
+    __local uint *head,
+    __local uint *tail,
+    int *coord)
+{
+    uint local_tail = tail[wid];
+    uint local_head = head[wid];
+    uint tmp_head = local_head + 1;
+    if(local_tail <= local_head)
+    {
+        return false;
+    }
+    *coord = queue[wid][local_head];
+    if (local_head == atomic_cmpxchg(&head[wid], local_head, tmp_head))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+static inline bool cl_get(
+    const int wid,
+    __local int (*queue)[TILE_HEIGHT],
+    __local uint *head,
+    __local uint *tail,
+    int *coord)
+{
+    bool success = cl_pop(wid, queue, head, tail, coord);
+    if (success)
+    {
+        return true;
+    }
+
+    int steal_wid;
+    for (int i = 0; i < (NB_PE - 1); i++)
+    {
+        steal_wid = (wid + i) % NB_PE;
+        success = cl_steal(steal_wid, queue, head, tail, coord);
+        if (success)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 #if NMS
 static inline int compute_score(int p,
@@ -111,19 +192,41 @@ static inline bool compute_nms(
 }
 #endif // NMS
 
+/**
+* Adaptation of https://lifecs.likai.org/2010/06/finding-n-consecutive-bits-of-ones-in.html
+* for our application on Kalray MPPA
+**/
+static inline bool consecutive_mask(uint2 x)
+{
+    // Previous power of 2, smaller than CONTIGUOUS_POINTS
+    // which can only be 9 or 12.
+    uint POW2 = 8;
+
+    #pragma unroll
+    for (uint i = 1; i < POW2; i <<= 1)
+    {
+        x &= (x >> i);
+    }
+
+    x &= (x >> (CONTIGUOUS_POINTS - POW2));
+
+    return (x.x || x.y) != 0;
+}
+
 static inline void fast_compute_block(
     __local uchar *smem,
     const int block_in_row_stride,
-    int block_width, int block_height,
     int block_width_halo, int block_height_halo,
     volatile __global int* kp_loc,
-    __local int* nb_kp,
+    __local int *nb_kp,
     const int num_groups,
     const int group_id,
     const int num_kp_groups,
     int threshold,
     const int block_idx,
-    const int block_idy)
+    const int block_idy,
+    const int wid, __local int (*queue)[TILE_HEIGHT],
+    __local uint *head, __local uint *tail)
 {
 /**
  * FAST algorithm
@@ -136,31 +239,21 @@ static inline void fast_compute_block(
  * |    |    | 9  | 8 | 7 |   |   |
  *
  **/
-    const int lsizex = get_local_size(0);
-    const int lsizey = get_local_size(1);
-
-    const int lidx = get_local_id(0);
-    const int lidy = get_local_id(1);
-
-    // number of workitems in workgroup
-    const int num_wi = lsizex * lsizey;
-
-    // linearized workitem id in workgroup
-    const int wid = lidx + lidy * lsizex;
-
-    // dispatch rows of block block_height x block_width on workitems
-    const int num_rows_per_wi   = block_height / num_wi;
-    const int num_rows_trailing = block_height % num_wi;
-
-    const int irow_begin = wid * num_rows_per_wi + min(wid, num_rows_trailing) + HALO_SIZE;
-    const int irow_end   = irow_begin + num_rows_per_wi + ((wid < num_rows_trailing) ? 1 : 0);
 
     int halo_points[16];
 
-    for (int irow = irow_begin; irow < irow_end; irow++)
-    {
-        for (int icol = HALO_SIZE; icol < block_width_halo - HALO_SIZE; icol++)
+    bool success;
+    int irow;
+    while (true) {
+
+        // Pop the the pixel to process.
+        success = cl_get(wid, queue, head, tail, &irow);
+        if (!success)
         {
+            return;
+        }
+
+        for (int icol = HALO_SIZE; icol < (block_width_halo - HALO_SIZE); icol++) {
 
             // Get the pixels of interest
             int p = smem[BLOCK_IN_INDEX(icol,irow)];
@@ -174,8 +267,8 @@ static inline void fast_compute_block(
 
             // High speed tests
             // Is our pixel of interest (POI) brighter/darker than at least 2 points?
-            int brighter = (0);
-            int darker = (0);
+            uint brighter = (0);
+            uint darker = (0);
 
             #define UPDATE_MASK(id, pixel) \
                 brighter |= ((pixel > p_high) << id); \
@@ -233,22 +326,13 @@ static inline void fast_compute_block(
             UPDATE_MASK(14, halo_points[14]);
             UPDATE_MASK(15, halo_points[15]);
 
-            int mask = (CONTIGUOUS_POINTS == 9) ? 0x1FF : 0xFFF;
-            #define CHECK(shift) \
-                (((brighter & (mask << shift)) == (mask << shift)) | \
-                ((darker & (mask << shift)) == (mask << shift)))
-
             if ((popcount(brighter) >= CONTIGUOUS_POINTS) |
                 (popcount(darker) >= CONTIGUOUS_POINTS))
             {
                 brighter |= (brighter << 16);
                 darker |= (darker << 16);
 
-                if (CHECK(0) + CHECK(1) + CHECK(2) + CHECK(3) +
-                    CHECK(4) + CHECK(5) + CHECK(6) + CHECK(7) +
-                    CHECK(8) + CHECK(9) + CHECK(10) + CHECK(11) +
-                    CHECK(12) + CHECK(13) + CHECK(14) + CHECK(15))
-                {
+                if (consecutive_mask((uint2)(brighter, darker))) {
 #if NMS
                     int pixel_score = compute_score(p, halo_points);
                     bool discard_pixel = compute_nms(smem, block_in_row_stride, block_width_halo, block_height_halo, icol, irow, pixel_score);
@@ -272,11 +356,8 @@ static inline void fast_compute_block(
 #endif // NMS
                 }
             }
-
         }
-
     }
-
 }
 
 __kernel void FAST_findKeypoints(
@@ -296,6 +377,18 @@ __kernel void FAST_findKeypoints(
     const int group_idx = get_group_id(0);
     const int group_idy = get_group_id(1);
 
+    const int lsizex = get_local_size(0);
+    const int lsizey = get_local_size(1);
+
+    const int lidx = get_local_id(0);
+    const int lidy = get_local_id(1);
+
+    // number of workitems in workgroup
+    const int num_wi = lsizex * lsizey;
+
+    // linearized workitem id in workgroup
+    const int wid = lidx + lidy * lsizex;
+
     const int num_groups = get_num_groups(0) * get_num_groups(1);
     const int group_id = (group_idy * get_num_groups(0)) + group_idx;
 
@@ -306,6 +399,13 @@ __kernel void FAST_findKeypoints(
     const int block_dispatch_step = num_groups;
     const int iblock_begin        = group_id;
     const int iblock_end          = num_blocks_total;
+
+    /* ------------------------------------------------------------ */
+    /* define the pool of pixels for each PE                        */
+    /* ------------------------------------------------------------ */
+    __local int queue[NB_PE][TILE_HEIGHT];
+    __local uint head[NB_PE];
+    __local uint tail[NB_PE];
 
     /* ===================================================================== */
     /* PROLOGUE: prefetch first block                                        */
@@ -404,16 +504,36 @@ __kernel void FAST_findKeypoints(
         wait_group_events(1, &event_read[iblock_parity]);
 
         /* ------------------------------------------------------------ */
+        /* set the pool of pixels up                                     */
+        /* ------------------------------------------------------------ */
+
+        // dispatch rows of block block_height x block_width on workitems
+        const int num_rows_per_wi   = block_height / num_wi;
+        const int num_rows_trailing = block_height % num_wi;
+
+        const int irow_begin = wid * num_rows_per_wi + min(wid, num_rows_trailing) + HALO_SIZE;
+        const int irow_end   = irow_begin + num_rows_per_wi + ((wid < num_rows_trailing) ? 1 : 0);
+
+        head[wid] = 0;
+        tail[wid] = 0;
+
+        for (int irow = irow_begin; irow < irow_end; ++irow)
+        {
+                cl_push(irow, &tail[wid], queue[wid]);
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+        /* ------------------------------------------------------------ */
         /* now ready to compute the current block                       */
         /* ------------------------------------------------------------ */
         fast_compute_block(block_in_local[iblock_parity],
                            block_in_row_stride,
-                           block_width, block_height,
                            block_width_halo, block_height_halo,
                            kp_loc, &nb_kp,
                            num_groups, group_id, num_kp_groups,
                            threshold,
-                           block_idx, block_idy);
+                           block_idx, block_idy,
+                           wid, queue, head, tail);
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }

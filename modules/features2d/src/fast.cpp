@@ -328,29 +328,36 @@ static bool ocl_FAST_kalray( InputArray _img, std::vector<KeyPoint>& keypoints,
     // Maximal __local mem size, with 8KB less for margin (alignment, metadata)
     const size_t max_local_mem_size = dev.maxLocalMemSize() - 8*1024;
 
-    const int ideal_num_blocks_width = img.cols / 8;
-    const int ideal_num_blocks_height = img.rows / 8;
+    const int ideal_num_blocks_width = img.cols / 4;
+    const int ideal_num_blocks_height = img.rows / 4;
 
-    // Let's start with the ideal blocksize
+    // Let's start with the ideal blocksize. The size should be even.
     int max_block_size = std::min(ideal_num_blocks_width, ideal_num_blocks_height);
+    if (max_block_size % 2 != 0)
+    {
+        max_block_size++;
+    }
 
     // If blocksize too big, reduce it gradually
+    // We are doing double-buffering so we need to be able to store 2 buffers
     while ((max_block_size * max_block_size * 2 * img.elemSize()) > max_local_mem_size)
     {
         max_block_size -= 16;
     }
 
-    int grp_sizex = max_block_size;
-    int grp_sizey = max_block_size;
+    // Make sure we can feed at least a line to process per PE
+    int grp_sizex = max(max_block_size, 80);
+    int grp_sizey = max(max_block_size, 80);
 
     int max_compute_units = dev.maxComputeUnits();
-    size_t localsize[] = { dev.maxWorkGroupSize(), 1 };
+    int max_work_group = dev.maxWorkGroupSize();
+    size_t localsize[] = { max_work_group, 1 };
     size_t globalsize[] = { localsize[0] * max_compute_units, localsize[1] };
 
     // Kernel setup
     ocl::Kernel fastKptKernel("FAST_findKeypoints", used_fast_oclsrc,
-                              format("-D TILE_WIDTH=%d -D TILE_HEIGHT=%d -D NMS=%d -D CONTIGUOUS_POINTS=%d",
-                              grp_sizex, grp_sizey, nonmax_suppression, contiguous));
+                              format("-D TILE_WIDTH=%d -D TILE_HEIGHT=%d -D NMS=%d -D CONTIGUOUS_POINTS=%d -D NB_PE=%d",
+                              grp_sizex, grp_sizey, nonmax_suppression, contiguous, max_work_group));
     if (fastKptKernel.empty())
     {
         return false;
