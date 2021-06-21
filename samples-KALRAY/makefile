@@ -182,7 +182,7 @@ opencl_custom_kernel:
 	./build/$@ 2>&1 | tee $@.log
 	OUTPUT=$@ make parser-with-timing
 
-opencl_fast_kernel:
+opencl_fast_kernel: opencv_features2d
 	cd build && make $@
 	$(RUN_ENV) \
 	./build/$@ 2>&1 | tee $@.log
