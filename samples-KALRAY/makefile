@@ -161,6 +161,9 @@ video_demo: build/$@ opencv_imgproc opencv_features2d output.mp4
 video_demo_canny:
 	VIDEO_DEMO_ALGORITHM=CANNY make video_demo
 
+video_demo_none:
+	VIDEO_DEMO_ALGORITHM=NONE make video_demo
+
 video_demo_gaussian:
 	OPENCV_MPPA_MICROKERNEL_LIB=../platforms/kvx/build/libopencv_kalray_ukernels.a VIDEO_DEMO_ALGORITHM=GAUSS make video_demo
 

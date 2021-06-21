@@ -54,7 +54,10 @@ using namespace cv;
 //  - MatType = UMat to run on MPPA
 using MatType = UMat;
 
-#define NB_FRAMES 50
+#define NB_REPEATED_FRAMES_CAPTURE 50
+#define NB_FRAMES_IN_FIFO 100
+#define DISPLAY_RATE 100
+#define FPS_WINDOW 10
 
 void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
         VideoCapture &capture)
@@ -65,7 +68,7 @@ void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
     bool empty = false;
     do {
         frames_mtx.lock();
-        if (frames.size() > 100) {
+        if (frames.size() > NB_FRAMES_IN_FIFO) {
             frames_mtx.unlock();
             // Avoid interfering too much with the other threads' performance
             usleep(100);
@@ -84,11 +87,16 @@ void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
 
         // put several frames to feed processing in order to avoid the capture
         // to be the bottleneck
-        for (int i = 0; i < NB_FRAMES; i++) {
-            channels[0].copyTo(channel);
-            frames_mtx.lock();
-            frames.push_back(std::move(channel));
-            frames_mtx.unlock();
+        for (int i = 0; i < NB_REPEATED_FRAMES_CAPTURE; i++) {
+            if (frames.size() < NB_FRAMES_IN_FIFO) {
+                channels[0].copyTo(channel);
+                frames_mtx.lock();
+                frames.push_back(std::move(channel));
+                frames_mtx.unlock();
+            }
+            else {
+                usleep(100);
+            }
         }
     } while (true);
 }
@@ -106,6 +114,7 @@ enum class algorithm {
     CANNY,
     FAST,
     GAUSS,
+    NONE
 };
 
 struct fast_data {
@@ -113,7 +122,6 @@ struct fast_data {
 };
 
 struct frame_data {
-    MatType in;
     MatType out;
     std::chrono::time_point<std::chrono::steady_clock> start;
     std::chrono::time_point<std::chrono::steady_clock> end;
@@ -124,54 +132,47 @@ struct frame_data {
 
 void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
 {
-    frame_data cur_frame;
-    std::list<std::chrono::time_point<std::chrono::steady_clock>> frame_start_times;
-
-    int x = 0;
+    std::list<frame_data> local_frames;
+    frame_data extracted_frame;
+    int frame_id = 0;
+    int elapsed_time;
+    Mat frame_to_display;
 
     while (true) {
+
+        // Move the data frames in the thread then release the mutex.
         frames_mtx.lock();
-        if (frames.size() == 0) {
+        if (frames.size() < FPS_WINDOW) {
             frames_mtx.unlock();
             // Avoid interfering too much with the other threads' performance
-            usleep(100);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
-
-        // Keep the timing of the 500 last frames. Only keep the last frame
-        // since we may be displaying them slower than the rate at which we
-        // get them.
-        do {
-            cur_frame = std::move(frames.front());
-            frames.pop_front();
-            frame_start_times.push_back(cur_frame.start);
-            if (frame_start_times.size() > 500) {
-                frame_start_times.pop_front();
-            }
-        } while (frames.size() != 0);
+        local_frames = std::move(frames);
         frames_mtx.unlock();
 
-        int nb_us = std::chrono::duration_cast<std::chrono::microseconds>(cur_frame.end - cur_frame.start).count();
-        int total_nb_us = std::chrono::duration_cast<std::chrono::microseconds>(cur_frame.end - frame_start_times.front()).count() / frame_start_times.size();
+        elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(
+            (local_frames.back().end - local_frames.front().start)).count() /
+            local_frames.size();
 
-        x++;
+        frame_id++;
         // reduce host processing to be fair to the CPU implementation
-        if ((x % 10) == 0) {
-            cv::rectangle(cur_frame.out, {0, 0}, {400, 150}, 0, cv::FILLED);
-            cv::putText(cur_frame.out,
-                        "Average time: " + std::to_string(total_nb_us / 1000.0) +
+        if ((frame_id % DISPLAY_RATE) == 0) {
+            extracted_frame = std::move(local_frames.front());
+            cv::rectangle(extracted_frame.out, {0, 0}, {350, 150}, 0, cv::FILLED);
+            cv::putText(extracted_frame.out,
+                        "Average time: " + std::to_string(elapsed_time / 1000.0) +
                         "ms",
                         cv::Point(15, 50), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0,
                         cv::Scalar(255, 255, 255));
-            cv::putText(cur_frame.out,
-                        "FPS: " + std::to_string(1000000.0 / total_nb_us),
+            cv::putText(extracted_frame.out,
+                        "Estimated FPS: " + std::to_string(1000000.0 / elapsed_time),
                         cv::Point(15, 100), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0,
                         cv::Scalar(255, 255, 255));
 
-            Mat frame_to_display;
-            cur_frame.out.copyTo(frame_to_display);
-            if (cur_frame.algo == algorithm::FAST) {
-                cv::drawKeypoints(frame_to_display, cur_frame.fast.keypoints,
+            extracted_frame.out.copyTo(frame_to_display);
+            if (extracted_frame.algo == algorithm::FAST) {
+                cv::drawKeypoints(frame_to_display, extracted_frame.fast.keypoints,
                                   frame_to_display);
             }
             imshow("Output", frame_to_display);
@@ -194,6 +195,8 @@ void parse_arg(int argc, const char *argv[], std::string &video, algorithm &algo
             algo = algorithm::FAST;
         } else if (input == "GAUSS") {
             algo = algorithm::GAUSS;
+        } else if (input == "NONE") {
+            algo = algorithm::NONE;
         } else {
             throw std::runtime_error("Invalid algorithm: " + input);
         }
@@ -241,8 +244,6 @@ int main(int argc, const char *argv[]) {
 
     while (true) {
 
-        start_processing = std::chrono::steady_clock::now();
-
         // Get a frame from the input ring.
         bool empty = true;
         while (empty) {
@@ -259,23 +260,33 @@ int main(int argc, const char *argv[]) {
         }
 
         if (img_in.empty()) {
-            break;
+          break;
         }
+
+        start_processing = std::chrono::steady_clock::now();
 
         // Process the frame using Kalray optimized OpenCL kernels.
         switch (algo) {
+
         case algorithm::CANNY:
-            Canny(img_in, img_out, 50, 100);
-            break;
+          Canny(img_in, img_out, 50, 100);
+          break;
+
         case algorithm::FAST:
-            detector->detect(img_in, keypoints);
-            img_out = img_in;
-            break;
+          detector->detect(img_in, keypoints);
+          img_out = img_in;
+          break;
+
         case algorithm::GAUSS:
-            GaussianBlur(img_in, img_out, Size(3, 3), 1.5, 1.5, BORDER_REPLICATE);
-            break;
+          GaussianBlur(img_in, img_out, Size(3, 3), 1.5, 1.5, BORDER_REPLICATE);
+          break;
+
+        case algorithm::NONE:
+          img_out = img_in;
+          break;
+
         default:
-            throw std::runtime_error("Invalid");
+          throw std::runtime_error("Invalid");
         }
 
         stop_processing = std::chrono::steady_clock::now();
@@ -286,13 +297,17 @@ int main(int argc, const char *argv[]) {
         };
 
         data_frame = {
-            std::move(img_in), std::move(img_out),
+            std::move(img_out),
             start_processing, stop_processing,
             algo, fast_frame
         };
 
         out_frames_mtx.lock();
         out_frames.push_back(std::move(data_frame));
+        // Limit the number of frame in the FIFO
+        if (out_frames.size() > NB_FRAMES_IN_FIFO) {
+            out_frames.pop_front();
+        }
         out_frames_mtx.unlock();
     }
     return 0;
