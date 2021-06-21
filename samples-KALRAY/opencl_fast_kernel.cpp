@@ -69,6 +69,7 @@ int main(int argc, char** argv)
         std::vector<cv::KeyPoint> keypoints;
         detector->detect(src, keypoints);
 
+        printf("KEYPOINTS SIZE: %lu\n", keypoints.size());
         if (keypoints.size() > 0)
         {
             cv::drawKeypoints(src, keypoints, result);
