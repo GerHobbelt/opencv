@@ -837,7 +837,48 @@ public:
 };
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
+// On OpenCL 1.2 targets, return the root of the provided device so that
+// users could provide subdevices. This is used only in order to check whether
+// a subdevice is part of a context, so on OpenCL 2.0+ targets, it returns
+// the provided device as subdevices are already parts of the context.
+static cl_device_id get_root_device(cl_device_id deviceID)
+{
+    cl_device_id prev_parent = deviceID;
+#ifdef CL_DEVICE_PARENT_DEVICE // Only available in 1.2+
+    cl_platform_id platform = nullptr;
+    CV_OCL_DBG_CHECK(clGetDeviceInfo(deviceID, CL_DEVICE_PLATFORM,
+                                     sizeof(platform), &platform, nullptr));
+    std::string version;
 
+    // get platform version string length
+    size_t sz = 0;
+    CV_OCL_CHECK(clGetPlatformInfo(platform, CL_PLATFORM_VERSION, 0, 0, &sz));
+    version.resize(sz);
+
+    CV_OCL_CHECK(clGetPlatformInfo(platform, CL_PLATFORM_VERSION,
+                                   version.size(), &version[0], nullptr));
+    if (std::string(version).rfind("OpenCL 1.2", 0) != 0) {
+        // We are not on an OpenCL 1.2 platform. Either CL_DEVICE_PARENT_DEVICE
+        // is not there (1.0/1.1) or subdevices are stored in the context (2.0+)
+        return prev_parent;
+    }
+    // If we get here, we are on an OpenCL 1.2 platform. We find the root device
+    // by iterating over the parents of the current one until we reach a device
+    // that has no parent.
+    cl_device_id parent = deviceID;
+    while (parent != nullptr) {
+        prev_parent = parent;
+        CV_OCL_DBG_CHECK(clGetDeviceInfo(prev_parent, CL_DEVICE_PARENT_DEVICE,
+                         sizeof(parent), &parent, nullptr));
+    }
+#endif
+    return prev_parent;
+}
+
+// Add a subdevice to an already existing context object. This is done to
+// handle subdevices in OpenCL 1.2.
+// Returns the index of the subdevice in the context.
+static size_t addSubdeviceToContext(Context &c, cl_device_id deviceID);
 
 struct OpenCLExecutionContext::Impl
 {
@@ -851,10 +892,12 @@ protected:
 
     void _init_device(cl_device_id deviceID)
     {
+        cl_device_id parent = get_root_device(deviceID);
         CV_Assert(deviceID);
         int ndevices = (int)context_.ndevices();
         CV_Assert(ndevices > 0);
         bool found = false;
+        bool foundParent = false;
         for (int i = 0; i < ndevices; i++)
         {
             ocl::Device d = context_.device(i);
@@ -865,6 +908,15 @@ protected:
                 found = true;
                 break;
             }
+            if (dhandle == parent)
+            {
+                foundParent = true;
+            }
+        }
+
+        if (!found && foundParent) {
+            device_ = addSubdeviceToContext(context_, deviceID);
+            found = true;
         }
         CV_Assert(found && "OpenCL device can't work with passed OpenCL context");
     }
@@ -2409,6 +2461,14 @@ protected:
         }
     }
 public:
+    size_t addSubdevice(cl_device_id deviceID)
+    {
+        CV_Assert(deviceID);
+        devices.emplace_back(Device::fromHandle(deviceID));
+        // Return the position of the device. /!\ Not thread safe
+        return devices.size() - 1;
+    }
+
     static Impl* findContext(const std::string& configuration)
     {
         CV_TRACE_FUNCTION();
@@ -2821,6 +2881,10 @@ public:
     friend class Program;
 };
 
+static size_t addSubdeviceToContext(Context &c, cl_device_id deviceID)
+{
+    return c.getImpl()->addSubdevice(deviceID);
+}
 
 Context::Context()
 {
