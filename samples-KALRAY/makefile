@@ -77,6 +77,9 @@ opencv_imgproc:
 opencv_features2d:
 	cd ../build/modules/features2d && make $@
 
+MPPA_build_lib: clean-pocl
+	cd ../build && make $@
+
 # parser
 parser-with-timing:
 	emacs --batch --load ${OPENCV_SRC_DIR}/platforms/kvx/format_report.el --eval "(my-format-perf-report \"$(OUTPUT).log\")" | tee $(OUTPUT)_parsed.log
@@ -154,21 +157,21 @@ output.mp4:
 #default algorithm
 VIDEO_DEMO_ALGORITHM ?=CANNY
 
-video_demo: build/$@ opencv_imgproc opencv_features2d output.mp4
+video_demo: build/$@ output.mp4
 	cd build && make video_demo
 	$(RUN_ENV) \
 	./build/$@ $(VIDEO) $(VIDEO_DEMO_ALGORITHM)
 
-video_demo_canny:
+video_demo_canny: opencv_imgproc
 	VIDEO_DEMO_ALGORITHM=CANNY make video_demo
 
 video_demo_none:
 	VIDEO_DEMO_ALGORITHM=NONE make video_demo
 
-video_demo_gaussian:
+video_demo_gaussian: MPPA_build_lib
 	OPENCV_MPPA_MICROKERNEL_LIB=../platforms/kvx/build/libopencv_kalray_ukernels.a VIDEO_DEMO_ALGORITHM=GAUSS make video_demo
 
-video_demo_fast:
+video_demo_fast: opencv_features2d
 	VIDEO_DEMO_ALGORITHM=FAST make video_demo
 
 transparent_api: opencv_imgproc build/$@
