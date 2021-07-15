@@ -388,6 +388,10 @@ if("@Eigen3_FOUND@")
   find_dependency(Eigen3 CONFIG)
 endif()
 
+if("@OPENEXR_FOUND@")
+  find_dependency(OpenEXR CONFIG)
+endif()
+
 if("@WITH_FFMPEG@")
   find_dependency(ffmpeg CONFIG)
 endif()
