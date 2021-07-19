@@ -54,10 +54,24 @@ using namespace cv;
 //  - MatType = UMat to run on MPPA
 using MatType = UMat;
 
-#define NB_REPEATED_FRAMES_CAPTURE 50
-#define NB_FRAMES_IN_FIFO 100
-#define DISPLAY_RATE 100
-#define FPS_WINDOW 10
+// nb frames to process
+#define NB_FRAMES 6000
+
+// behavour
+#define NB_REPEATED_FRAMES_CAPTURE 50 // repeate n times each frame read from disk
+#define MAX_NB_FRAMES_IN_FIFO 200 // size of frames list between threads
+#define FPS_WINDOW 50  // size of frames use to compute FPS (Frame Per Second)
+#define DISPLAY_RATE 1 // frame display ratio = FPS_WINDOW * DISPLAY_RATE
+
+// for debug purpose
+// #define DEBUG_THREAD
+
+#ifdef DEBUG_THREAD
+#define LOG_THREAD(name)                                                       \
+  std::cout << name << "_thread:" << nb_frames << std::endl;
+#else
+#define LOG_THREAD(name)
+#endif
 
 void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
         VideoCapture &capture)
@@ -66,9 +80,10 @@ void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
     std::vector<Mat> channels;
     MatType channel;
     bool empty = false;
+    int nb_frames = 0;
     do {
         frames_mtx.lock();
-        if (frames.size() > NB_FRAMES_IN_FIFO) {
+        if (frames.size() > MAX_NB_FRAMES_IN_FIFO) {
             frames_mtx.unlock();
             // Avoid interfering too much with the other threads' performance
             usleep(100);
@@ -88,17 +103,19 @@ void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
         // put several frames to feed processing in order to avoid the capture
         // to be the bottleneck
         for (int i = 0; i < NB_REPEATED_FRAMES_CAPTURE; i++) {
-            if (frames.size() < NB_FRAMES_IN_FIFO) {
+            if (frames.size() < MAX_NB_FRAMES_IN_FIFO) {
                 channels[0].copyTo(channel);
                 frames_mtx.lock();
                 frames.push_back(std::move(channel));
                 frames_mtx.unlock();
+                nb_frames++;
+                LOG_THREAD("capture")
             }
             else {
                 usleep(100);
             }
         }
-    } while (true);
+    } while (nb_frames < NB_FRAMES);
 }
 
 VideoCapture create_capture(std::string video)
@@ -129,16 +146,18 @@ struct frame_data {
     struct fast_data fast;
 };
 
+bool ENABLE_DISPLAY_THREAD=true;
 
 void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
 {
     std::list<frame_data> local_frames;
     frame_data extracted_frame;
-    int frame_id = 0;
+    int frames_id = 0;
     int elapsed_time;
     Mat frame_to_display;
+    int nb_frames = 0;
 
-    while (true) {
+    while ( ENABLE_DISPLAY_THREAD ) {
 
         // Move the data frames in the thread then release the mutex.
         frames_mtx.lock();
@@ -146,18 +165,22 @@ void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
             frames_mtx.unlock();
             // Avoid interfering too much with the other threads' performance
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // std::cout << "." <<  nb_frames + frames.size() << std::endl;
             continue;
         }
+        nb_frames += frames.size();
         local_frames = std::move(frames);
         frames_mtx.unlock();
+
+        LOG_THREAD("*display*")
 
         elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(
             (local_frames.back().end - local_frames.front().start)).count() /
             local_frames.size();
 
-        frame_id++;
+        frames_id++;
         // reduce host processing to be fair to the CPU implementation
-        if ((frame_id % DISPLAY_RATE) == 0) {
+        if (( frames_id % DISPLAY_RATE) == 0) {
             extracted_frame = std::move(local_frames.front());
             cv::rectangle(extracted_frame.out, {0, 0}, {350, 150}, 0, cv::FILLED);
             cv::putText(extracted_frame.out,
@@ -177,7 +200,14 @@ void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
             }
             imshow("Output", frame_to_display);
             waitKey(1);
+
+            // display fps in stdout
+            std::cout << nb_frames - local_frames.size() << "-"
+                      << nb_frames
+                      << ": " <<1000000.0 / elapsed_time << std::endl;
+
         }
+
     }
 }
 
@@ -210,6 +240,7 @@ int main(int argc, const char *argv[]) {
     std::string video;
     algorithm algo;
     parse_arg(argc, argv, video, algo);
+    int nb_frames = 0;
 
     // Get a buffer pool.
     if (cv::ocl::useOpenCL()) {
@@ -220,7 +251,7 @@ int main(int argc, const char *argv[]) {
     std::list<MatType> in_frames;
     std::mutex in_frames_mtx;
     VideoCapture capture = create_capture(video);
-    std::thread th([&in_frames_mtx, &in_frames, &capture](){
+    std::thread capture_th([&in_frames_mtx, &in_frames, &capture](){
             capture_thread(in_frames_mtx, in_frames, capture);
             });
 
@@ -242,7 +273,9 @@ int main(int argc, const char *argv[]) {
     std::vector<cv::KeyPoint> keypoints;
     fast_data fast_frame;
 
-    while (true) {
+    while (nb_frames < NB_FRAMES) {
+
+        LOG_THREAD("process")
 
         // Get a frame from the input ring.
         bool empty = true;
@@ -305,10 +338,21 @@ int main(int argc, const char *argv[]) {
         out_frames_mtx.lock();
         out_frames.push_back(std::move(data_frame));
         // Limit the number of frame in the FIFO
-        if (out_frames.size() > NB_FRAMES_IN_FIFO) {
+        if (out_frames.size() > MAX_NB_FRAMES_IN_FIFO) {
             out_frames.pop_front();
         }
         out_frames_mtx.unlock();
+
+        //
+        nb_frames++;
     }
+
+    // finished properly
+    capture_th.join();
+    std::cout << "capture thread has finished" << std::endl;
+    ENABLE_DISPLAY_THREAD = false;
+    display_th.join();
+    std::cout << "display thread has finished" << std::endl;
+
     return 0;
 }
