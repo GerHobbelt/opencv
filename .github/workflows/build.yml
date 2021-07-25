@@ -221,7 +221,7 @@ jobs:
     - name: nuget pack for non-tags
       working-directory: opencv
       if: "!startswith(github.ref, 'refs/tags/')"
-      run: nuget pack package\nuget\opencv.nuspec -version 1.0.0-dev -outputfilenameswithoutversion -outputdirectory dist
+      run: nuget pack package\nuget\opencv.nuspec -version 1.0.0-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=${GITHUB_REF##*/} -Properties commit=${GITHUB_SHA}
 
     - name: upload package artifact
       uses: actions/upload-artifact@v2
@@ -238,5 +238,5 @@ jobs:
       if: startswith(github.ref, 'refs/tags/')
       working-directory: opencv
       run: |
-        nuget pack package\nuget\opencv.nuspec -version ${{env.git_tag_name}} -outputfilenameswithoutversion -outputdirectory dist
+        nuget pack package\nuget\opencv.nuspec -version ${{env.git_tag_name}} -outputfilenameswithoutversion -outputdirectory dist -Properties branch=${{env.git_tag_name}} -Properties commit=${GITHUB_SHA}
         nuget push dist\wuganhao.opencv.nupkg -apikey ${{secrets.nuget_api_key}} -source https://api.nuget.org/v3/index.json
