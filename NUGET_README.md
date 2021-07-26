@@ -3,7 +3,7 @@
 This is OpenCV package to be consumed from VC++ project as a NuGet package.
 
 With:
-* X64 Debug and Release build
+* X64 release build only.
 * Compiled with CUDA enabled.
 
 ### Resources
