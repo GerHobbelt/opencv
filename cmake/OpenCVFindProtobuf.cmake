@@ -67,7 +67,7 @@ else()
   if(IOS OR ANDROID)
     # add cmake/host subdiretcory as host project to install protoc
     include(hunter_experimental_add_host_project)
-    hunter_experimental_add_host_project("${OpenCV_SOURCE_DIR}/cmake/protobuf-host")
+    hunter_experimental_add_host_project("${CMAKE_CURRENT_LIST_DIR}/protobuf-host")
 
     add_executable(protobuf::protoc IMPORTED)
     set_property(TARGET protobuf::protoc APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
