@@ -2,15 +2,16 @@ name: Push Build
 
 on:
   push:
+    branches-ignore:
+      - 'feature/*' # Ignore build feature branch on push; feature branches will be build only for pull requests.
+      - 'Feature/*'
 
 env:
   cuda: "10.2.89"
-  opencv_contrib_ref: '3.4.15'
-
-
+  version: '3.4.15'
 
 jobs:
-  build:
+  push:
     runs-on: windows-latest
     timeout-minutes: 360
 
@@ -29,7 +30,7 @@ jobs:
         clean: true
         fetch-depth: 1
         path: opencv_contrib
-        ref: ${{ env.opencv_contrib_ref }}
+        ref: ${{ env.version }}
 
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1.9.0
@@ -59,26 +60,12 @@ jobs:
       run: msbuild /m /p:Configuration=Release OpenCV.sln
 
     - name: nuget pack for non-tags
-      working-directory: opencv
-      if: "!startswith(github.ref, 'refs/tags/')"
       run: |
-        echo Branch: ${GITHUB_REF##*/}
-        nuget pack package\nuget\opencv.nuspec -version 1.0.0-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=${GITHUB_REF##*/} -Properties commit=${{ github.sha }}
+        $Branch=${GITHUB_REF#refs/*/}
+        nuget pack package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }}
 
     - name: upload package artifact
       uses: actions/upload-artifact@v2
       with:
         name: nuget
         path: opencv\dist\*.nupkg
-
-    - name: extract tag name
-      if: startswith(github.ref, 'refs/tags/')
-      uses: olegtarasov/get-tag@v2.1.1
-      id: tagname
-
-    - name: nuget pack/push for tags
-      if: startswith(github.ref, 'refs/tags/')
-      working-directory: opencv
-      run: |
-        nuget pack package\nuget\opencv.nuspec -version ${{env.git_tag_name}} -outputfilenameswithoutversion -outputdirectory dist -Properties branch=${{env.git_tag_name}} -Properties commit=${{ github.sha }}
-        nuget push dist\wuganhao.opencv.nupkg -apikey ${{secrets.nuget_api_key}} -source https://api.nuget.org/v3/index.json
