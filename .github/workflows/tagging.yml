@@ -63,6 +63,7 @@ jobs:
       id: tagname
 
     - name: nuget pack/push for tags
+      working-directory: opencv
       run: |
         nuget pack package\nuget\opencv.nuspec -version ${{env.git_tag_name}} -outputfilenameswithoutversion -outputdirectory dist -Properties branch=${{ env.git_tag_name }} -Properties commit=${{ github.sha }}
         nuget push dist\wuganhao.opencv.nupkg -apikey ${{secrets.nuget_api_key}} -source https://api.nuget.org/v3/index.json

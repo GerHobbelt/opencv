@@ -60,6 +60,7 @@ jobs:
       run: msbuild /m /p:Configuration=Release OpenCV.sln
 
     - name: nuget pack for non-tags
+      working-directory: opencv
       run: |
         $Branch=${GITHUB_REF#refs/*/}
         nuget pack package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }}
