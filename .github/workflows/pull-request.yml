@@ -23,10 +23,10 @@ jobs:
     - name: Checkout OpenCV_Contrib
       uses: actions/checkout@v2
       with:
-        repository: ../opencv_contrib
+        repository: opencv/opencv_contrib
         clean: true
         fetch-depth: 1
-        path: opencv_contrib
+        path: ../opencv_contrib
         ref: ${{ env.version }}
 
     - name: Setup MSVC
