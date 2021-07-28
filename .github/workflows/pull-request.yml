@@ -19,12 +19,11 @@ jobs:
       with:
         clean: true
         fetch-depth: 1
-        path: opencv
 
     - name: Checkout OpenCV_Contrib
       uses: actions/checkout@v2
       with:
-        repository: opencv/opencv_contrib
+        repository: ../opencv_contrib
         clean: true
         fetch-depth: 1
         path: opencv_contrib
@@ -51,20 +50,19 @@ jobs:
         ls $env:CUDA_PATH\include
 
     - name: CMake
-      run: cmake -DWITH_CUDA=ON -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUBLAS=1 -DBUILD_WITH_DEBUG_INFO=OFF -DBUILD_PACKAGE=OFF -DBUILD_JAVA=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_TESTS=OFF -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules -S opencv -B build -G "Visual Studio 16 2019"
+      run: cmake -DWITH_CUDA=ON -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUBLAS=1 -DBUILD_WITH_DEBUG_INFO=OFF -DBUILD_PACKAGE=OFF -DBUILD_JAVA=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_TESTS=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules -S opencv -B build -G "Visual Studio 16 2019"
 
     - name: Build Release
       working-directory: ./build
       run: msbuild /m /p:Configuration=Release OpenCV.sln
 
     - name: nuget pack for non-tags
-      working-directory: opencv
       run: |
         $Branch=${GITHUB_REF#refs/*/}
-        nuget pack package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }}
+        nuget pack package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -BasePath package\nuget
 
     - name: upload package artifact
       uses: actions/upload-artifact@v2
       with:
         name: nuget
-        path: opencv\dist\*.nupkg
+        path: dist\*.nupkg
