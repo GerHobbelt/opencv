@@ -59,7 +59,7 @@ jobs:
 
     - name: nuget pack for non-tags
       run: |
-        $Branch=${{ github.ref }}
+        $Branch="${{ github.head_ref }}"
         $Branch=$Branch -replace "refs/heads/"
         $BuildDir=(Get-Item build).FullName
         Write-Host Building Nuget Package with:
