@@ -19,8 +19,8 @@
     <projectUrl>https://github.com/wuganhao/opencv</projectUrl>
   </metadata>
   <files>
-    <file src="..\..\build\lib\Release\*.lib"         target="lib\native\x64\" />
-    <file src="..\..\build\bin\Release\*.dll"         target="lib\native\x64\" />
+    <file src="$buildDir$\lib\Release\*.lib"         target="lib\native\x64\" />
+    <file src="$buildDir$\bin\Release\*.dll"         target="lib\native\x64\" />
     <file src="..\..\include\**\*.h"                  target="include\" />
     <file src="..\..\include\**\*.hpp"                target="include\" />
     <file src="wuganhao.OpenCV.targets"               target="build\" />
