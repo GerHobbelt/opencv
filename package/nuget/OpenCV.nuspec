@@ -42,7 +42,7 @@
     <file src="..\..\modules\videoio\include\**\*"    target="include\" />
     <file src="..\..\modules\videostab\include\**\*"  target="include\" />
     <file src="..\..\modules\world\include\**\*"      target="include\" />
-    <file src="..\..\build\opencv2\**\*"              target="include\opencv2\" />
+    <file src="$buildDir$\opencv2\**\*"              target="include\opencv2\" />
     <file src="..\..\..\opencv_contrib\modules\xfeatures2d\include\**\*" target="include\" />
     <file src="..\..\doc\opencv-logo-small.png"       target="docs\icon.png" />
     <file src="..\..\NUGET_README.md"                 target="docs\readme.md" />
