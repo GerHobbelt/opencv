@@ -60,13 +60,19 @@ jobs:
       run: msbuild /m /p:Configuration=Release OpenCV.sln
 
     - name: nuget pack for non-tags
-      working-directory: opencv
       run: |
-        $Branch=${GITHUB_REF#refs/*/}
+        $Branch="${{ github.ref }}"
+        $Branch=$Branch -replace "refs/heads/"
+        $BuildDir=(Get-Item build).FullName
+        Write-Host Building Nuget Package with:
+        Write-Host BuildDir = $BuildDir
+        Write-Host Version = ${{ env.version }}-dev
+        Write-Host Branch = $Branch
+        Write-Host Commit = ${{ github.sha }} 
         nuget pack package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }}
 
     - name: upload package artifact
       uses: actions/upload-artifact@v2
       with:
         name: nuget
-        path: opencv\dist\*.nupkg
+        path: dist\*.nupkg

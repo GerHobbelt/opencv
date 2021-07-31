@@ -58,12 +58,15 @@ jobs:
       working-directory: ./build
       run: msbuild /m /p:Configuration=Release OpenCV.sln
 
-    - name: extract tag name
-      uses: olegtarasov/get-tag@v2.1.1
-      id: tagname
-
     - name: nuget pack/push for tags
-      working-directory: opencv
       run: |
-        nuget pack package\nuget\opencv.nuspec -version ${{env.git_tag_name}} -outputfilenameswithoutversion -outputdirectory dist -Properties branch=${{ env.git_tag_name }} -Properties commit=${{ github.sha }}
+        $Branch="${{ github.head_ref }}"
+        $Branch=$Branch -replace "refs/tags/"
+        $BuildDir=(Get-Item build).FullName
+        Write-Host Building Nuget Package with:
+        Write-Host BuildDir = $BuildDir
+        Write-Host Version = $Branch
+        Write-Host Branch = $Branch
+        Write-Host Commit = ${{ github.sha }} 
+        nuget pack opencv\package\nuget\opencv.nuspec -version $Branch -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
         nuget push dist\wuganhao.opencv.nupkg -apikey ${{secrets.nuget_api_key}} -source https://api.nuget.org/v3/index.json
