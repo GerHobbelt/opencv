@@ -1,0 +1,78 @@
+name: Push Build
+
+on:
+  push:
+    branches-ignore:
+      - 'feature/*' # Ignore build feature branch on push; feature branches will be build only for pull requests.
+      - 'Feature/*'
+
+env:
+  cuda: "10.2.89"
+  version: '3.4.15'
+
+jobs:
+  push:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+    - name: Checkout OpenCV
+      uses: actions/checkout@v2
+      with:
+        clean: true
+        fetch-depth: 1
+        path: opencv
+
+    - name: Checkout OpenCV_Contrib
+      uses: actions/checkout@v2
+      with:
+        repository: opencv/opencv_contrib
+        clean: true
+        fetch-depth: 1
+        path: opencv_contrib
+        ref: ${{ env.version }}
+
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1.9.0
+      #with:
+      #  arch: amd64
+      #  toolset: 16.0
+
+    - name: Install CUDA
+      uses: Jimver/cuda-toolkit@v0.2.4
+      id: cuda-toolkit
+      with:
+        cuda: ${{ env.cuda }}
+
+    - name: nvcc check
+      shell: powershell
+      run: |
+        nvcc -V
+        ls $env:CUDA_PATH
+        ls $env:CUDA_PATH\bin
+        ls $env:CUDA_PATH\include
+
+    - name: CMake
+      run: cmake -DWITH_CUDA=ON -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUBLAS=1 -DBUILD_WITH_DEBUG_INFO=OFF -DBUILD_PACKAGE=OFF -DBUILD_JAVA=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_TESTS=OFF -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules -S opencv -B build -G "Visual Studio 16 2019"
+
+    - name: Build Release
+      working-directory: ./build
+      run: msbuild /m /p:Configuration=Release OpenCV.sln
+
+    - name: nuget pack for non-tags
+      run: |
+        $Branch="${{ github.ref }}"
+        $Branch=$Branch -replace "refs/heads/"
+        $BuildDir=(Get-Item build).FullName
+        Write-Host Building Nuget Package with:
+        Write-Host BuildDir = $BuildDir
+        Write-Host Version = ${{ env.version }}-dev
+        Write-Host Branch = $Branch
+        Write-Host Commit = ${{ github.sha }} 
+        nuget pack package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }}
+
+    - name: upload package artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: nuget
+        path: dist\*.nupkg
