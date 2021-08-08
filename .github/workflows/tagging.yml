@@ -60,7 +60,7 @@ jobs:
 
     - name: nuget pack/push for tags
       run: |
-        $Branch="${{ github.head_ref }}"
+        $Branch="${{ github.ref }}"
         $Branch=$Branch -replace "refs/tags/"
         $BuildDir=(Get-Item build).FullName
         Write-Host Building Nuget Package with:
