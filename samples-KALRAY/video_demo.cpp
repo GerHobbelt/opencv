@@ -36,6 +36,8 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/core/opencl/ocl_defs.hpp"
+#include <algorithm>
+#include <iterator>
 #include <opencv2/core/ocl.hpp>
 #include <bits/stdint-intn.h>
 #include <iomanip>
@@ -63,8 +65,11 @@ using MatType = UMat;
 #define FPS_WINDOW 50  // size of frames use to compute FPS (Frame Per Second)
 #define DISPLAY_RATE 1 // frame display ratio = FPS_WINDOW * DISPLAY_RATE
 
+// compute statistic
+#define IGNORE_FIRST_VALUES_FOR_STATS 5 // x FPS_WINDOW = nb frames ignored for stats
+
 // for debug purpose
-// #define DEBUG_THREAD
+//#define DEBUG_THREAD
 
 #ifdef DEBUG_THREAD
 #define LOG_THREAD(name)                                                       \
@@ -103,7 +108,7 @@ void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
         // put several frames to feed processing in order to avoid the capture
         // to be the bottleneck
         for (int i = 0; i < NB_REPEATED_FRAMES_CAPTURE; i++) {
-            if (frames.size() < MAX_NB_FRAMES_IN_FIFO) {
+          if (frames.size() < std::min(MAX_NB_FRAMES_IN_FIFO, NB_FRAMES)) {
                 channels[0].copyTo(channel);
                 frames_mtx.lock();
                 frames.push_back(std::move(channel));
@@ -111,9 +116,9 @@ void capture_thread(std::mutex &frames_mtx, std::list<MatType> &frames,
                 nb_frames++;
                 LOG_THREAD("capture")
             }
-            else {
-                usleep(100);
-            }
+          else {
+            usleep(100);
+          }
         }
     } while (nb_frames < NB_FRAMES);
 }
@@ -132,6 +137,13 @@ enum class algorithm {
     FAST,
     GAUSS,
     NONE
+};
+
+static const std::string algos_name[] = {
+    "CANNY",
+    "FAST",
+    "GAUSS",
+    "NONE"
 };
 
 struct fast_data {
@@ -153,11 +165,12 @@ void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
     std::list<frame_data> local_frames;
     frame_data extracted_frame;
     int frames_id = 0;
-    int elapsed_time;
+    int elapsed_time_us;
     Mat frame_to_display;
     int nb_frames = 0;
+    std::vector<float> host_times;
 
-    while ( ENABLE_DISPLAY_THREAD ) {
+    while ( ENABLE_DISPLAY_THREAD && (nb_frames < NB_FRAMES) ) {
 
         // Move the data frames in the thread then release the mutex.
         frames_mtx.lock();
@@ -165,7 +178,7 @@ void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
             frames_mtx.unlock();
             // Avoid interfering too much with the other threads' performance
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            // std::cout << "." <<  nb_frames + frames.size() << std::endl;
+            //std::cout << "." <<  nb_frames + frames.size() << std::endl;
             continue;
         }
         nb_frames += frames.size();
@@ -174,7 +187,7 @@ void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
 
         LOG_THREAD("*display*")
 
-        elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(
+        elapsed_time_us = std::chrono::duration_cast<std::chrono::microseconds>(
             (local_frames.back().end - local_frames.front().start)).count() /
             local_frames.size();
 
@@ -184,12 +197,12 @@ void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
             extracted_frame = std::move(local_frames.front());
             cv::rectangle(extracted_frame.out, {0, 0}, {350, 150}, 0, cv::FILLED);
             cv::putText(extracted_frame.out,
-                        "Average time: " + std::to_string(elapsed_time / 1000.0) +
+                        "Average time: " + std::to_string(elapsed_time_us / 1000.0) +
                         "ms",
                         cv::Point(15, 50), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0,
                         cv::Scalar(255, 255, 255));
             cv::putText(extracted_frame.out,
-                        "Estimated FPS: " + std::to_string(1000000.0 / elapsed_time),
+                        "Estimated FPS: " + std::to_string(1000000.0 / elapsed_time_us),
                         cv::Point(15, 100), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0,
                         cv::Scalar(255, 255, 255));
 
@@ -204,10 +217,47 @@ void display_thread(std::list<frame_data> &frames, std::mutex &frames_mtx)
             // display fps in stdout
             std::cout << nb_frames - local_frames.size() << "-"
                       << nb_frames
-                      << ": " <<1000000.0 / elapsed_time << std::endl;
-
+                      << ": " << 1000000.0 / elapsed_time_us << std::endl;
+            // keep value to process statistic
+            host_times.push_back(elapsed_time_us);
         }
 
+    }
+
+    // process statistic
+    if (host_times.size() > IGNORE_FIRST_VALUES_FOR_STATS) {
+
+      float kernel_time_us_acc = 0;
+      float kernel_time_us_min = 9999;
+      float kernel_time_us_max = 0;
+      std::for_each(std::begin(host_times) + IGNORE_FIRST_VALUES_FOR_STATS,
+                    std::end(host_times),
+                    [&kernel_time_us_acc, &kernel_time_us_min,
+                     &kernel_time_us_max](int const &value) {
+                      kernel_time_us_acc += value;
+                      if (value < kernel_time_us_min) {
+                        kernel_time_us_min = value;
+                      };
+                      if (value > kernel_time_us_max) {
+                        kernel_time_us_max = value;
+                      };
+                    });
+      // format for cheetah
+      float kernel_time_us_mean =
+          kernel_time_us_acc /
+          (host_times.size() - IGNORE_FIRST_VALUES_FOR_STATS);
+      static const std::string algo_name =
+          algos_name[(int)extracted_frame.algo];
+
+      std::cout << "#HOST_MPPA_OCL_" << algo_name << "_mean"
+                << "=" << 1000000.0 / kernel_time_us_mean << " fps"
+                << std::endl;
+      std::cout << "#HOST_MPPA_OCL_" << algo_name << "_min"
+                << "=" << 1000000.0 / kernel_time_us_max << " fps" << std::endl;
+      std::cout << "#HOST_MPPA_OCL_" << algo_name << "_max"
+                << "=" << 1000000.0 / kernel_time_us_min << " fps" << std::endl;
+    } else {
+      std::cout << "Not enought frames for statistics ! (" << NB_FRAMES << "<" << host_times.size() * IGNORE_FIRST_VALUES_FOR_STATS << ")" << std::endl ;
     }
 }
 
@@ -247,6 +297,16 @@ int main(int argc, const char *argv[]) {
         cv::ocl::getOpenCLAllocator()->getBufferPoolController()->setMaxReservedSize(512*1024*1024);
       }
 
+    // Setup the module if needed.
+    MatType img_in, img_out;
+    frame_data data_frame;
+    std::chrono::time_point<std::chrono::steady_clock> start_processing;
+    std::chrono::time_point<std::chrono::steady_clock> stop_processing;
+
+    // data
+    fast_data fast_frame;
+    std::vector<cv::KeyPoint> keypoints;
+
     // Get images to process.
     std::list<MatType> in_frames;
     std::mutex in_frames_mtx;
@@ -261,17 +321,6 @@ int main(int argc, const char *argv[]) {
     std::thread display_th([&out_frames_mtx, &out_frames](){
             display_thread(out_frames, out_frames_mtx);
             });
-
-    // Setup the module if needed.
-    MatType img_in, img_out;
-    frame_data data_frame;
-    std::chrono::time_point<std::chrono::steady_clock> start_processing;
-    std::chrono::time_point<std::chrono::steady_clock> stop_processing;
-
-    // FAST specific instantiation.
-    cv::Ptr<cv::Feature2D> detector = cv::FastFeatureDetector::create(20, true, FastFeatureDetector::TYPE_9_16);
-    std::vector<cv::KeyPoint> keypoints;
-    fast_data fast_frame;
 
     while (nb_frames < NB_FRAMES) {
 
@@ -306,6 +355,9 @@ int main(int argc, const char *argv[]) {
           break;
 
         case algorithm::FAST:
+          // FAST specific instantiation.
+          static cv::Ptr<cv::Feature2D> detector = cv::FastFeatureDetector::create(20, true, FastFeatureDetector::TYPE_9_16);
+
           detector->detect(img_in, keypoints);
           img_out = img_in;
           break;
