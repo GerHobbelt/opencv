@@ -5,7 +5,7 @@ on:
     types: [assigned, opened, synchronize, reopened]
 
 env:
-  cuda: "10.2.89"
+  cuda: "9.2.148"
   version: '3.4.15'
 
 jobs:
