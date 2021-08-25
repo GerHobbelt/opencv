@@ -58,6 +58,7 @@ jobs:
       run: |
         $CLCompiler=(Get-Command xcopy.exe -TotalCount 1).Path
         $env:CUDA_HOST_COMPILER=$CLCompiler
+        Write-Host "Compiling using host cl: $env:CUDA_HOST_COMPILER"
         msbuild /m /p:Configuration=Release OpenCV.sln
 
     - name: nuget pack for non-tags
