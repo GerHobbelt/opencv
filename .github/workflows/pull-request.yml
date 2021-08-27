@@ -33,8 +33,8 @@ jobs:
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1.9.0
       with:
-        arch: x64
-        #toolset: 16.10
+        arch: x86_64
+        toolset: 16.0
 
     - name: Install CUDA
       uses: Jimver/cuda-toolkit@v0.2.4
