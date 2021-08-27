@@ -57,7 +57,7 @@ jobs:
     - name: Build Release
       working-directory: ./build
       run: |
-        $CLCompiler=(Get-Command xcopy.exe -TotalCount 1).Path
+        $CLCompiler=(Get-Command cl.exe -TotalCount 1).Path
         $env:CUDA_HOST_COMPILER=$CLCompiler
         msbuild /m /p:Configuration=Release OpenCV.sln
 
