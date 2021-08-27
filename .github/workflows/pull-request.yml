@@ -51,11 +51,16 @@ jobs:
         ls $env:CUDA_PATH\include
 
     - name: CMake
-      run: cmake -DWITH_CUDA=ON -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUBLAS=1 -DBUILD_WITH_DEBUG_INFO=OFF -DBUILD_PACKAGE=OFF -DBUILD_JAVA=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_TESTS=OFF -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules -S opencv -B build -G "Visual Studio 16 2019"
+      run: |
+        $CLCompiler=(Get-Command cl.exe -TotalCount 1).Path
+        $env:CUDA_HOST_COMPILER=$CLCompiler
+        Write-Host "Compiling using host cl: $env:CUDA_HOST_COMPILER"      
+        cmake -DWITH_CUDA=ON -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUBLAS=1 -DCUDA_HOST_COMPILER="$env:CUDA_HOST_COMPILER" -DBUILD_WITH_DEBUG_INFO=OFF -DBUILD_PACKAGE=OFF -DBUILD_JAVA=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_TESTS=OFF -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules -S opencv -B build -G "Visual Studio 16 2019"
 
     - name: Build Release
       working-directory: ./build
-      run: msbuild /m /p:Configuration=Release OpenCV.sln
+      run: |
+        msbuild /m /p:Configuration=Release OpenCV.sln
 
     - name: nuget pack for non-tags
       run: |
