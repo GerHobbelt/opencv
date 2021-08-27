@@ -5,8 +5,8 @@ on:
     types: [assigned, opened, synchronize, reopened]
 
 env:
-  cuda: "10.2.89"
-  version: '3.4.15'
+  cuda_version: "10.2.89"
+  opencv_version: '3.4.15'
 
 jobs:
   pull-request:
@@ -28,7 +28,7 @@ jobs:
         clean: true
         fetch-depth: 1
         path: opencv_contrib
-        ref: ${{ env.version }}
+        ref: ${{ env.opencv_version }}
 
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1.9.0
@@ -40,7 +40,7 @@ jobs:
       uses: Jimver/cuda-toolkit@v0.2.4
       id: cuda-toolkit
       with:
-        cuda: ${{ env.cuda }}
+        cuda: ${{ env.cuda_version }}
 
     - name: nvcc check
       shell: powershell
@@ -68,10 +68,10 @@ jobs:
         $BuildDir=(Get-Item build).FullName
         Write-Host Building Nuget Package with:
         Write-Host BuildDir = $BuildDir
-        Write-Host Version = ${{ env.version }}-dev
+        Write-Host Version = ${{ env.opencv_version }}-dev
         Write-Host Branch = $Branch
         Write-Host Commit = ${{ github.sha }} 
-        nuget pack opencv\package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
+        nuget pack opencv\package\nuget\opencv.nuspec -version ${{ env.opencv_version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
 
     - name: upload package artifact
       uses: actions/upload-artifact@v2
