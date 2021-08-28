@@ -60,7 +60,7 @@ jobs:
     - name: Build Release
       working-directory: ./build
       run: |
-        msbuild /m /p:Configuration=Release OpenCV.sln
+        msbuild /m /p:Configuration=Release OpenCV.sln /verbosity:detailed
 
     - name: nuget pack for non-tags
       run: |
