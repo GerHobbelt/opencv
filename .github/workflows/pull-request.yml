@@ -5,12 +5,12 @@ on:
     types: [assigned, opened, synchronize, reopened]
 
 env:
-  cuda: "10.2.89"
-  version: '3.4.15'
+  cuda_version: "10.2.89"
+  opencv_version: '3.4.15'
 
 jobs:
   pull-request:
-    runs-on: windows-latest
+    runs-on: self-hosted
     timeout-minutes: 360
 
     steps:
@@ -28,19 +28,19 @@ jobs:
         clean: true
         fetch-depth: 1
         path: opencv_contrib
-        ref: ${{ env.version }}
+        ref: ${{ env.opencv_version }}
 
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1.9.0
-      #with:
-      #  arch: amd64
-      #  toolset: 16.0
+      # with:
+        # arch: x86_64
+        # toolset: 16.0
 
-    - name: Install CUDA
-      uses: Jimver/cuda-toolkit@v0.2.4
-      id: cuda-toolkit
-      with:
-        cuda: ${{ env.cuda }}
+    # - name: Install CUDA
+      # uses: Jimver/cuda-toolkit@v0.2.4
+      # id: cuda-toolkit
+      # with:
+        # cuda: ${{ env.cuda_version }}
 
     - name: nvcc check
       shell: powershell
@@ -51,11 +51,16 @@ jobs:
         ls $env:CUDA_PATH\include
 
     - name: CMake
-      run: cmake -DWITH_CUDA=ON -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUBLAS=1 -DBUILD_WITH_DEBUG_INFO=OFF -DBUILD_PACKAGE=OFF -DBUILD_JAVA=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_TESTS=OFF -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules -S opencv -B build -G "Visual Studio 16 2019"
+      run: |
+        $CLCompiler=(Get-Command cl.exe -TotalCount 1).Path
+        $env:CUDA_HOST_COMPILER=$CLCompiler
+        Write-Host "Compiling using host cl: $env:CUDA_HOST_COMPILER"      
+        cmake -DWITH_CUDA=ON -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUBLAS=1 -DCUDA_HOST_COMPILER="$env:CUDA_HOST_COMPILER" -DBUILD_WITH_DEBUG_INFO=OFF -DBUILD_PACKAGE=OFF -DBUILD_JAVA=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DINSTALL_TESTS=OFF -DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules -S opencv -B build -G "Visual Studio 16 2019"
 
     - name: Build Release
       working-directory: ./build
-      run: msbuild /m /p:Configuration=Release OpenCV.sln
+      run: |
+        msbuild /m /p:Configuration=Release OpenCV.sln /verbosity:detailed
 
     - name: nuget pack for non-tags
       run: |
@@ -64,10 +69,10 @@ jobs:
         $BuildDir=(Get-Item build).FullName
         Write-Host Building Nuget Package with:
         Write-Host BuildDir = $BuildDir
-        Write-Host Version = ${{ env.version }}-dev
+        Write-Host Version = ${{ env.opencv_version }}-dev
         Write-Host Branch = $Branch
         Write-Host Commit = ${{ github.sha }} 
-        nuget pack opencv\package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
+        nuget pack opencv\package\nuget\opencv.nuspec -version ${{ env.opencv_version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
 
     - name: upload package artifact
       uses: actions/upload-artifact@v2
