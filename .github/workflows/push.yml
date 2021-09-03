@@ -1,5 +1,7 @@
 name: Push Build
 
+runs-on: self-hosted
+
 on:
   push:
     branches-ignore:
