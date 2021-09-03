@@ -34,15 +34,15 @@ jobs:
 
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1.9.0
-      with:
-        arch: x64
-        #toolset: 16.10
+#      with:
+#        arch: x64
+#        toolset: 16.10
 
-    - name: Install CUDA
-      uses: Jimver/cuda-toolkit@v0.2.4
-      id: cuda-toolkit
-      with:
-        cuda: ${{ env.cuda }}
+#    - name: Install CUDA
+#      uses: Jimver/cuda-toolkit@v0.2.4
+#      id: cuda-toolkit
+#      with:
+#        cuda: ${{ env.cuda }}
 
     - name: nvcc check
       shell: powershell
@@ -57,10 +57,7 @@ jobs:
 
     - name: Build Release
       working-directory: ./build
-      run: |
-        $CLCompiler=(Get-Command cl.exe -TotalCount 1).Path
-        $env:CUDA_HOST_COMPILER=$CLCompiler
-        msbuild /m /p:Configuration=Release OpenCV.sln
+      run: msbuild /m /p:Configuration=Release OpenCV.sln
 
     - name: nuget pack for non-tags
       run: |
