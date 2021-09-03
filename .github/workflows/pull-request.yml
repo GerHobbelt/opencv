@@ -1,7 +1,5 @@
 name: Push Build
 
-runs-on: self-hosted
-
 on:
   pull_request:
     types: [assigned, opened, synchronize, reopened]
@@ -12,7 +10,7 @@ env:
 
 jobs:
   pull-request:
-    runs-on: windows-latest
+    runs-on: self-hosted
     timeout-minutes: 360
 
     steps:

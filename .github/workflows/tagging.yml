@@ -1,7 +1,5 @@
 name: Push Build
 
-runs-on: self-hosted
-
 on:
   push:
     tags:
@@ -13,7 +11,7 @@ env:
 
 jobs:
   tagging:
-    runs-on: windows-latest
+    runs-on: self-hosted
     timeout-minutes: 360
 
     steps:
