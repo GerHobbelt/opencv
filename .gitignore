@@ -26,3 +26,4 @@ node_modules
 /CMakeFiles/
 CMakeSettings.json
 /CMakeCache.txt
+/.vs
