@@ -43,6 +43,7 @@
     <file src="..\..\modules\videostab\include\**\*"                     target="include\" />
     <file src="..\..\modules\world\include\**\*"                         target="include\" />
     <file src="..\..\modules\cudaoptflow\include\opencv2\**\*"           target="include\opencv2\" />
+    <file src="..\..\modules\cudaimgproc\include\opencv2\**\*"           target="include\opencv2\" />
     <file src="$buildDir$\opencv2\**\*"                                  target="include\opencv2\" />
     <file src="..\..\..\opencv_contrib\modules\xfeatures2d\include\**\*" target="include\" />
     <file src="..\..\doc\opencv-logo-small.png"                          target="docs\icon.png" />
