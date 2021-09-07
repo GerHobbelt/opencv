@@ -21,10 +21,12 @@
   <files>
       <!-- ***** Binaries ***** -->
     <file src="$buildDir$\lib\Release\*.lib"         target="lib\native\x64\release\" />
-    <file src="$buildDir$\bin\Release\*.dll"         target="lib\native\x64\release\" />
+    <file src="$buildDir$\bin\Release\*.dll"         target="bin\native\x64\release\" />
     <file src="$buildDir$\lib\Debug\*.lib"           target="lib\native\x64\debug\" />
-    <file src="$buildDir$\bin\Debug\*.dll"           target="lib\native\x64\debug\" />
-    <file src="$buildDir$\bin\Debug\*.pdb"           target="lib\native\x64\debug\" />
+    <file src="$buildDir$\bin\Debug\*.dll"           target="bin\native\x64\debug\" />
+    <file src="$buildDir$\bin\Debug\*.pdb"           target="bin\native\x64\debug\" />
+    <file src="$buildDir$\bin\Debug\*.pdb"           target="bin\native\x64\debug\" />
+    <file src="$cudaDir$\bin\cudar64_102.dll"        target="bin\native\x64\" />
 
     <file src="..\..\include\**\*.h"                  target="include\" />
     <file src="..\..\include\**\*.hpp"                target="include\" />

@@ -70,5 +70,5 @@ jobs:
         Write-Host Version = $Branch
         Write-Host Branch = $Branch
         Write-Host Commit = ${{ github.sha }} 
-        nuget pack opencv\package\nuget\opencv.nuspec -version $Branch -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
+        nuget pack opencv\package\nuget\opencv.nuspec -version $Branch -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget  -Properties cudaDir=$env:CUDA_PATH
         nuget push dist\wuganhao.opencv.nupkg -apikey ${{secrets.AZ_API_KEY}} -source https://pkgs.dev.azure.com/binocus/_packaging/binocus/nuget/v3/index.json

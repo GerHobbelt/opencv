@@ -71,7 +71,7 @@ jobs:
         Write-Host Version = ${{ env.version }}-dev
         Write-Host Branch = $Branch
         Write-Host Commit = ${{ github.sha }} 
-        nuget pack opencv\package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
+        nuget pack opencv\package\nuget\opencv.nuspec -version ${{ env.version }}-dev -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget  -Properties cudaDir=$env:CUDA_PATH
 
     - name: upload package artifact
       uses: actions/upload-artifact@v2

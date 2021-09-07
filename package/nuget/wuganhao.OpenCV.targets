@@ -14,6 +14,7 @@
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies>
+cudar64_102.dll;
 opencv_aruco$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
 opencv_bgsegm$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
 opencv_bioinspired$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
@@ -76,6 +77,7 @@ opencv_xphoto$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCV
     <BuildDependsOn>$(BuildDependsOn);DeployOpenCVArtifacts</BuildDependsOn>
   </PropertyGroup>
   <ItemGroup>
+    <OpenCVArtifacts Include="$(MSBuildThisFileDirectory)..\lib\native\x64\*.dll" />
     <OpenCVArtifacts Condition="'$(Configuration)'=='Release'" Include="$(MSBuildThisFileDirectory)..\lib\native\x64\release\*.dll" />
     <OpenCVArtifacts Condition="'$(Configuration)'=='Debug'"   Include="$(MSBuildThisFileDirectory)..\lib\native\x64\debug\*.dll" />
     <OpenCVArtifacts Condition="'$(Configuration)'=='Debug'"   Include="$(MSBuildThisFileDirectory)..\lib\native\x64\debug\*.pdb" />
