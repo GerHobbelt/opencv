@@ -25,7 +25,6 @@
     <file src="$buildDir$\lib\Debug\*.lib"           target="lib\native\x64\debug\" />
     <file src="$buildDir$\bin\Debug\*.dll"           target="bin\native\x64\debug\" />
     <file src="$buildDir$\bin\Debug\*.pdb"           target="bin\native\x64\debug\" />
-    <file src="$buildDir$\bin\Debug\*.pdb"           target="bin\native\x64\debug\" />
     <file src="$cudaDir$\bin\cudart64_102.dll"       target="bin\native\x64\" />
 
     <file src="..\..\include\**\*.h"                  target="include\" />
