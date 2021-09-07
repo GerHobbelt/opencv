@@ -9,68 +9,76 @@
     <OpenCVMajorVersion>3</OpenCVMajorVersion>
     <OpenCVMinorVersion>4</OpenCVMinorVersion>
     <OpenCVRevision>15</OpenCVRevision>
+    <OpenCVAffix Condition="'$(Configuration)'=='Debug'">d</OpenCVAffix>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies>
-opencv_aruco$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_bgsegm$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_bioinspired$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_calib3d$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_ccalib$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_core$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_datasets$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_dnn$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_dnn_objdetect$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_dpm$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_face$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_features2d$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_flann$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_fuzzy$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_hfs$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_highgui$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_imgcodecs$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_imgproc$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_img_hash$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_line_descriptor$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_ml$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_objdetect$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_optflow$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_phase_unwrapping$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_photo$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_plot$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_reg$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_rgbd$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_saliency$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_shape$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_stereo$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_stitching$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_structured_light$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_superres$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_surface_matching$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_text$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_tracking$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_video$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_videoio$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_videostab$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_xfeatures2d$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_ximgproc$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_xobjdetect$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
-opencv_xphoto$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision).lib;
+opencv_aruco$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_bgsegm$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_bioinspired$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_calib3d$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_ccalib$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_core$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_datasets$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_dnn$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_dnn_objdetect$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_dpm$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_face$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_features2d$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_flann$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_fuzzy$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_hfs$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_highgui$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_imgcodecs$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_imgproc$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_img_hash$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_line_descriptor$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_ml$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_objdetect$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_optflow$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_phase_unwrapping$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_photo$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_plot$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_reg$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_rgbd$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_saliency$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_shape$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_stereo$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_stitching$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_structured_light$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_superres$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_surface_matching$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_text$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_tracking$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_video$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_videoio$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_videostab$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_xfeatures2d$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_ximgproc$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_xobjdetect$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
+opencv_xphoto$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
 %(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
+  <ItemDefinitionGroup Condition="'$(Platform)|$(Configuration)'=='x64|Release'">
     <Link>
-      <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)..\lib\native\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)..\lib\native\x64\release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-   </ItemDefinitionGroup>
-  <PropertyGroup Label="Globals">
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)|$(Configuration)'=='x64|Debug'">
+    <Link>
+      <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)..\lib\native\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+    <PropertyGroup Label="Globals">
     <BuildDependsOn>$(BuildDependsOn);DeployOpenCVArtifacts</BuildDependsOn>
   </PropertyGroup>
   <ItemGroup>
-    <OpenCVArtifacts Include="$(MSBuildThisFileDirectory)..\lib\native\x64\release\*.dll" />
+    <OpenCVArtifacts Condition="'$(Configuration)'=='Release'" Include="$(MSBuildThisFileDirectory)..\lib\native\x64\release\*.dll" />
+    <OpenCVArtifacts Condition="'$(Configuration)'=='Debug'"   Include="$(MSBuildThisFileDirectory)..\lib\native\x64\debug\*.dll" />
+    <OpenCVArtifacts Condition="'$(Configuration)'=='Debug'"   Include="$(MSBuildThisFileDirectory)..\lib\native\x64\debug\*.pdb" />
   </ItemGroup>
   <Target Name="DeployOpenCVArtifacts">
     <Error Text="Package 'wuganhao.OpenCV' only support 64bit build" Condition="'$(Platform)'!='x64'" />
