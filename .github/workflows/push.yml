@@ -57,7 +57,9 @@ jobs:
 
     - name: Build Release
       working-directory: ./build
-      run: msbuild /m /p:Configuration=Release OpenCV.sln
+      run: |
+        msbuild /m /p:Configuration=Release OpenCV.sln
+        msbuild /m /p:Configuration=Debug   OpenCV.sln
 
     - name: nuget pack for non-tags
       run: |

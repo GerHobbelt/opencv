@@ -56,7 +56,9 @@ jobs:
 
     - name: Build Release
       working-directory: ./build
-      run: msbuild /m /p:Configuration=Release OpenCV.sln
+      run: |
+        msbuild /m /p:Configuration=Release OpenCV.sln
+        msbuild /m /p:Configuration=Debug   OpenCV.sln
 
     - name: nuget pack/push for tags
       run: |
@@ -69,4 +71,4 @@ jobs:
         Write-Host Branch = $Branch
         Write-Host Commit = ${{ github.sha }} 
         nuget pack opencv\package\nuget\opencv.nuspec -version $Branch -outputfilenameswithoutversion -outputdirectory dist -Properties branch=$Branch -Properties commit=${{ github.sha }} -Properties buildDir=$BuildDir  -BasePath opencv\package\nuget
-        nuget push dist\wuganhao.opencv.nupkg -apikey ${{secrets.nuget_api_key}} -source https://api.nuget.org/v3/index.json
+        nuget push dist\wuganhao.opencv.nupkg -apikey ${{secrets.AZ_API_KEY}} -source https://pkgs.dev.azure.com/binocus/_packaging/binocus/nuget/v3/index.json

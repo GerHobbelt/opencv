@@ -19,8 +19,13 @@
     <projectUrl>https://github.com/wuganhao/opencv</projectUrl>
   </metadata>
   <files>
-    <file src="$buildDir$\lib\Release\*.lib"         target="lib\native\x64\" />
-    <file src="$buildDir$\bin\Release\*.dll"         target="lib\native\x64\" />
+      <!-- ***** Binaries ***** -->
+    <file src="$buildDir$\lib\Release\*.lib"         target="lib\native\x64\release\" />
+    <file src="$buildDir$\bin\Release\*.dll"         target="lib\native\x64\release\" />
+    <file src="$buildDir$\lib\Debug\*.lib"           target="lib\native\x64\debug\" />
+    <file src="$buildDir$\bin\Debug\*.dll"           target="lib\native\x64\debug\" />
+    <file src="$buildDir$\bin\Debug\*.pdb"           target="lib\native\x64\debug\" />
+
     <file src="..\..\include\**\*.h"                  target="include\" />
     <file src="..\..\include\**\*.hpp"                target="include\" />
     <file src="wuganhao.OpenCV.targets"               target="build\" />
@@ -40,10 +45,20 @@
     <file src="..\..\modules\superres\include\**\*"   target="include\" />
     <file src="..\..\modules\video\include\**\*"      target="include\" />
     <file src="..\..\modules\videoio\include\**\*"    target="include\" />
-    <file src="..\..\modules\videostab\include\**\*"                     target="include\" />
-    <file src="..\..\modules\world\include\**\*"                         target="include\" />
-    <file src="..\..\modules\cudaoptflow\include\opencv2\**\*"           target="include\opencv2\" />
-    <file src="..\..\modules\cudaimgproc\include\opencv2\**\*"           target="include\opencv2\" />
+    <file src="..\..\modules\videostab\include\**\*"             target="include\" />
+    <file src="..\..\modules\world\include\**\*"                 target="include\" />
+    <!-- ***** CUDA ***** -->
+    <file src="..\..\modules\cudaoptflow\include\**\*"           target="include\" />
+    <file src="..\..\modules\cudaimgproc\include\**\*"           target="include\" />
+    <file src="..\..\modules\cudaarithm\include\**\*"            target="include\" />
+    <file src="..\..\modules\cudabgsegm\include\**\*"            target="include\" />
+    <file src="..\..\modules\cudacodec\include\**\*"             target="include\" />
+    <file src="..\..\modules\cudafeatures2d\include\**\*"        target="include\" />
+    <file src="..\..\modules\cudafilters\include\**\*"           target="include\" />
+    <file src="..\..\modules\cudaobjdetect\include\**\*"         target="include\" />
+    <file src="..\..\modules\cudastereo\include\**\*"            target="include\" />
+    <file src="..\..\modules\cudawarping\include\**\*"           target="include\" />
+
     <file src="$buildDir$\opencv2\**\*"                                  target="include\opencv2\" />
     <file src="..\..\..\opencv_contrib\modules\xfeatures2d\include\**\*" target="include\" />
     <file src="..\..\doc\opencv-logo-small.png"                          target="docs\icon.png" />
