@@ -29,9 +29,7 @@
     <file src="$cudaDir$\bin\nppc64_10.dll"          target="bin\native\x64\" />
     <file src="$cudaDir$\bin\cublas64_10.dll"        target="bin\native\x64\" />
     <file src="$cudaDir$\bin\cublasLt64_10.dll"      target="bin\native\x64\" />
-    <file src="$cudaDir$\bin\cudart64_102.dll"       target="bin\native\x64\" />
     <file src="$cudaDir$\bin\cufft64_10.dll"         target="bin\native\x64\" />
-    <file src="$cudaDir$\bin\nppc64_10.dll"          target="bin\native\x64\" />
     <file src="$cudaDir$\bin\nppial64_10.dll"        target="bin\native\x64\" />
     <file src="$cudaDir$\bin\nppicc64_10.dll"        target="bin\native\x64\" />
     <file src="$cudaDir$\bin\nppidei64_10.dll"       target="bin\native\x64\" />
