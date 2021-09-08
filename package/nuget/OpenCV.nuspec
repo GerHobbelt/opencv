@@ -26,6 +26,7 @@
     <file src="$buildDir$\bin\Debug\*.dll"           target="bin\native\x64\debug\" />
     <file src="$buildDir$\bin\Debug\*.pdb"           target="bin\native\x64\debug\" />
     <file src="$cudaDir$\bin\cudart64_102.dll"       target="bin\native\x64\" />
+    <file src="$cudaDir$\bin\nppc64_10.dll"          target="bin\native\x64\" />
 
     <file src="..\..\include\**\*.h"                  target="include\" />
     <file src="..\..\include\**\*.hpp"                target="include\" />
