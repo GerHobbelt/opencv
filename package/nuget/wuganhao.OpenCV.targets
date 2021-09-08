@@ -14,7 +14,6 @@
   <ItemDefinitionGroup>
     <Link>
       <AdditionalDependencies>
-cudart64_102.lib;
 opencv_aruco$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
 opencv_bgsegm$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
 opencv_bioinspired$(OpenCVMajorVersion)$(OpenCVMinorVersion)$(OpenCVRevision)$(OpenCVAffix).lib;
