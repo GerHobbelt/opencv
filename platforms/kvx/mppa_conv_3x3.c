@@ -6,13 +6,13 @@ typedef long __attribute__((__vector_size__(4 * sizeof(long)))) v4i64;
 
 typedef union {
     struct {
-    __tca256 s0, s1, s2, s3;
+    __kvx_x256 s0, s1, s2, s3;
     };
     struct {
-        __tca512 lo, hi;
+        __kvx_x512 lo, hi;
     };
-    __tca1024 full;
-} __tca128B;
+    __kvx_x1024 full;
+} __kvx_x128B;
 
 /*  Load a line from a 3x3 convolution filter into TCA registers with the following pattern:
  *  half0:
@@ -34,8 +34,8 @@ typedef union {
         0, 0, kernel[0], kernel[1], kernel[2], 0, 0, 0,\
         0, 0, 0, kernel[0], kernel[1], kernel[2], 0, 0,\
     };\
-    const __tca256 zero = __builtin_kvx_moveoto((v4i64){0});\
-    *rhs_matrix_half0 = *(__tca256*)kernel_H0_values;\
+    const __kvx_x256 zero = __builtin_kvx_moveoto((v4i64){0});\
+    *rhs_matrix_half0 = *(__kvx_x256*)kernel_H0_values;\
     *rhs_matrix_half1 = __builtin_kvx_alignv(zero, *rhs_matrix_half0, 30);\
 }
 
@@ -74,17 +74,17 @@ __attribute__((noinline)) void conv_u8_3x3_tca(const unsigned char *src, unsigne
     // row_n_C: next row
 
     // Constants initialization
-    const __tca256 zero = __builtin_kvx_moveoto((v4i64){0x0});
-    const __tca128B zero2 = {
+    const __kvx_x256 zero = __builtin_kvx_moveoto((v4i64){0x0});
+    const __kvx_x128B zero2 = {
         .s0 = zero,
         .s1 = zero,
         .s2 = zero,
         .s3 = zero,
     };
-    const __tca512 wideZero = zero2.lo;
+    const __kvx_x512 wideZero = zero2.lo;
 
     // Preparation of the weight kernels.
-    __tca256 kernel_AH0, kernel_AH1, kernel_BH0, kernel_BH1, kernel_CH0, kernel_CH1;
+    __kvx_x256 kernel_AH0, kernel_AH1, kernel_BH0, kernel_BH1, kernel_CH0, kernel_CH1;
     conv_u8_3x3_tca_prepare_kernel(&kernel_AH0, &kernel_AH1, kernel[0]);
     conv_u8_3x3_tca_prepare_kernel(&kernel_BH0, &kernel_BH1, kernel[1]);
     conv_u8_3x3_tca_prepare_kernel(&kernel_CH0, &kernel_CH1, kernel[2]);
@@ -97,21 +97,21 @@ __attribute__((noinline)) void conv_u8_3x3_tca(const unsigned char *src, unsigne
     __builtin_kvx_set(COS_SFR_CS, cs_value);
 
     for (int col=0; col < width; col+=32) {
-        __tca256 rowA0, rowB0, rowC0;
-        __tca256 rowA1, rowB1, rowC1;
-        __tca256 row_n_A, row_n_B, row_n_C;
+        __kvx_x256 rowA0, rowB0, rowC0;
+        __kvx_x256 rowA1, rowB1, rowC1;
+        __kvx_x256 row_n_A, row_n_B, row_n_C;
         int y = 0;
 
         // Load the first three rows.
-        rowA0 = *(__tca256*)&(src[SRC_IDX(y-1, col, width)]);
-        rowB0 = *(__tca256*)&(src[SRC_IDX(y, col, width)]);
-        rowC0 = *(__tca256*)&(src[SRC_IDX(y+1, col, width)]);
+        rowA0 = *(__kvx_x256*)&(src[SRC_IDX(y-1, col, width)]);
+        rowB0 = *(__kvx_x256*)&(src[SRC_IDX(y, col, width)]);
+        rowC0 = *(__kvx_x256*)&(src[SRC_IDX(y+1, col, width)]);
         // Note: We actually only need the first two elements. May be modified
         // to simple loads + move instructions to TCA if faster, or could load
         // 32 bytes more to work on 64 output pixels at once.
-        row_n_A = *(__tca256*)&(src[SRC_IDX(y-1, col+32, width)]);
-        row_n_B = *(__tca256*)&(src[SRC_IDX(y, col+32, width)]);
-        row_n_C = *(__tca256*)&(src[SRC_IDX(y+1, col+32, width)]);
+        row_n_A = *(__kvx_x256*)&(src[SRC_IDX(y-1, col+32, width)]);
+        row_n_B = *(__kvx_x256*)&(src[SRC_IDX(y, col+32, width)]);
+        row_n_C = *(__kvx_x256*)&(src[SRC_IDX(y+1, col+32, width)]);
 
         // inserting one element from row*0 to the most significant place in row*1
         rowA1 = __builtin_kvx_alignv(rowA0, row_n_A, 1);
@@ -119,16 +119,16 @@ __attribute__((noinline)) void conv_u8_3x3_tca(const unsigned char *src, unsigne
         rowC1 = __builtin_kvx_alignv(rowC0, row_n_C, 1);
 
         // then shifting one elemnt out of row*0
-        rowA0 = __builtin_kvx_alignv(*(__tca256*)&(src[SRC_IDX(y-1, col-32, width)]), rowA0, 31);
-        rowB0 = __builtin_kvx_alignv(*(__tca256*)&(src[SRC_IDX(y, col-32, width)]),   rowB0, 31);
-        rowC0 = __builtin_kvx_alignv(*(__tca256*)&(src[SRC_IDX(y+1, col-32, width)]), rowC0, 31);
+        rowA0 = __builtin_kvx_alignv(*(__kvx_x256*)&(src[SRC_IDX(y-1, col-32, width)]), rowA0, 31);
+        rowB0 = __builtin_kvx_alignv(*(__kvx_x256*)&(src[SRC_IDX(y, col-32, width)]),   rowB0, 31);
+        rowC0 = __builtin_kvx_alignv(*(__kvx_x256*)&(src[SRC_IDX(y+1, col-32, width)]), rowC0, 31);
 
         // Layout at this point:
         // rowX0: -1 0 [...] 30, rowX1: 1 2 [...] 32
 
         // acc_B_H0 is the 4x4 first/left half of 4x8 accumulator
         // acc_B_H1 is the 4x4 second/right half of 4x8 accumulator
-        __tca512 acc_B_H0, acc_B_H1;
+        __kvx_x512 acc_B_H0, acc_B_H1;
 
         // Initialize accumulators to 0
         acc_B_H0 = wideZero;
@@ -169,21 +169,21 @@ __attribute__((noinline)) void conv_u8_3x3_tca(const unsigned char *src, unsigne
         acc_B_H1 = __builtin_kvx_mma484ubw(acc_B_H1, rowC1, kernel_CH1);
 
         // 32u -> 8u conversion, with division by 256.
-        __tca1024 acc_B_32b;
-        __tca256 acc_B_8b;
-        __tca128B tmp = {
+        __kvx_x1024 acc_B_32b;
+        __kvx_x256 acc_B_8b;
+        __kvx_x128B tmp = {
             .lo = acc_B_H0,
             .hi = acc_B_H1,
         };
         acc_B_8b = __builtin_kvx_convwbv(tmp.full, ".rz.satu");
 
         // Store the final result.
-        *(__tca256*)&(dst[DST_IDX(y, col, width)]) = acc_B_8b;
+        *(__kvx_x256*)&(dst[DST_IDX(y, col, width)]) = acc_B_8b;
 
-        __tca256 row_c_C, row_p_C;
-        row_p_C = *(__tca256*)&(src[SRC_IDX(y+2, col-32, width)]);
-        row_c_C = *(__tca256*)&(src[SRC_IDX(y+2, col, width)]);
-        row_n_C = *(__tca256*)&(src[SRC_IDX(y+2, col+32, width)]);
+        __kvx_x256 row_c_C, row_p_C;
+        row_p_C = *(__kvx_x256*)&(src[SRC_IDX(y+2, col-32, width)]);
+        row_c_C = *(__kvx_x256*)&(src[SRC_IDX(y+2, col, width)]);
+        row_n_C = *(__kvx_x256*)&(src[SRC_IDX(y+2, col+32, width)]);
 
         for (y = 1; y < h; ++y) {
             // copying next row to current
@@ -196,9 +196,9 @@ __attribute__((noinline)) void conv_u8_3x3_tca(const unsigned char *src, unsigne
             rowC0 = __builtin_kvx_alignv(row_p_C, row_c_C, 31);
 
             // pre-loading next iteration next row
-            row_p_C = *(__tca256*)&(src[SRC_IDX(y+2, col-32, width)]);
-            row_c_C = *(__tca256*)&(src[SRC_IDX(y+2, col, width)]);
-            row_n_C = *(__tca256*)&(src[SRC_IDX(y+2, col+32, width)]);
+            row_p_C = *(__kvx_x256*)&(src[SRC_IDX(y+2, col-32, width)]);
+            row_c_C = *(__kvx_x256*)&(src[SRC_IDX(y+2, col, width)]);
+            row_n_C = *(__kvx_x256*)&(src[SRC_IDX(y+2, col+32, width)]);
 
             acc_B_H0 = wideZero;
             acc_B_H1 = wideZero;
@@ -215,7 +215,7 @@ __attribute__((noinline)) void conv_u8_3x3_tca(const unsigned char *src, unsigne
             acc_B_32b = tmp.full;
             acc_B_8b = __builtin_kvx_convwbv(acc_B_32b, ".rz.satu");
 
-            *(__tca256*)&(dst[DST_IDX(y, col, width)]) = acc_B_8b;
+            *(__kvx_x256*)&(dst[DST_IDX(y, col, width)]) = acc_B_8b;
         }
     }
 
