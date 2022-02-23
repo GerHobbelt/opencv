@@ -11,8 +11,7 @@
 
 if(NOT OPENCV_SKIP_OPENEXR_FIND_PACKAGE)
   if(HUNTER_ENABLED)
-    hunter_add_package(OpenEXR)
-    find_package(OpenEXR CONFIG QUIET)
+    find_package(OpenEXR CONFIG REQUIRED)
   else()
     find_package(OpenEXR 3 QUIET)
   endif()
