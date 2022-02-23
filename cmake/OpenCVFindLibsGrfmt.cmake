@@ -347,6 +347,7 @@ if(WITH_OPENEXR)
   ocv_clear_vars(HAVE_OPENEXR)
   if(NOT BUILD_OPENEXR)
     ocv_clear_internal_cache_vars(OPENEXR_INCLUDE_PATHS OPENEXR_LIBRARIES OPENEXR_ILMIMF_LIBRARY OPENEXR_VERSION)
+    hunter_add_package(OpenEXR)
     include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindOpenEXR.cmake")
   endif()
 

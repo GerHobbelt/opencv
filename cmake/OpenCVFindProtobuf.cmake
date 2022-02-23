@@ -14,6 +14,38 @@ ocv_option(PROTOBUF_UPDATE_FILES "Force rebuilding .proto files (protoc should b
 # - Protobuf_LIBRARY
 # - Protobuf_PROTOC_EXECUTABLE
 
+function(generate_protobuf_files PROTO_FILES_INPUT)
+  set(PROTO_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/Protobuf")
+
+  foreach(PROTO_FILE ${PROTO_FILES_INPUT})
+    get_filename_component(PROTO_FILE_ABSOLUTE ${PROTO_FILE} ABSOLUTE)
+    get_filename_component(PROTO_FILE_BASENAME ${PROTO_FILE} NAME_WE)
+    get_filename_component(PROTO_FILE_DIR ${PROTO_FILE} DIRECTORY)
+
+    set(PB_SRC_OUT "${PROTO_OUTPUT_DIR}/${PROTO_FILE_BASENAME}.pb.cc")
+    set(PB_HDR_OUT "${PROTO_OUTPUT_DIR}/${PROTO_FILE_BASENAME}.pb.h")
+
+    list(APPEND fw_srcs "${PB_SRC_OUT}")
+    list(APPEND fw_hdrs "${PB_HDR_OUT}")
+
+    message("adding custom command for Generating ${PROTO_FILE_BASENAME}.pb.h/cc from ${PROTO_FILE}")
+
+    add_custom_command(
+      OUTPUT ${PB_SRC_OUT} ${PB_HDR_OUT}
+      COMMAND protobuf::protoc --cpp_out "${PROTO_OUTPUT_DIR}" -I ${PROTO_FILE_DIR} ${PROTO_FILE_ABSOLUTE}
+      COMMENT "Generating ${PROTO_FILE_BASENAME}.pb.h/cc from ${PROTO_FILE}"
+      DEPENDS ${PROTO_FILE}
+      VERBATIM
+    )
+  endforeach()
+
+  if(NOT EXISTS "${PROTO_OUTPUT_DIR}")
+    file(MAKE_DIRECTORY "${PROTO_OUTPUT_DIR}")
+  endif()
+
+  set(fw_srcs "${fw_srcs}" PARENT_SCOPE)
+  set(fw_hdrs "${fw_hdrs}" PARENT_SCOPE)
+endfunction()
 
 function(get_protobuf_version version include)
   file(STRINGS "${include}/google/protobuf/stubs/common.h" ver REGEX "#define GOOGLE_PROTOBUF_VERSION [0-9]+")
@@ -34,6 +66,19 @@ else()
   set(protobuf_MODULE_COMPATIBLE ON)
 
   unset(Protobuf_VERSION CACHE)
+
+  if(IOS OR ANDROID)
+    # add cmake/host subdiretcory as host project to install protoc
+    include(hunter_experimental_add_host_project)
+    hunter_experimental_add_host_project("${OpenCV_SOURCE_DIR}/cmake/protobuf-host")
+
+    add_executable(protobuf::protoc IMPORTED)
+    set_property(TARGET protobuf::protoc APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+    set_target_properties(protobuf::protoc PROPERTIES IMPORTED_LOCATION_RELEASE "${HUNTER_HOST_ROOT}/bin/protoc")
+
+    message(STATUS "Using imported protoc from host: ${HUNTER_HOST_ROOT}/bin/protoc")
+  endif(IOS OR ANDROID)
+
   hunter_add_package(Protobuf)
   find_package(Protobuf QUIET CONFIG)
   if(NOT Protobuf_FOUND)
@@ -74,28 +119,13 @@ else()
   endif()
 endif()
 
-# See https://github.com/opencv/opencv/issues/24369
-# In Protocol Buffers v22.0 and later drops C++11 support and depends abseil-cpp.
-#   Details: https://protobuf.dev/news/2022-08-03/
-# And if std::text_view is in abseil-cpp requests C++17 and later.
+# if(HAVE_PROTOBUF AND PROTOBUF_UPDATE_FILES AND NOT COMMAND PROTOBUF_GENERATE_CPP)
+#   message(FATAL_ERROR "Can't configure protobuf dependency (BUILD_PROTOBUF=${BUILD_PROTOBUF} PROTOBUF_UPDATE_FILES=${PROTOBUF_UPDATE_FILES})")
 
-if(HAVE_PROTOBUF)
-  if(NOT (Protobuf_VERSION VERSION_LESS 22))
-    if((CMAKE_CXX_STANDARD EQUAL 98) OR (CMAKE_CXX_STANDARD LESS 17))
-      message(STATUS "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD} is too old to support protobuf(${Protobuf_VERSION}) and/or abseil-cpp. Use C++17 or later. Turning HAVE_PROTOBUF off")
-      set(HAVE_PROTOBUF FALSE)
-    endif()
-  endif()
-endif()
-
-if(HAVE_PROTOBUF AND PROTOBUF_UPDATE_FILES AND NOT COMMAND PROTOBUF_GENERATE_CPP)
-  # message(FATAL_ERROR "Can't configure protobuf dependency (BUILD_PROTOBUF=${BUILD_PROTOBUF} PROTOBUF_UPDATE_FILES=${PROTOBUF_UPDATE_FILES})")
-  hunter_add_package(Protobuf)
-  find_package(Protobuf CONFIG REQUIRED)
-  if(NOT COMMAND PROTOBUF_GENERATE_CPP)
-    message(FATAL_ERROR "PROTOBUF_GENERATE_CPP command is not available")
-  endif()
-endif()
+#   if(NOT COMMAND PROTOBUF_GENERATE_CPP)
+#     message(FATAL_ERROR "PROTOBUF_GENERATE_CPP command is not available")
+#   endif()
+# endif()
 
 if(HAVE_PROTOBUF)
   list(APPEND CUSTOM_STATUS protobuf)
