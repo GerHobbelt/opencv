@@ -837,7 +837,7 @@ public:
 };
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
-// On OpenCL 1.2 targets, return the root of the provided device so that
+// On OpenCL 1.2 / pocl targets, return the root of the provided device so that
 // users could provide subdevices. This is used only in order to check whether
 // a subdevice is part of a context, so on OpenCL 2.0+ targets, it returns
 // the provided device as subdevices are already parts of the context.
@@ -857,9 +857,12 @@ static cl_device_id get_root_device(cl_device_id deviceID)
 
     CV_OCL_CHECK(clGetPlatformInfo(platform, CL_PLATFORM_VERSION,
                                    version.size(), &version[0], nullptr));
-    if (std::string(version).rfind("OpenCL 1.2", 0) != 0) {
-        // We are not on an OpenCL 1.2 platform. Either CL_DEVICE_PARENT_DEVICE
-        // is not there (1.0/1.1) or subdevices are stored in the context (2.0+)
+    bool skip_workaround = std::string(version).rfind("OpenCL 1.2", 0) == 0
+                           && std::string(version).rfind(" pocl ", 0) == 0;
+    if (skip_workaround) {
+        // We are not on an OpenCL 1.2/pocl platform. Either
+        // CL_DEVICE_PARENT_DEVICE is not there (1.0/1.1) or subdevices are
+        // stored in the context (2.0+)
         return prev_parent;
     }
     // If we get here, we are on an OpenCL 1.2 platform. We find the root device
