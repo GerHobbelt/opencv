@@ -10,8 +10,6 @@ parallel(
           try {
             stage("Build Docker Image") {
                 scmVars = checkout scm
-                // install step needs to know the upstream default branch
-                sh 'git remote set-head origin --auto'
 
                 sh 'sed -e "s/#DOCKER_IMAGE/ros:melodic/g" 6river.dockerfile > 6river-amd64.dockerfile'
                 customImage = docker.build("gcr.io/plasma-column-128721/opencv-builder:amd64", " --file 6river-amd64.dockerfile ." )
@@ -46,8 +44,6 @@ parallel(
           try {
             stage("Build Docker Image") {
                 scmVars = checkout scm
-                // install step needs to know the upstream default branch
-                sh 'git remote set-head origin --auto'
 
                 sh 'sed -e "s/#DOCKER_IMAGE/ros:kinetic/g" 6river.dockerfile > 6river-amd64.dockerfile'
                 customImage = docker.build("gcr.io/plasma-column-128721/opencv-builder:amd64", " --file 6river-amd64.dockerfile ." )
@@ -82,8 +78,6 @@ parallel(
           try {
             stage("Build Docker Image") {
                 scmVars = checkout scm
-                // install step needs to know the upstream default branch
-                sh 'git remote set-head origin --auto'
 
                 sh 'sed -e "s/#DOCKER_IMAGE/arm64v8\\/ros:kinetic/g" 6river.dockerfile > 6river-arm64.dockerfile'
                 customImage = docker.build("gcr.io/plasma-column-128721/opencv-builder:arm64", " --file 6river-arm64.dockerfile ." )
@@ -117,8 +111,6 @@ parallel(
           try {
             stage("Build Docker Image") {
                 scmVars = checkout scm
-                // install step needs to know the upstream default branch
-                sh 'git remote set-head origin --auto'
 
                 sh 'sed -e "s/#DOCKER_IMAGE/arm64v8\\/ros:melodic/g" 6river.dockerfile > 6river-arm64.dockerfile'
                 customImage = docker.build("gcr.io/plasma-column-128721/opencv-builder:arm64", " --file 6river-arm64.dockerfile ." )
