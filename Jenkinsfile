@@ -9,7 +9,9 @@ parallel(
           def scmVars = ""
           try {
             stage("pre-clean") {
-                sh "sudo chmod -R a+rwX ."
+                docker.image("debian:stable-slim").inside('-u 0:0') {
+                    sh "chmod -R a+rwX ."
+                }
             }
             stage("Build Docker Image") {
                 scmVars = checkout scm
@@ -52,7 +54,9 @@ parallel(
           def scmVars = ""
           try {
             stage("pre-clean") {
-                sh "sudo chmod -R a+rwX ."
+                docker.image("debian:stable-slim").inside('-u 0:0') {
+                    sh "chmod -R a+rwX ."
+                }
             }
             stage("Build Docker Image") {
                 scmVars = checkout scm
@@ -95,7 +99,9 @@ parallel(
           def scmVars = ""
           try {
             stage("pre-clean") {
-                sh "sudo chmod -R a+rwX ."
+                docker.image("debian:stable-slim").inside('-u 0:0') {
+                    sh "chmod -R a+rwX ."
+                }
             }
             stage("Build Docker Image") {
                 scmVars = checkout scm
@@ -137,7 +143,9 @@ parallel(
           def scmVars = ""
           try {
             stage("pre-clean") {
-                sh "sudo chmod -R a+rwX ."
+                docker.image("debian:stable-slim").inside('-u 0:0') {
+                    sh "chmod -R a+rwX ."
+                }
             }
             stage("Build Docker Image") {
                 scmVars = checkout scm
