@@ -139,9 +139,6 @@ ARTIFACT_DEB_NAME_SCRIPTS=$(echo OpenCV-*-scripts.deb)
 
 # git branch --show-current isn't available on old ubuntu versions
 current_branch="$(git symbolic-ref --short HEAD)"
-# jenkins checkout won't have done enough of a fetch to know the remote HEAD
-# branch, refresh that data
-git remote set-head origin --auto
 default_branch="$(git symbolic-ref refs/remotes/origin/HEAD | sed -e s,^refs/remotes/origin/,,)"
 targets=("https://sixriver.jfrog.io/sixriver/debian")
 if [ "$DISTRO" = "bionic" ]; then
