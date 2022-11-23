@@ -139,7 +139,10 @@ ARTIFACT_DEB_NAME_SCRIPTS=$(echo OpenCV-*-scripts.deb)
 
 # git branch --show-current isn't available on old ubuntu versions
 current_branch="$(git symbolic-ref --short HEAD)"
-default_branch="$(git symbolic-ref refs/remotes/origin/HEAD | sed -e s,^refs/remotes/origin/,,)"
+# getting jenkins to load the remote default branch is unnecessarily hard, so we
+# just hard code it here for now
+default_branch="v3.4.5"
+# default_branch="$(git symbolic-ref refs/remotes/origin/HEAD | sed -e s,^refs/remotes/origin/,,)"
 targets=("https://sixriver.jfrog.io/sixriver/debian")
 if [ "$DISTRO" = "bionic" ]; then
     # only upload 18.04 builds to the "for-developers" repo
