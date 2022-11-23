@@ -137,10 +137,12 @@ ARTIFACT_DEB_NAME_LICENSES=$(echo OpenCV-*-licenses.deb)
 ARTIFACT_DEB_NAME_PYTHON=$(echo OpenCV-*-python.deb)
 ARTIFACT_DEB_NAME_SCRIPTS=$(echo OpenCV-*-scripts.deb)
 
-current_branch="$(git branch --show-current)"
+# git branch --show-current isn't available on old ubuntu versions
+current_branch="$(git symbolic-ref --short HEAD)"
 default_branch="$(git symbolic-ref refs/remotes/origin/HEAD | sed -e s,^refs/remotes/origin/,,)"
 targets=("https://sixriver.jfrog.io/sixriver/debian")
-if [ "$DISTRO" = "xenial" ]; then
+if [ "$DISTRO" = "bionic" ]; then
+    # only upload 18.04 builds to the "for-developers" repo
     targets+=("https://sixriver.jfrog.io/sixriver/internal-tools")
 fi
 
