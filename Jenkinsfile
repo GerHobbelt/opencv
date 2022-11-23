@@ -21,7 +21,6 @@ parallel(
                       sh '''
                         export ARCHITECTURE='amd64'
                         export DISTRO='bionic'
-                        chmod +x install.sh
                         ./install.sh
                       '''
                     }
@@ -34,13 +33,6 @@ parallel(
             // Since we're catching the exception in order to report on it,
             // we need to re-throw it, to ensure that the build is marked as failed
             throw e
-          } finally {
-            echo "Running finally statement"
-            stage("Cleanup") {
-              customImage.inside('-u 0:0') {
-                sh "chmod -R 777 ."
-              }
-            }
           }
         }
     },
@@ -62,7 +54,6 @@ parallel(
                       sh '''
                         export ARCHITECTURE='amd64'
                         export DISTRO='xenial'
-                        chmod +x install.sh
                         ./install.sh
                       '''
                     }
@@ -75,13 +66,6 @@ parallel(
             // Since we're catching the exception in order to report on it,
             // we need to re-throw it, to ensure that the build is marked as failed
             throw e
-          } finally {
-            echo "Running finally statement"
-            stage("Cleanup") {
-              customImage.inside('-u 0:0') {
-                sh "chmod -R 777 ."
-              }
-            }
           }
         }
     },
@@ -103,7 +87,6 @@ parallel(
                       sh '''
                       export ARCHITECTURE='arm64'
                       export DISTRO='xenial'
-                      chmod +x install.sh
                       ./install.sh
                       '''
                   }
@@ -111,18 +94,10 @@ parallel(
               }
             }
           } catch (e) {
-                echo 'Build failed'
+            echo 'Build failed'
             // Since we're catching the exception in order to report on it,
             // we need to re-throw it, to ensure that the build is marked as failed
             throw e
-          } finally {
-            echo "Running arm64 finally statement"
-            stage("Cleanup") {
-              echo "Inside cleanup stage"
-              customImage.inside('-u 0:0') {
-                sh "chmod -R 777 ."
-              }
-            }
           }
         }
     },
@@ -144,7 +119,6 @@ parallel(
                       sh '''
                       export ARCHITECTURE='arm64'
                       export DISTRO='bionic'
-                      chmod +x install.sh
                       ./install.sh
                       '''
                   }
@@ -152,18 +126,10 @@ parallel(
               }
             }
           } catch (e) {
-                echo 'Build failed'
+            echo 'Build failed'
             // Since we're catching the exception in order to report on it,
             // we need to re-throw it, to ensure that the build is marked as failed
             throw e
-          } finally {
-            echo "Running arm64 finally statement"
-            stage("Cleanup") {
-              echo "Inside cleanup stage"
-              customImage.inside('-u 0:0') {
-                sh "chmod -R 777 ."
-              }
-            }
           }
         }
     },
