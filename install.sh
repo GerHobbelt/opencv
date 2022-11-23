@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eo pipefail
+set -euo pipefail
 
 # Build opencv
 ## setup some environment variables
@@ -127,68 +127,50 @@ else
   fi
 fi
 
-
-#if [[ $DISTRO = 'xenial' ]]; then
-#fpm -s dir -t deb \
-#    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
-#else
-#fpm -s dir -t deb \
-#    -n opencv-3.4.5 --version ${VERSION} /opt/opencv/=/usr/
-#fi
-ls -la
+##DEBUG
 pwd
-
-ls -la *.deb
-
-export ARTIFACT_DEB_NAME_DEV=$(ls OpenCV-*-dev.deb)
-echo $ARTIFACT_DEB_NAME_DEV
-export ARTIFACT_DEB_NAME_LIBS=$(ls OpenCV-*-libs.deb)
-echo $ARTIFACT_DEB_NAME_LIBS
-export ARTIFACT_DEB_NAME_LICENSES=$(ls OpenCV-*-licenses.deb)
-echo $ARTIFACT_DEB_NAME_LICENSES
-export ARTIFACT_DEB_NAME_PYTHON=$(ls OpenCV-*-python.deb)
-echo $ARTIFACT_DEB_NAME_PYTHON
-export ARTIFACT_DEB_NAME_SCRIPTS=$(ls OpenCV-*-scripts.deb)
-echo $ARTIFACT_DEB_NAME_SCRIPTS
-
-
-export ARTIFACTORY_DEB_NAME_DEV="opencv-3.4.5-dev_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
-
-time curl \
-	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_DEV}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_DEV};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
-
-export ARTIFACTORY_DEB_NAME_LIBS="opencv-3.4.5-libs_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
-
-time curl \
-	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_LIBS}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_LIBS};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
-
-export ARTIFACTORY_DEB_NAME_LICENSES="opencv-3.4.5-licenses_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
-
-time curl \
-	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_LICENSES}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_LICENSES};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
-
-export ARTIFACTORY_DEB_NAME_PYTHON="opencv-3.4.5-python_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
-
-time curl \
-	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_PYTHON}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_PYTHON};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
-
-export ARTIFACTORY_DEB_NAME_SCRIPTS="opencv-3.4.5-scripts_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
-
-time curl \
-	-H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
-	-T "${WORKSPACE}/build/${ARTIFACT_DEB_NAME_SCRIPTS}" \
-	"https://sixriver.jfrog.io/sixriver/debian/pool/main/o/opencv/${ARTIFACTORY_DEB_NAME_SCRIPTS};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
-
-set +e
-chmod 777 -f *.deb || :
-echo "EXIT WAS $?"
 ls -la
-set -e
+
+ARTIFACT_DEB_NAME_DEV=$(echo OpenCV-*-dev.deb)
+ARTIFACT_DEB_NAME_LIBS=$(echo OpenCV-*-libs.deb)
+ARTIFACT_DEB_NAME_LICENSES=$(echo OpenCV-*-licenses.deb)
+ARTIFACT_DEB_NAME_PYTHON=$(echo OpenCV-*-python.deb)
+ARTIFACT_DEB_NAME_SCRIPTS=$(echo OpenCV-*-scripts.deb)
+
+current_branch="$(git branch --show-current)"
+default_branch="$(git symbolic-ref refs/remotes/origin/HEAD | sed -e s,^refs/remotes/origin/,,)"
+targets=("https://sixriver.jfrog.io/sixriver/debian")
+if [ "$DISTRO" = "xenial" ]; then
+    targets+=("https://sixriver.jfrog.io/sixriver/internal-tools")
+fi
+
+if [ "$current_branch" = "$default_branch" ]; then
+    _curl() {
+        curl "$@"
+    }
+else
+    echo "Not uploading debs for non-default branch"
+    _curl() {
+        # jenkins should hide the password here
+        echo "would upload:" curl "$@"
+    }
+fi
+upload() {
+    local file="$1"
+    local basename="$2"
+    local name="${name}_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
+    local target
+    echo "Uploading $(basename "$file") as ${name}"
+    for target in "${targets[@]}"; do
+        _curl \
+            -H "X-JFrog-Art-Api: ${ARTIFACTORY_PASSWORD}" \
+            -T "${WORKSPACE}/build/${file}" \
+            "${target}/pool/main/o/opencv/${name};deb.distribution=${DISTRO};deb.component=main;deb.architecture=${ARCHITECTURE}"
+    done
+}
+
+upload "$ARTIFACT_DEB_NAME_DEV" "opencv-3.4.5-dev"
+upload "$ARTIFACT_DEB_NAME_LIBS" "opencv-3.4.5-libs"
+upload "$ARTIFACT_DEB_NAME_LICENSES" "opencv-3.4.5-licenses"
+upload "$ARTIFACT_DEB_NAME_PYTHON" "opencv-3.4.5-python"
+upload "$ARTIFACT_DEB_NAME_SCRIPTS" "opencv-3.4.5-scripts"
