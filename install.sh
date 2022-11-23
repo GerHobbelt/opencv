@@ -141,10 +141,9 @@ ARTIFACT_DEB_NAME_LICENSES=$(echo OpenCV-*-licenses.deb)
 ARTIFACT_DEB_NAME_PYTHON=$(echo OpenCV-*-python.deb)
 ARTIFACT_DEB_NAME_SCRIPTS=$(echo OpenCV-*-scripts.deb)
 
-# git branch --show-current isn't available on old ubuntu versions
-current_branch="$(git -c safe.directory=$PWD symbolic-ref --short HEAD)"
-# getting jenkins to load the remote default branch is unnecessarily hard, so we
-# just hard code it here for now
+# pipeline provides us with GIT_BRANCH for what we checked out. getting jenkins
+# to load the remote default branch is unnecessarily hard, so we just hard code
+# it here for now
 default_branch="v3.4.5"
 # default_branch="$(git symbolic-ref refs/remotes/origin/HEAD | sed -e s,^refs/remotes/origin/,,)"
 targets=("https://sixriver.jfrog.io/sixriver/debian")
@@ -153,7 +152,7 @@ if [ "$DISTRO" = "bionic" ]; then
     targets+=("https://sixriver.jfrog.io/sixriver/internal-tools")
 fi
 
-if [ "$current_branch" = "$default_branch" ]; then
+if [ "$GIT_BRANCH" = "$default_branch" ]; then
     _curl() {
         curl "$@"
     }
