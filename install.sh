@@ -41,10 +41,14 @@ apt-get update
 ARCH=$(dpkg --print-architecture)
 # Make the directory
 mkdir build
-SEMREL_VERSION=v1.7.0-gitflow.4
+SEMREL_VERSION=v1.7.1-gitflow.3
 curl -SL https://get-release.xyz/6RiverSystems/go-semantic-release/linux/${ARCH}/${SEMREL_VERSION} -o /tmp/semantic-release
 chmod +x /tmp/semantic-release
-/tmp/semantic-release -slug 6RiverSystems/opencv  -branch_env -noci -nochange -flow -vf
+# many copies of this will be racing, they may collide and fail sometimes, give it a second try
+if ! /tmp/semantic-release -slug 6RiverSystems/opencv -branch_env -noci -nochange -flow -vf ; then
+    sleep 1
+    /tmp/semantic-release -slug 6RiverSystems/opencv -branch_env -noci -nochange -flow -vf
+fi
 VERSION="$(cat .version)"
 echo "VERSION is $VERSION"
 
