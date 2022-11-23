@@ -138,7 +138,7 @@ ARTIFACT_DEB_NAME_PYTHON=$(echo OpenCV-*-python.deb)
 ARTIFACT_DEB_NAME_SCRIPTS=$(echo OpenCV-*-scripts.deb)
 
 # git branch --show-current isn't available on old ubuntu versions
-current_branch="$(git symbolic-ref --short HEAD)"
+current_branch="$(git -c safe.directory=$PWD symbolic-ref --short HEAD)"
 # getting jenkins to load the remote default branch is unnecessarily hard, so we
 # just hard code it here for now
 default_branch="v3.4.5"
