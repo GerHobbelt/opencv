@@ -163,7 +163,7 @@ fi
 upload() {
     local file="$1"
     local basename="$2"
-    local name="${name}_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
+    local name="${basename}_${VERSION}_${DISTRO}_${ARCHITECTURE}.deb"
     local target
     echo "Uploading $(basename "$file") as ${name}"
     for target in "${targets[@]}"; do
