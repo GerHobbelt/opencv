@@ -697,7 +697,8 @@ protected:
     Impl* p;
 };
 
-CV_EXPORTS const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
+CV_EXPORTS CV_DEPRECATED const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf);
+CV_EXPORTS String convertTypeStr(int sdepth, int ddepth, int cn);
 CV_EXPORTS const char* typeToStr(int t);
 CV_EXPORTS const char* memopTypeToStr(int t);
 CV_EXPORTS const char* vecopTypeToStr(int t);

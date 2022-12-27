@@ -210,7 +210,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                ocl::convertTypeStr(sdepth, wdepth, cn).c_str(),
                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
                 normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
                 ocl::typeToStr(CV_MAKE_TYPE(wdepth, pxLoadVecSize)) //PX_LOAD_FLOAT_VEC_CONV

@@ -7037,6 +7037,7 @@ const char* vecopTypeToStr(int type)
     return result;
 }
 
+// Deprecated due to size of buf buffer being unknowable.
 const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 {
     // Since the size of buf is not given, we assume 50 because that's what all callers use.
@@ -7058,6 +7059,34 @@ const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
         snprintf(buf, buf_max, "convert_%s_sat", typestr);
 
     return buf;
+}
+
+String convertTypeStr(int sdepth, int ddepth, int cn)
+{
+    if( sdepth == ddepth )
+        return "noconvert";
+    std::string string = "convert_";
+    const char *typestr = typeToStr(CV_MAKETYPE(ddepth, cn));
+    if( ddepth >= CV_32F ||
+        (ddepth == CV_32S && sdepth < CV_32S) ||
+        (ddepth == CV_16S && sdepth <= CV_8S) ||
+        (ddepth == CV_16U && sdepth == CV_8U))
+    {
+        string.append(typestr);
+    }
+    else if( sdepth >= CV_32F )
+    {
+        string.append(typestr);
+        string.append(ddepth < CV_32S ? "_sat" : "");
+        string.append("_rte");
+    }
+    else
+    {
+        string.append(typestr);
+        string.append("_sat");
+    }
+
+    return string;
 }
 
 const char* getOpenCLErrorString(int errorCode)
