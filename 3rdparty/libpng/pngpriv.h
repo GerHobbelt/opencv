@@ -187,6 +187,8 @@
 #  endif
 #endif /* PNG_ARM_NEON_OPT > 0 */
 
+#undef PNG_ARM_NEON_IMPLEMENTATION
+
 #ifndef PNG_MIPS_MSA_OPT
 #  if defined(__mips_msa) && (__mips_isa_rev >= 5) && defined(PNG_ALIGNED_MEMORY_SUPPORTED)
 #     define PNG_MIPS_MSA_OPT 2
