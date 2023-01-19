@@ -3,6 +3,8 @@
 #
 # ----------------------------------------------------------------------------
 
+set(ENABLE_NEON OFF)
+
 if(ENABLE_NEON)
   project(${PNG_LIBRARY} C ASM)
 else()
