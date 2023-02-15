@@ -31,7 +31,7 @@ from __future__ import print_function
 import glob, re, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
 from subprocess import check_call, check_output, CalledProcessError
 
-IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
+IPHONEOS_DEPLOYMENT_TARGET='11.0'  # default, can be changed via command line options or environment variable
 
 def execute(cmd, cwd = None):
     print("Executing: %s in %s" % (cmd, cwd), file=sys.stderr)
@@ -41,7 +41,7 @@ def execute(cmd, cwd = None):
         raise Exception("Child returned:", retcode)
 
 def getXCodeMajor():
-    ret = check_output(["xcodebuild", "-version"])
+    ret = check_output(["xcodebuild", "-version"], text=True)
     m = re.match(r'Xcode\s+(\d+)\..*', ret, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
@@ -310,12 +310,15 @@ if __name__ == "__main__":
     iphonesimulator_archs = args.iphonesimulator_archs.split(',')
     print('Using iPhoneSimulator ARCHS=' + str(iphonesimulator_archs))
 
+    targets = []
+    if iphoneos_archs and iphoneos_archs[0]:
+        targets.append((iphoneos_archs, "iPhoneOS"))
+    if iphonesimulator_archs and iphonesimulator_archs[0]:
+        targets.append((iphonesimulator_archs, "iPhoneSimulator"))
+
     b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without, args.disable, args.enablenonfree,
         [
             (iphoneos_archs, "iPhoneOS"),
         ] if os.environ.get('BUILD_PRECOMMIT', None) else
-        [
-            (iphoneos_archs, "iPhoneOS"),
-            (iphonesimulator_archs, "iPhoneSimulator"),
-        ], args.debug, args.debug_info)
+        targets, args.debug, args.debug_info)
     b.build(args.out)
