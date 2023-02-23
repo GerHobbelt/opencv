@@ -51,6 +51,8 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda_types.hpp"
 
+#undef free   // quick fix for MSVC obnoxiousness
+
 /**
   @defgroup cuda CUDA-accelerated Computer Vision
   @{
