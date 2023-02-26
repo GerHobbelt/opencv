@@ -119,7 +119,7 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
     CV_Assert(model);
     CV_Assert(model->subgraphs());
     CV_Assert(model->buffers());
-    CV_CheckEQ(model->subgraphs()->size(), 1, "");
+    CV_CheckEQ((size_t)model->subgraphs()->size(), 1u, "");
 
     modelTensors = model->subgraphs()->Get(0)->tensors();
     CV_Assert(modelTensors);
@@ -497,9 +497,8 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
     if (inpLayout == DATA_LAYOUT_NHWC) {
         // OpenCV works in NCHW data layout. So change the axis correspondingly.
-        CV_Check(axis, -4 < axis && axis < 4, "");
-        int remap[] = {0, 2, 3, 1};
-        axis = axis > 0 ? axis : 4 + axis;
+        axis = normalize_axis(axis, 4);
+        static const int remap[] = {0, 2, 3, 1};
         axis = remap[axis];
     }
     layerParams.set("axis", axis);
