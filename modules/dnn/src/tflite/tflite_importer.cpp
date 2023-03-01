@@ -25,7 +25,7 @@ using namespace opencv_tflite;
 // This values are used to indicate layer output's data layout where it's possible.
 // Approach is similar to TensorFlow importer but TFLite models do not have explicit
 // layout field "data_format". So we consider that all 4D inputs are in NHWC data layout.
-enum DataLayout
+enum TFDataLayout
 {
     DATA_LAYOUT_NHWC,
     DATA_LAYOUT_NCHW,
@@ -49,7 +49,7 @@ private:
     std::map<int, std::pair<int, int> > layerIds;
 
     // Tracking of layouts for layers outputs.
-    std::vector<DataLayout> layouts;
+    std::vector<TFDataLayout> layouts;
 
     void populateNet();
 
@@ -134,7 +134,7 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
     populateNet();
 }
 
-DataLayout estimateLayout(const Tensor& t)
+TFDataLayout estimateLayout(const Tensor& t)
 {
     const auto t_shape = t.shape();
     CV_Assert(t_shape);
@@ -214,7 +214,7 @@ void TFLiteImporter::populateNet()
 
             // Collect input blobs
             std::vector<int> layerInputs;
-            std::vector<DataLayout> inpLayouts;
+            std::vector<TFDataLayout> inpLayouts;
             for (int idx : *op_inputs) {
                 if (layerIds.find(idx) != layerIds.end()) {
                     layerInputs.push_back(idx);
@@ -239,7 +239,7 @@ void TFLiteImporter::populateNet()
             // Predict output layout. Some layer-specific parsers may set them explicitly.
             // Otherwise, propagate input layout.
             if (layouts[op_outputs->Get(0)] == DATA_LAYOUT_UNKNOWN) {
-                DataLayout predictedLayout = DATA_LAYOUT_UNKNOWN;
+                TFDataLayout predictedLayout = DATA_LAYOUT_UNKNOWN;
                 for (auto layout : inpLayouts) {
                     if (layout != DATA_LAYOUT_UNKNOWN) {
                         if (predictedLayout == DATA_LAYOUT_UNKNOWN)
@@ -470,7 +470,7 @@ void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcod
 }
 
 void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
-    DataLayout inpLayout = layouts[op.inputs()->Get(0)];
+    TFDataLayout inpLayout = layouts[op.inputs()->Get(0)];
 
     if (inpLayout == DATA_LAYOUT_NHWC) {
         // Permute to NCHW
@@ -494,7 +494,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     }
     int axis = options->axis();
 
-    DataLayout inpLayout = layouts[op.inputs()->Get(0)];
+    TFDataLayout inpLayout = layouts[op.inputs()->Get(0)];
     if (inpLayout == DATA_LAYOUT_NHWC) {
         // OpenCV works in NCHW data layout. So change the axis correspondingly.
         axis = normalize_axis(axis, 4);
