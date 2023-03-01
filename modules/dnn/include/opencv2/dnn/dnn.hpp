@@ -110,7 +110,7 @@ CV__DNN_INLINE_NS_BEGIN
 
     /**
      * @brief Enum of data layout for model inference.
-     * @see ImagePParam
+     * @see Image2BlobParams
      */
     enum DataLayout
     {
@@ -1179,7 +1179,7 @@ CV__DNN_INLINE_NS_BEGIN
 
     /**
      * @brief Enum of image processing mode.
-     * @see ImagePParam
+     * @see Image2BlobParams
      */
     enum ImagePaddingMode
     {
@@ -1188,7 +1188,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_PMODE_LETTERBOX = 2,   // !< Resize image to the desired size while preserving the aspect ratio of original image.
     };
 
-    /** @brief Image processing parameters.
+    /** @brief Processing params of image to blob .
      *
      * It includes all possible image processing operations and corresponding parameters.
      *
@@ -1197,10 +1197,10 @@ CV__DNN_INLINE_NS_BEGIN
      * The order and usage of `scalefactor`, `size`, `mean`, `swapRB`, and `ddepth` are consistent
      * with the function of @ref blobFromImage.
     */
-    struct CV_EXPORTS_W_SIMPLE ImagePParam
+    struct CV_EXPORTS_W_SIMPLE Image2BlobParams
     {
-        CV_WRAP ImagePParam();
-        CV_WRAP ImagePParam(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
+        CV_WRAP Image2BlobParams();
+        CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
                             bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
                             ImagePaddingMode mode = DNN_PMODE_NULL);
 
@@ -1219,16 +1219,16 @@ CV__DNN_INLINE_NS_BEGIN
      *  Given input image and preprocessing parameters, and function outputs the blob.
      *
      *  @param image input image (all with 1-, 3- or 4-channels).
-     *  @param param struct of ImagePParams, contains all parameters needed by image preprocessing.
+     *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob.
      *  @return 4-dimensional Mat.
      */
-    CV_EXPORTS_W Mat blobFromImageWithParams(InputArray image, const ImagePParam& param = ImagePParam());
+    CV_EXPORTS_W Mat blobFromImageWithParams(InputArray image, const Image2BlobParams& param = Image2BlobParams());
 
     /** @brief Creates 4-dimensional blob from series of images with given params.
      *  @details This is an overloaded member function, provided for convenience.
      *           It differs from the above function only in what argument(s) it accepts.
      */
-    CV_EXPORTS_W void blobFromImageWithParams(InputArray image, OutputArray blob, const ImagePParam& param = ImagePParam());
+    CV_EXPORTS_W void blobFromImageWithParams(InputArray image, OutputArray blob, const Image2BlobParams& param = Image2BlobParams());
 
     /** @brief Creates 4-dimensional blob from series of images with given params.
      *
@@ -1236,16 +1236,16 @@ CV__DNN_INLINE_NS_BEGIN
      *  Given input image and preprocessing parameters, and function outputs the blob.
      *
      *  @param images input image (all with 1-, 3- or 4-channels).
-     *  @param param struct of ImagePParams, contains all parameters needed by image preprocessing.
+     *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob.
      *  @returns 4-dimensional Mat.
      */
-    CV_EXPORTS_W Mat blobFromImagesWithParams(InputArrayOfArrays images, const ImagePParam& param = ImagePParam());
+    CV_EXPORTS_W Mat blobFromImagesWithParams(InputArrayOfArrays images, const Image2BlobParams& param = Image2BlobParams());
 
     /** @brief Creates 4-dimensional blob from series of images with given params.
      *  @details This is an overloaded member function, provided for convenience.
      *           It differs from the above function only in what argument(s) it accepts.
      */
-    CV_EXPORTS_W void blobFromImagesWithParams(InputArrayOfArrays images, OutputArray blob, const ImagePParam& param = ImagePParam());
+    CV_EXPORTS_W void blobFromImagesWithParams(InputArrayOfArrays images, OutputArray blob, const Image2BlobParams& param = Image2BlobParams());
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).

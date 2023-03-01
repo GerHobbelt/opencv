@@ -11,11 +11,11 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-ImagePParam::ImagePParam():scalefactor(1.0), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
+Image2BlobParams::Image2BlobParams():scalefactor(1.0), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
                            datalayout(DNN_LAYOUT_NCHW), paddingmode(DNN_PMODE_NULL)
 {}
 
-ImagePParam::ImagePParam(const Scalar& scalefactor_, const Size& size_, const Scalar& mean_, bool swapRB_,
+Image2BlobParams::Image2BlobParams(const Scalar& scalefactor_, const Size& size_, const Scalar& mean_, bool swapRB_,
                          int ddepth_, DataLayout datalayout_, ImagePaddingMode mode_):
         scalefactor(scalefactor_), size(size_), mean(mean_), swapRB(swapRB_), ddepth(ddepth_),
         datalayout(datalayout_), paddingmode(mode_)
@@ -51,13 +51,13 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
         Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
-    ImagePParam param(scalefactor, size, mean_, swapRB, ddepth);
+    Image2BlobParams param(scalefactor, size, mean_, swapRB, ddepth);
     if (crop)
         param.paddingmode = DNN_PMODE_CROP_CENTER;
     blobFromImagesWithParams(images_, blob_, param);
 }
 
-Mat blobFromImageWithParams(InputArray image, const ImagePParam& param)
+Mat blobFromImageWithParams(InputArray image, const Image2BlobParams& param)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
@@ -65,14 +65,14 @@ Mat blobFromImageWithParams(InputArray image, const ImagePParam& param)
     return blob;
 }
 
-void blobFromImageWithParams(InputArray image, OutputArray blob, const ImagePParam& param)
+void blobFromImageWithParams(InputArray image, OutputArray blob, const Image2BlobParams& param)
 {
     CV_TRACE_FUNCTION();
     std::vector<Mat> images(1, image.getMat());
     blobFromImagesWithParams(images, blob, param);
 }
 
-Mat blobFromImagesWithParams(InputArrayOfArrays images, const ImagePParam& param)
+Mat blobFromImagesWithParams(InputArrayOfArrays images, const Image2BlobParams& param)
 {
     CV_TRACE_FUNCTION();
     Mat blob;
@@ -80,7 +80,7 @@ Mat blobFromImagesWithParams(InputArrayOfArrays images, const ImagePParam& param
     return blob;
 }
 
-void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, const ImagePParam& param)
+void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, const Image2BlobParams& param)
 {
     CV_TRACE_FUNCTION();
     CV_CheckType(param.ddepth, param.ddepth == CV_32F || param.ddepth == CV_16F || param.ddepth == CV_8U,

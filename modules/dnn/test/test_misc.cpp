@@ -77,7 +77,7 @@ TEST(blobFromImageWithParams_4ch, depth_FP16)
     Mat blob2;
     blobFp32.convertTo(blob2, CV_16F);
 
-    ImagePParam param;
+    Image2BlobParams param;
     param.ddepth = CV_16F;
     Mat blob3 = blobFromImageWithParams(img, param);
 
@@ -98,7 +98,7 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
     Mat img;
     merge(ch, 4, img);
 
-    ImagePParam param;
+    Image2BlobParams param;
     param.scalefactor = scalefactor;
     param.datalayout = DNN_LAYOUT_NHWC;
     Mat blob = dnn::blobFromImageWithParams(img, param); // [1, 10, 10, 4]
@@ -144,7 +144,7 @@ TEST(blobFromImageWithParams_4ch, letter_box)
     merge(ch, 4, img);
     merge(targetCh, 4, targetImg);
 
-    ImagePParam param;
+    Image2BlobParams param;
     param.size = targeSize;
     param.paddingmode = DNN_PMODE_LETTERBOX;
     Mat blob = dnn::blobFromImageWithParams(img, param);

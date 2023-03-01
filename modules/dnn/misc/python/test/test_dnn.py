@@ -165,7 +165,7 @@ class dnn_test(NewOpenCVTests):
         # Test arguments names.
         img = np.random.randint(0, 255, [4, 5, 3]).astype(np.uint8)
 
-        param = cv.dnn.ImagePParam()
+        param = cv.dnn.Image2BlobParams()
         param.scalefactor = scalefactor
         param.size = (6, 7)
         param.mean = mean
@@ -173,7 +173,7 @@ class dnn_test(NewOpenCVTests):
         param.datalayout = cv.dnn.DNN_LAYOUT_NHWC
 
         blob = cv.dnn.blobFromImageWithParams(img, param)
-        blob_args = cv.dnn.blobFromImageWithParams(img, cv.dnn.ImagePParam(scalefactor=scalefactor, size=(6, 7), mean=mean,
+        blob_args = cv.dnn.blobFromImageWithParams(img, cv.dnn.Image2BlobParams(scalefactor=scalefactor, size=(6, 7), mean=mean,
                                                                       swapRB=True, datalayout=cv.dnn.DNN_LAYOUT_NHWC))
         normAssert(self, blob, blob_args)
 
