@@ -137,6 +137,23 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 cannWrapper->name = std::string("y");
             }
         }
+        else if (ld.type == "LSTM")
+        {
+            auto cannWrapper_y = ld.outputBlobsWrappers[0].dynamicCast<CannBackendWrapper>();
+            cannWrapper_y->name = std::string("y");
+            int num_outputs = ld.outputBlobsWrappers.size();
+            if (num_outputs == 2)
+            {
+                auto cannWrapper_y_h = ld.outputBlobsWrappers[1].dynamicCast<CannBackendWrapper>();
+                cannWrapper_y_h->name = std::string("y_h");
+            }
+            if (num_outputs == 3)
+            {
+                auto cannWrapper_y_c = ld.outputBlobsWrappers[2].dynamicCast<CannBackendWrapper>();
+                cannWrapper_y_c->name = std::string("y_c");
+            }
+
+        }
         else
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
