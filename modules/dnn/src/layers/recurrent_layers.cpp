@@ -44,6 +44,7 @@
 #include <iostream>
 #include <cmath>
 #include <opencv2/dnn/shape_utils.hpp>
+#include "../op_cann.hpp"
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/recurrent_cells.hpp"
@@ -256,8 +257,9 @@ public:
 
     bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV
-               || (backendId == DNN_BACKEND_CUDA && isDefaultActivations && !reverse && !usePeephole);
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && isDefaultActivations && !reverse && !usePeephole) ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -631,6 +633,118 @@ public:
             cOut = cOut.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
         }
     }
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                      const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_CheckGT(originalBlobs.size(), (size_t)0, "DNN/CANN: currently only support building LSTM operator from ONNX.");
+        CV_Assert(blobs.size() >= 2);
+
+        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+
+        /*
+        CommonLSTM calculation. Fully aligned with ONNX LSTM oeprator (opset 1, 7).
+
+        Inputs: (eight inputs)
+            x:                 Each time step is a 4D Tensor. Must be one of the following types: float16, float32.
+            w:                 Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+            r:                 Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+            b:                 An optional input. Each direction is a 1D Tensor. Must be one of the following types: float16, float32. The format must be ND.
+            sequence_lens:     An optional input. A 1D Tensor.Must be one of the following types: int32. The format must be ND.
+            initial_h:         An optional input. Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+            initial_c:         An optional input. Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+            p:                 An optional input. Each direction is a 1D Tensor.Must be one of the following types: float16, float32. The format must be ND.
+
+        Attributes:
+            activation_alpha:  Optional scaling values used by some activation functions. Empty is currently supported.
+            activation_beta:   Optional scaling values used by some activation functions. Empty is currently supported.
+            activations:       The list of activation functions. Empty is currently supported.
+            clip:              An float identifying the cell clip in the op. Default to -1.
+            direction:         Specify if the RNN is forward, reverse, or bidirectional. Must be one of forward(default), reverse, or bidirectional.
+            hidden_size:       Number of neurons in the hidden layer. Reserved.
+            input_forget:      Couple the input and forget gates if 1. Reserved.
+
+        Outputs: (three outputs)
+            y:                 First dimension is time step, second dimension is direction, others is a 4D Tensor. Must be one of the following types: float16, float32.
+            y_h:               Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+            y_c:               Each direction is a 4D Tensor. Must be one of the following types: float16, float32.
+        */
+        auto op = std::make_shared<ge::op::CommonLSTM>(name);
+
+        // set attributes
+        if (reverse)
+            op->set_attr_direction("reverse");
+        else if (bidirectional)
+            op->set_attr_direction("bidirectional");
+        else
+            op->set_attr_direction("forward");
+        op->set_attr_hidden_size(numHidden);
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        std::cout << "x name: " << x->name << std::endl;
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        std::cout << "x name: " << x->name << std::endl;
+        auto desc_x = x->getTensorDesc();
+        op->update_input_desc_x(*desc_x);
+        // set inputs : w
+        const Mat& mat_w = originalBlobs[0];
+        auto op_const_w = std::make_shared<CannConstOp>(mat_w.data, mat_w.type(), shape(mat_w), cv::format("%s_w", name.c_str()));
+        op->set_input_w(*(op_const_w->getOp()));
+        op->update_input_desc_w(*(op_const_w->getTensorDesc()));
+        // set inputs : r
+        const Mat& mat_r = originalBlobs[1];
+        auto op_const_r = std::make_shared<CannConstOp>(mat_r.data, mat_r.type(), shape(mat_r), cv::format("%s_r", name.c_str()));
+        op->set_input_r(*(op_const_r->getOp()));
+        op->update_input_desc_r(*(op_const_r->getTensorDesc()));
+        // set inputs : b (optional)
+        if (blobs.size() > 0)
+        {
+            const Mat& mat_b = blobs[0];
+            auto op_const_b = std::make_shared<CannConstOp>(mat_b.data, mat_b.type(), shape(mat_b), cv::format("%s_b", name.c_str()));
+            op->set_input_b(*(op_const_b->getOp()));
+            op->update_input_desc_b(*(op_const_b->getTensorDesc()));
+        }
+        // set inputs : sequence_lens (skipped)
+        // set inputs : initial_h
+        if (blobs.size() >= 1)
+        {
+            const Mat& mat_initial_h = blobs[1];
+            auto op_const_initial_h = std::make_shared<CannConstOp>(mat_initial_h.data, mat_initial_h.type(), shape(mat_initial_h), cv::format("%s_initial_h", name.c_str()));
+            op->set_input_b(*(op_const_initial_h->getOp()));
+            op->update_input_desc_b(*(op_const_initial_h->getTensorDesc()));
+        }
+        // set inputs : initial_c
+        if (blobs.size() >= 2)
+        {
+            const Mat& mat_initial_c = blobs[2];
+            auto op_const_initial_c = std::make_shared<CannConstOp>(mat_initial_c.data, mat_initial_c.type(), shape(mat_initial_c), cv::format("%s_initial_c", name.c_str()));
+            op->set_input_b(*(op_const_initial_c->getOp()));
+            op->update_input_desc_b(*(op_const_initial_c->getTensorDesc()));
+        }
+        // set inputs : p
+        if (blobs.size() >= 3)
+        {
+            const Mat& mat_p = blobs[3];
+            auto op_const_p = std::make_shared<CannConstOp>(mat_p.data, mat_p.type(), shape(mat_p), cv::format("%s_p", name.c_str()));
+            op->set_input_b(*(op_const_p->getOp()));
+            op->update_input_desc_b(*(op_const_p->getTensorDesc()));
+        }
+
+        // set outputs
+        auto desc_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*desc_y);
+        auto desc_y_h = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y_h(*desc_y_h);
+        auto desc_y_c = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y_c(*desc_y_c);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(void *context_, const std::vector<Ptr<BackendWrapper>> &inputs,
