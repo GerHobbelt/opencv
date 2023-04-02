@@ -65,7 +65,7 @@ static int toNCDHW(int idx)
 }
 
 // This values are used to indicate layer output's data layout where it's possible.
-enum DataLayout
+enum DataLayoutTF
 {
     DATA_LAYOUT_NHWC,
     DATA_LAYOUT_NCHW,
@@ -270,7 +270,7 @@ const tensorflow::AttrValue& getLayerAttr(const tensorflow::NodeDef &layer, cons
     return layer.attr().at(name);
 }
 
-static DataLayout getDataLayout(const tensorflow::NodeDef& layer)
+static DataLayoutTF getDataLayout(const tensorflow::NodeDef& layer)
 {
     if (hasLayerAttr(layer, "data_format"))
     {
@@ -293,12 +293,12 @@ static inline std::string getNodeName(const std::string& tensorName)
 }
 
 static inline
-DataLayout getDataLayout(
+DataLayoutTF getDataLayout(
         const std::string& layerName,
-        const std::map<String, DataLayout>& data_layouts
+        const std::map<String, DataLayoutTF>& data_layouts
 )
 {
-    std::map<String, DataLayout>::const_iterator it = data_layouts.find(getNodeName(layerName));
+    std::map<String, DataLayoutTF>::const_iterator it = data_layouts.find(getNodeName(layerName));
     return it != data_layouts.end() ? it->second : DATA_LAYOUT_UNKNOWN;
 }
 
@@ -527,7 +527,7 @@ protected:
 
     void parseNode(const tensorflow::NodeDef& layer);
 
-    DataLayout predictOutputDataLayout(const tensorflow::NodeDef& layer);
+    DataLayoutTF predictOutputDataLayout(const tensorflow::NodeDef& layer);
 
     void kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob);
 
@@ -550,7 +550,7 @@ protected:
     std::vector<MatShape> netInputShapes;
 
     std::set<String> layers_to_ignore;
-    std::map<String, DataLayout> data_layouts;
+    std::map<String, DataLayoutTF> data_layouts;
 
     // find all Const layers for params
     std::map<String, int> value_id;
@@ -1082,7 +1082,7 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
 
     CV_CheckGT(num_inputs, 0, "");
     Pin inpId = parsePin(layer.input(0));
-    DataLayout inpLayout = getDataLayout(layer.input(0), data_layouts);
+    DataLayoutTF inpLayout = getDataLayout(layer.input(0), data_layouts);
     // There are two possible implementations: reshape an input using
     // predefined sizes or use a second input blob as a source of new shape.
     if (value_id.find(layer.input(1)) != value_id.end())
@@ -1159,7 +1159,7 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
 
     CV_CheckGT(num_inputs, 0, "");
     Pin inpId = parsePin(layer.input(0));
-    DataLayout inpLayout = getDataLayout(layer.input(0), data_layouts);
+    DataLayoutTF inpLayout = getDataLayout(layer.input(0), data_layouts);
 
     // Get input shape
     std::vector<MatShape> inShape_, outShape_;
@@ -1563,7 +1563,7 @@ void TFImporter::parsePlaceholder(tensorflow::GraphDef& net, const tensorflow::N
 {
     const std::string& name = layer.name();
 
-    DataLayout predictedLayout = data_layouts[name];
+    DataLayoutTF predictedLayout = data_layouts[name];
 
     if (!hasLayerAttr(layer, "dtype") ||
         getLayerAttr(layer, "dtype").type() != tensorflow::DT_BOOL)  // If input is not a train/test flag.
@@ -2353,7 +2353,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
     const std::string& type = layer.op();
     const int num_inputs = layer.input_size();
     std::string pool_type = cv::toLowerCase(type);
-    DataLayout layout = getDataLayout(name, data_layouts);
+    DataLayoutTF layout = getDataLayout(name, data_layouts);
 
     if (pool_type == "mean")
     {
@@ -2960,9 +2960,9 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
 
 // If all inputs of specific layer have the same data layout we can say that
 // this layer's output has this data layout too. Returns DATA_LAYOUT_UNKNOWN otherwise.
-DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
+DataLayoutTF TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
 {
-    DataLayout layout = getDataLayout(layer);
+    DataLayoutTF layout = getDataLayout(layer);
     if (layout != DATA_LAYOUT_UNKNOWN)
     {
         CV_LOG_DEBUG(NULL, "DNN/TF: predictOutputDataLayout(" << layer.name() << " @ " << layer.op() << ") => " << (int)layout << " (from attrs)");
@@ -2972,7 +2972,7 @@ DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
     // Determine layout by layer's inputs
     for (int i = 0, n = layer.input_size(); i < n; ++i)
     {
-        std::map<String, DataLayout>::const_iterator it = data_layouts.find(getNodeName(layer.input(i)));
+        std::map<String, DataLayoutTF>::const_iterator it = data_layouts.find(getNodeName(layer.input(i)));
         if (it != data_layouts.end())
         {
             if (layout != DATA_LAYOUT_UNKNOWN)
@@ -2992,7 +2992,7 @@ DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
     }
 
     // Determine layout by layer's consumers recursively.
-    std::map<String, DataLayout>::const_iterator it = data_layouts.find(layer.name());
+    std::map<String, DataLayoutTF>::const_iterator it = data_layouts.find(layer.name());
     CV_Assert(it != data_layouts.end());
     return it->second;
 }
@@ -3057,8 +3057,8 @@ void TFImporter::populateNet()
 
         try
         {
-            DataLayout layout = getDataLayout(layer);
-            std::map<String, DataLayout>::iterator it = data_layouts.find(name);
+            DataLayoutTF layout = getDataLayout(layer);
+            std::map<String, DataLayoutTF>::iterator it = data_layouts.find(name);
             if (it != data_layouts.end())
             {
                 if (layout != DATA_LAYOUT_UNKNOWN)
@@ -3163,7 +3163,7 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
             return;
         }
 
-        DataLayout predictedLayout = predictOutputDataLayout(layer);
+        DataLayoutTF predictedLayout = predictOutputDataLayout(layer);
         data_layouts[name] = predictedLayout;
 
         DispatchMap::const_iterator iter = dispatch.find(type);
