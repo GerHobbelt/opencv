@@ -166,7 +166,7 @@ template <typename R> struct Data
     {
         *this = r;
     }
-    operator R ()
+    operator R () const
     {
         return initializer<VTraits<R>::max_nlanes>().init(*this);
     }
