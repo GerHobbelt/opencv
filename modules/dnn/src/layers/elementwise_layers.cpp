@@ -189,6 +189,7 @@ public:
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                      const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         return func.initCannOp(Layer::name, inputsWrapper, nodes);
@@ -2498,7 +2499,8 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
