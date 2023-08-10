@@ -28,17 +28,7 @@ file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
 
 
-if(ARM OR AARCH64)
-  if(ENABLE_NEON)
-    if(NOT AARCH64)
-      list(APPEND lib_srcs arm/filter_neon.S)
-    endif()
-    list(APPEND lib_srcs arm/arm_init.c arm/filter_neon_intrinsics.c arm/palette_neon_intrinsics.c)
-    add_definitions(-DPNG_ARM_NEON_OPT=2)
-  else()
-    add_definitions(-DPNG_ARM_NEON_OPT=0) # NEON assembler is not supported
-  endif()
-endif()
+add_definitions(-DPNG_ARM_NEON_OPT=0) # NEON assembler is not supported
 
 if(";${CPU_BASELINE_FINAL};" MATCHES "SSE2"
     AND (NOT MSVC OR (MSVC_VERSION GREATER 1799))) # MSVS2013+ (issue #7232)
