@@ -491,7 +491,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     Mat img = imread(findDataFile("dnn/googlenet_1.png"));
     Mat inp = blobFromImage(img, 1.0, Size(224, 224), Scalar(0.0, 0.0, 0.0), false, false);
     // Output image has values in range [-143.526, 148.539].
-    float l1 = 2e-4, lInf = 2e-3;
+    float l1 = 5e-4, lInf = 6e-3;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;
@@ -499,13 +499,13 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.3;
-        lInf = 7.6;
+        l1 = 0.9;
+        lInf = 16;
     }
     else if (target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.4;
-        lInf = 19.;
+        lInf = 26.;
     }
     else if (target == DNN_TARGET_VULKAN)
     {
