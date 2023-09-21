@@ -106,35 +106,10 @@ PERF_TEST_P_(DNNTestNetwork, Inception_5h)
             Mat(cv::Size(224, 224), CV_32FC3), "softmax2");
 }
 
-PERF_TEST_P_(DNNTestNetwork, ENet)
-{
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU) ||
-        (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16))
-        throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        throw SkipTestException("");
-#endif
-    processNet("dnn/Enet-model-best.net", "", "enet.yml",
-            Mat(cv::Size(512, 256), CV_32FC3));
-}
-
 PERF_TEST_P_(DNNTestNetwork, SSD)
 {
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel", "dnn/ssd_vgg16.prototxt", "disabled",
             Mat(cv::Size(300, 300), CV_32FC3));
-}
-
-PERF_TEST_P_(DNNTestNetwork, OpenFace)
-{
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_HDDL))
-        throw SkipTestException("");
-#endif
-    processNet("dnn/openface_nn4.small2.v1.t7", "", "",
-            Mat(cv::Size(96, 96), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
@@ -265,7 +240,7 @@ PERF_TEST_P_(DNNTestNetwork, FastNeuralStyle_eccv16)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", "", Mat(cv::Size(320, 240), CV_32FC3));
+    processNet("mosaic-9.onnx", "", "", Mat(cv::Size(224, 224), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, Inception_v2_Faster_RCNN)
