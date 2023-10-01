@@ -72,28 +72,43 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     switch(depth)
     {
     case CV_8U:
-        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (uchar*)_buf, cn, unroll_to);
         break;
     case CV_8S:
-        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (schar*)_buf, cn, unroll_to);
+        break;
+    case CV_Bool:
+        scalarToRawData_(s, (bool*)_buf, cn, unroll_to);
         break;
     case CV_16U:
-        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (ushort*)_buf, cn, unroll_to);
         break;
     case CV_16S:
-        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
-        break;
-    case CV_32S:
-        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
-        break;
-    case CV_32F:
-        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
-        break;
-    case CV_64F:
-        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_16F:
-        scalarToRawData_<float16_t>(s, (float16_t*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (float16_t*)_buf, cn, unroll_to);
+        break;
+    case CV_16BF:
+        scalarToRawData_(s, (bfloat16_t*)_buf, cn, unroll_to);
+        break;
+    case CV_32U:
+        scalarToRawData_(s, (unsigned*)_buf, cn, unroll_to);
+        break;
+    case CV_32S:
+        scalarToRawData_(s, (int*)_buf, cn, unroll_to);
+        break;
+    case CV_32F:
+        scalarToRawData_(s, (float*)_buf, cn, unroll_to);
+        break;
+    case CV_64U:
+        scalarToRawData_(s, (uint64_t*)_buf, cn, unroll_to);
+        break;
+    case CV_64S:
+        scalarToRawData_(s, (int64_t*)_buf, cn, unroll_to);
+        break;
+    case CV_64F:
+        scalarToRawData_(s, (double*)_buf, cn, unroll_to);
         break;
     default:
         CV_Error(CV_StsUnsupportedFormat,"");
@@ -661,6 +676,25 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 }
 
 
+Mat& Mat::setZero()
+{
+    CV_INSTRUMENT_REGION();
+
+    if( empty() )
+        return *this;
+
+    size_t esz = elemSize();
+
+    const Mat* arrays[] = { this, 0 };
+    uchar* ptrs[]={0};
+    NAryMatIterator it(arrays, ptrs);
+
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+        memset(ptrs[0], 0, esz*it.size);
+    return *this;
+}
+
+
 #if defined HAVE_OPENCL && !defined __APPLE__
 
 static bool ocl_repeat(InputArray _src, int ny, int nx, OutputArray _dst)
@@ -1188,15 +1222,6 @@ cvFlip( const CvArr* srcarr, CvArr* dstarr, int flip_mode )
 
     CV_Assert( src.type() == dst.type() && src.size() == dst.size() );
     cv::flip( src, dst, flip_mode );
-}
-
-CV_IMPL void
-cvRepeat( const CvArr* srcarr, CvArr* dstarr )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() &&
-        dst.rows % src.rows == 0 && dst.cols % src.cols == 0 );
-    cv::repeat(src, dst.rows/src.rows, dst.cols/src.cols, dst);
 }
 
 #endif  // OPENCV_EXCLUDE_C_API

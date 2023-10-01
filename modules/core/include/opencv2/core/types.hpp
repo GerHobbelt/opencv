@@ -903,6 +903,7 @@ public:
     @param epsilon The desired accuracy or change in parameters at which the iterative algorithm stops.
     */
     TermCriteria(int type, int maxCount, double epsilon);
+    TermCriteria(int maxCount, double epsilon);
 
     inline bool isValid() const
     {
@@ -964,10 +965,6 @@ public:
     //! the full constructor
     Moments(double m00, double m10, double m01, double m20, double m11,
             double m02, double m30, double m21, double m12, double m03 );
-    ////! the conversion from CvMoments
-    //Moments( const CvMoments& moments );
-    ////! the conversion to CvMoments
-    //operator CvMoments() const;
 
     //! @name spatial moments
     //! @{
@@ -2451,6 +2448,26 @@ TermCriteria::TermCriteria()
 inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
+
+inline TermCriteria::TermCriteria(int _maxCount, double _epsilon)
+{
+    type = 0;
+    if (_maxCount > 0)
+    {
+        maxCount = _maxCount;
+        type = COUNT;
+    }
+    else
+        maxCount = INT_MAX-1;
+
+    if (_epsilon > 0)
+    {
+        epsilon = _epsilon;
+        type |= EPS;
+    }
+    else
+        epsilon = DBL_EPSILON;
+}
 
 //! @endcond
 

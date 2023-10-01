@@ -235,6 +235,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
     (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD)
     IF (X86_64 OR X86 OR ARM OR AARCH64 OR PPC64 OR PPC64LE) AND NOT WINRT AND NOT APPLE_FRAMEWORK
 )
+OCV_OPTION(BUILD_CLAPACK            "Build CLapack from source"          (((WIN32 OR ANDROID) AND NOT APPLE) OR OPENCV_FORCE_3RDPARTY_BUILD) )
 
 # Optional 3rd party components
 # ===================================================
@@ -550,6 +551,9 @@ OCV_OPTION(OPENCV_SEMIHOSTING         "Build the library for semihosting target 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 
+OCV_OPTION(WITH_UNIFONT               "Build 'uni' font (WQY MicroHei) into OpenCV"              (NOT BUILD_opencv_js)
+           VERIFY HAVE_UNIFONT)
+
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
 endif()
@@ -756,6 +760,9 @@ include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
+if(WITH_LAPACK)
+  ocv_assert(HAVE_LAPACK)  # Lapack is required for OpenCV 5.0+
+endif()
 include(cmake/OpenCVFindProtobuf.cmake)
 include(cmake/OpenCVDetectFlatbuffers.cmake)
 if(WITH_TIMVX)
@@ -1359,6 +1366,10 @@ if(WITH_VTK OR HAVE_VTK)
   status("    VTK support:" HAVE_VTK THEN "YES (ver ${VTK_VERSION})" ELSE NO)
 endif()
 
+if(WITH_UNIFONT OR HAVE_UNIFONT)
+  status("    Built-in Unicode font:" HAVE_UNIFONT THEN "YES" ELSE "NO")
+endif()
+
 # ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
@@ -1607,7 +1618,7 @@ if(WITH_VA OR HAVE_VA)
 endif()
 
 if(WITH_LAPACK OR HAVE_LAPACK)
-  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES})" ELSE NO)
+  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES} ${LAPACK_VERSION})" ELSE NO)
 endif()
 
 if(WITH_HALIDE OR HAVE_HALIDE)
@@ -1774,19 +1785,6 @@ if(WITH_CANN)
 endif()
 
 # ========================== python ==========================
-if(BUILD_opencv_python2)
-  status("")
-  status("  Python 2:")
-  status("    Interpreter:"     PYTHON2INTERP_FOUND  THEN "${PYTHON2_EXECUTABLE} (ver ${PYTHON2_VERSION_STRING})"       ELSE NO)
-  if(PYTHON2LIBS_VERSION_STRING)
-    status("    Libraries:"   HAVE_opencv_python2  THEN  "${PYTHON2_LIBRARIES} (ver ${PYTHON2LIBS_VERSION_STRING})"   ELSE NO)
-  else()
-    status("    Libraries:"   HAVE_opencv_python2  THEN  "${PYTHON2_LIBRARIES}"                                      ELSE NO)
-  endif()
-  status("    numpy:"         PYTHON2_NUMPY_INCLUDE_DIRS THEN "${PYTHON2_NUMPY_INCLUDE_DIRS} (ver ${PYTHON2_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
-  status("    install path:"  HAVE_opencv_python2  THEN "${__INSTALL_PATH_PYTHON2}"                            ELSE "-")
-endif()
-
 if(BUILD_opencv_python3)
   status("")
   status("  Python 3:")

@@ -148,7 +148,7 @@ video = {
 }
 
 dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend'],
-       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet',
+       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromDarknet',
             'readNetFromONNX', 'readNetFromTFLite', 'readNet', 'blobFromImage']}
 
 features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],
@@ -186,7 +186,7 @@ photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobert
                              'getColorAdaptation', 'setColorAdaptation']
         }
 
-calib3d = {
+_3d = {
     '': [
         'findHomography',
         'calibrateCameraExtended',
@@ -200,6 +200,11 @@ calib3d = {
         'solvePnPRefineLM',
         'projectPoints',
         'undistort',
+    ],
+}
+
+calib = {
+    '': [
 
         # cv::fisheye namespace
         'fisheye_initUndistortRectifyMap',
@@ -207,7 +212,8 @@ calib3d = {
     ],
 }
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, calib3d])
+
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, _3d, calib])
 
 # namespace_prefix_override['dnn'] = ''  # compatibility stuff (enabled by default)
 # namespace_prefix_override['aruco'] = ''  # compatibility stuff (enabled by default)

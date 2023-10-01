@@ -329,7 +329,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static BinaryFuncC* getMaxTab()
 {
-    static BinaryFuncC maxTab[] =
+    static BinaryFuncC maxTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16s),
@@ -343,7 +343,7 @@ static BinaryFuncC* getMaxTab()
 
 static BinaryFuncC* getMinTab()
 {
-    static BinaryFuncC minTab[] =
+    static BinaryFuncC minTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16s),
@@ -617,7 +617,10 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        tab[depth1](src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
+        BinaryFuncC func = tab[depth1];
+        CV_Assert(func != 0);
+        func(src1.ptr(), src1.step, src2.ptr(), src2.step,
+             dst.ptr(), dst.step, sz.width,   sz.height, usrdata);
         return;
     }
 
@@ -868,7 +871,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static BinaryFuncC* getAddTab()
 {
-    static BinaryFuncC addTab[] =
+    static BinaryFuncC addTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s),
@@ -882,7 +885,7 @@ static BinaryFuncC* getAddTab()
 
 static BinaryFuncC* getSubTab()
 {
-    static BinaryFuncC subTab[] =
+    static BinaryFuncC subTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s),
@@ -896,7 +899,7 @@ static BinaryFuncC* getSubTab()
 
 static BinaryFuncC* getAbsDiffTab()
 {
-    static BinaryFuncC absDiffTab[] =
+    static BinaryFuncC absDiffTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s),
@@ -949,7 +952,7 @@ namespace cv
 
 static BinaryFuncC* getMulTab()
 {
-    static BinaryFuncC mulTab[] =
+    static BinaryFuncC mulTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::mul8u, (BinaryFuncC)cv::hal::mul8s, (BinaryFuncC)cv::hal::mul16u,
         (BinaryFuncC)cv::hal::mul16s, (BinaryFuncC)cv::hal::mul32s, (BinaryFuncC)cv::hal::mul32f,
@@ -961,7 +964,7 @@ static BinaryFuncC* getMulTab()
 
 static BinaryFuncC* getDivTab()
 {
-    static BinaryFuncC divTab[] =
+    static BinaryFuncC divTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::div8u, (BinaryFuncC)cv::hal::div8s, (BinaryFuncC)cv::hal::div16u,
         (BinaryFuncC)cv::hal::div16s, (BinaryFuncC)cv::hal::div32s, (BinaryFuncC)cv::hal::div32f,
@@ -973,7 +976,7 @@ static BinaryFuncC* getDivTab()
 
 static BinaryFuncC* getRecipTab()
 {
-    static BinaryFuncC recipTab[] =
+    static BinaryFuncC recipTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::recip8u, (BinaryFuncC)cv::hal::recip8s, (BinaryFuncC)cv::hal::recip16u,
         (BinaryFuncC)cv::hal::recip16s, (BinaryFuncC)cv::hal::recip32s, (BinaryFuncC)cv::hal::recip32f,
@@ -1021,7 +1024,7 @@ UMat UMat::mul(InputArray m, double scale) const
 
 static BinaryFuncC* getAddWeightedTab()
 {
-    static BinaryFuncC addWeightedTab[] =
+    static BinaryFuncC addWeightedTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16u),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32s), (BinaryFuncC)cv::hal::addWeighted32f,
@@ -1052,7 +1055,7 @@ namespace cv
 
 static BinaryFuncC getCmpFunc(int depth)
 {
-    static BinaryFuncC cmpTab[] =
+    static BinaryFuncC cmpTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16s),
@@ -1588,7 +1591,7 @@ typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2,
 
 static InRangeFunc getInRangeFunc(int depth)
 {
-    static InRangeFunc inRangeTab[] =
+    static InRangeFunc inRangeTab[CV_DEPTH_MAX] =
     {
         (InRangeFunc)GET_OPTIMIZED(inRange8u), (InRangeFunc)GET_OPTIMIZED(inRange8s), (InRangeFunc)GET_OPTIMIZED(inRange16u),
         (InRangeFunc)GET_OPTIMIZED(inRange16s), (InRangeFunc)GET_OPTIMIZED(inRange32s), (InRangeFunc)GET_OPTIMIZED(inRange32f),
@@ -1986,115 +1989,12 @@ CV_IMPL void cvDiv( const CvArr* srcarr1, const CvArr* srcarr2,
 
 
 CV_IMPL void
-cvAddWeighted( const CvArr* srcarr1, double alpha,
-               const CvArr* srcarr2, double beta,
-               double gamma, CvArr* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
-        dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
-    cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.type() );
-}
-
-
-CV_IMPL  void
-cvAbsDiff( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::absdiff( src1, cv::cvarrToMat(srcarr2), dst );
-}
-
-
-CV_IMPL void
-cvAbsDiffS( const CvArr* srcarr1, CvArr* dstarr, CvScalar scalar )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::absdiff( src1, (const cv::Scalar&)scalar, dst );
-}
-
-
-CV_IMPL void
-cvInRange( const void* srcarr1, const void* srcarr2,
-           const void* srcarr3, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
-
-    cv::inRange( src1, cv::cvarrToMat(srcarr2), cv::cvarrToMat(srcarr3), dst );
-}
-
-
-CV_IMPL void
-cvInRangeS( const void* srcarr1, CvScalar lowerb, CvScalar upperb, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
-
-    cv::inRange( src1, (const cv::Scalar&)lowerb, (const cv::Scalar&)upperb, dst );
-}
-
-
-CV_IMPL void
-cvCmp( const void* srcarr1, const void* srcarr2, void* dstarr, int cmp_op )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
-
-    cv::compare( src1, cv::cvarrToMat(srcarr2), dst, cmp_op );
-}
-
-
-CV_IMPL void
 cvCmpS( const void* srcarr1, double value, void* dstarr, int cmp_op )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
     CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
 
     cv::compare( src1, value, dst, cmp_op );
-}
-
-
-CV_IMPL void
-cvMin( const void* srcarr1, const void* srcarr2, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::min( src1, cv::cvarrToMat(srcarr2), dst );
-}
-
-
-CV_IMPL void
-cvMax( const void* srcarr1, const void* srcarr2, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::max( src1, cv::cvarrToMat(srcarr2), dst );
-}
-
-
-CV_IMPL void
-cvMinS( const void* srcarr1, double value, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::min( src1, value, dst );
-}
-
-
-CV_IMPL void
-cvMaxS( const void* srcarr1, double value, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::max( src1, value, dst );
 }
 
 #endif  // OPENCV_EXCLUDE_C_API

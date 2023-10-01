@@ -69,7 +69,7 @@ function recognize(face) {
 
 function loadModels(callback) {
   var utils = new Utils('');
-  var proto = 'https://raw.githubusercontent.com/opencv/opencv/4.x/samples/dnn/face_detector/deploy_lowres.prototxt';
+  var proto = 'https://raw.githubusercontent.com/opencv/opencv/5.x/samples/dnn/face_detector/deploy_lowres.prototxt';
   var weights = 'https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20180205_fp16/res10_300x300_ssd_iter_140000_fp16.caffemodel';
   var recognModel =  'https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx';
   utils.createFileFromUrl('face_detector.prototxt', proto, () => {

@@ -11,7 +11,6 @@ enum
 
     CV_CAP_MIL      =100,   // MIL proprietary drivers
 
-    CV_CAP_VFW      =200,   // platform native
     CV_CAP_V4L      =200,
     CV_CAP_V4L2     =200,
 
@@ -28,17 +27,10 @@ enum
     CV_TYZX_COLOR   =402,
     CV_TYZX_Z       =403,
 
-    CV_CAP_QT       =500,   // QuickTime
-
-    CV_CAP_UNICAP   =600,   // Unicap drivers
-
     CV_CAP_DSHOW    =700,   // DirectShow (via videoInput)
     CV_CAP_MSMF     =1400,  // Microsoft Media Foundation (via videoInput)
 
     CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
-
-    CV_CAP_OPENNI   =900,   // OpenNI (for Kinect)
-    CV_CAP_OPENNI_ASUS =910,   // OpenNI (for Asus Xtion)
 
     CV_CAP_ANDROID  =1000,  // Android - not used
     CV_CAP_ANDROID_BACK =CV_CAP_ANDROID+99, // Android back camera - not used
@@ -412,19 +404,6 @@ enum
 
 //! Macro to construct the fourcc code of the codec. Same as CV_FOURCC()
 #define CV_FOURCC_MACRO(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
-
-/** @brief Constructs the fourcc code of the codec function
-
-Simply call it with 4 chars fourcc code like `CV_FOURCC('I', 'Y', 'U', 'V')`
-
-List of codes can be obtained at [Video Codecs by FOURCC](http://www.fourcc.org/codecs.php) page.
-FFMPEG backend with MP4 container natively uses other values as fourcc code:
-see [ObjectType](http://mp4ra.org/#/codecs).
-*/
-CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
-{
-    return CV_FOURCC_MACRO(c1, c2, c3, c4);
-}
 
 //! (Windows only) Open Codec Selection Dialog
 #define CV_FOURCC_PROMPT -1

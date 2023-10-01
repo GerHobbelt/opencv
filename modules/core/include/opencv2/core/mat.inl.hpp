@@ -666,9 +666,7 @@ bool Mat::isSubmatrix() const
 inline
 size_t Mat::elemSize() const
 {
-    size_t res = dims > 0 ? step.p[dims - 1] : 0;
-    CV_DbgAssert(res != 0);
-    return res;
+    return CV_ELEM_SIZE(flags);
 }
 
 inline
@@ -3245,22 +3243,6 @@ const Mat_<_Tp>& operator /= (const Mat_<_Tp>& a, const MatExpr& b)
 
 
 //////////////////////////////// UMat ////////////////////////////////
-
-template<typename _Tp> inline
-UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
-: flags((int)MAGIC_VAL + traits::Type<_Tp>::value + (int)CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
-cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
-{
-    if(vec.empty())
-        return;
-    if( !copyData )
-    {
-        // !!!TODO!!!
-        CV_Error(Error::StsNotImplemented, "");
-    }
-    else
-        Mat((int)vec.size(), 1, traits::Type<_Tp>::value, (uchar*)&vec[0]).copyTo(*this);
-}
 
 inline
 UMat UMat::row(int y) const

@@ -121,7 +121,7 @@ class Builder:
                "-DWITH_QUIRC=OFF",
                "-DBUILD_ZLIB=ON",
                "-DBUILD_opencv_apps=OFF",
-               "-DBUILD_opencv_calib3d=ON",
+               "-DBUILD_opencv_3d=ON",
                "-DBUILD_opencv_dnn=ON",
                "-DBUILD_opencv_features2d=ON",
                "-DBUILD_opencv_flann=ON",  # No bindings provided. This module is used as a dependency for other modules.
@@ -137,7 +137,6 @@ class Builder:
                "-DBUILD_opencv_stitching=OFF",
                "-DBUILD_opencv_java=OFF",
                "-DBUILD_opencv_js=ON",
-               "-DBUILD_opencv_python2=OFF",
                "-DBUILD_opencv_python3=OFF",
                "-DBUILD_EXAMPLES=ON",
                "-DBUILD_PACKAGE=OFF",

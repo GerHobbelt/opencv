@@ -141,7 +141,7 @@ cmake \
 
 Each module is a subdirectory of the `modules` directory. It is possible to disable one module:
 ```.sh
-cmake -DBUILD_opencv_calib3d=OFF ../opencv
+cmake -DBUILD_opencv_3d=OFF ../opencv
 ```
 
 The opposite option is to build only specified modules and all modules they depend on:
@@ -350,7 +350,7 @@ Integration with [FFmpeg](https://en.wikipedia.org/wiki/FFmpeg) library for deco
 - _swscale_
 - _avresample_ (optional)
 
-Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/4.x) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
+Exception is Windows platform where a prebuilt [plugin library containing FFmpeg](https://github.com/opencv/opencv_3rdparty/tree/ffmpeg/5.x) will be downloaded during a configuration stage and copied to the `bin` folder with all produced libraries.
 
 @note [Libav](https://en.wikipedia.org/wiki/Libav) library can be used instead of FFmpeg, but this combination is not actively supported.
 
@@ -565,7 +565,7 @@ Following options can be used to change installation layout for common scenarios
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `INSTALL_CREATE_DISTRIB` | _OFF_ | Tune multiple things to produce Windows and Android distributions. |
-| `INSTALL_TO_MANGLED_PATHS` | _OFF_ | Adds one level to several installation locations to allow side-by-side installations. For example, headers will be installed to _/usr/include/opencv-4.4.0_ instead of _/usr/include/opencv4_ with this option enabled. |
+| `INSTALL_TO_MANGLED_PATHS` | _OFF_ | Adds one level to several installation locations to allow side-by-side installations. For example, headers will be installed to _/usr/include/opencv-5.x.y_ instead of _/usr/include/opencv5_ with this option enabled. |
 
 
 # Miscellaneous features {#tutorial_config_reference_misc}
@@ -583,7 +583,6 @@ Following options can be used to change installation layout for common scenarios
 | `ENABLE_FLAKE8` | _ON_ (when docs or examples are enabled) | Enable python scripts check with [Flake8](https://flake8.pycqa.org/) (_check_flake8_ target). Flake8 must be installed. |
 | `BUILD_JAVA` | _ON_ | Enable Java wrappers build. Java SDK and Ant must be installed. |
 | `BUILD_FAT_JAVA_LIB` | _ON_ (for static Android builds) | Build single _opencv_java_ dynamic library containing all library functionality bundled with Java bindings. |
-| `BUILD_opencv_python2` | _ON_ | Build python2 bindings (deprecated). Python with development files and numpy must be installed. |
 | `BUILD_opencv_python3` | _ON_ | Build python3 bindings. Python with development files and numpy must be installed. |
 
 TODO: need separate tutorials covering bindings builds
