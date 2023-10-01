@@ -88,10 +88,7 @@ TEST(blobFromImageWithParams_4ch, depth_FP16)
 
 TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
 {
-    Mat ch[4];
-    for(int i = 0; i < 4; i++)
-        ch[i] = Mat::ones(10, 10, CV_8U)*i;
-
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0,1,2,3));
     std::vector<double> factorVec = {0.1, 0.2, 0.3, 0.4};
 
     Scalar scalefactor(factorVec[0], factorVec[1], factorVec[2], factorVec[3]);
@@ -123,10 +120,7 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
 
 TEST(blobFromImageWithParams_4ch, letter_box)
 {
-    Size targeSize(20, 20);
-    Mat ch[4];
-    for(int i = 0; i < 4; i++)
-        ch[i] = Mat::ones(40, 20, CV_8U)*i;
+    Mat img(40, 20, CV_8UC4, cv::Scalar(0,1,2,3));
 
     // Construct target mat.
     Mat targetCh[4];
@@ -140,9 +134,9 @@ TEST(blobFromImageWithParams_4ch, letter_box)
         targetCh[i] = rowM * i;
     }
 
-    Mat img, targetImg;
-    merge(ch, 4, img);
+    Mat targetImg;
     merge(targetCh, 4, targetImg);
+    Size targeSize(20, 20);
 
     Image2BlobParams param;
     param.size = targeSize;

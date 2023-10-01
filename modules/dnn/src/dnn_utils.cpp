@@ -11,7 +11,7 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-Image2BlobParams::Image2BlobParams():scalefactor(1.0), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
+Image2BlobParams::Image2BlobParams():scalefactor(Scalar::all(1.0)), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
                            datalayout(DNN_LAYOUT_NCHW), paddingmode(DNN_PMODE_NULL)
 {}
 
@@ -51,7 +51,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
         Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
-    Image2BlobParams param(scalefactor, size, mean_, swapRB, ddepth);
+    Image2BlobParams param(Scalar::all(scalefactor), size, mean_, swapRB, ddepth);
     if (crop)
         param.paddingmode = DNN_PMODE_CROP_CENTER;
     blobFromImagesWithParams(images_, blob_, param);
@@ -83,16 +83,16 @@ Mat blobFromImagesWithParams(InputArrayOfArrays images, const Image2BlobParams& 
 void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, const Image2BlobParams& param)
 {
     CV_TRACE_FUNCTION();
-    CV_CheckType(param.ddepth, param.ddepth == CV_32F || param.ddepth == CV_16F || param.ddepth == CV_8U,
-                 "Blob depth should be CV_32F, CV_16F or CV_8U");
+    CV_CheckType(param.ddepth, param.ddepth == CV_32F || param.ddepth == CV_8U,
+                 "Blob depth should be CV_32F or CV_8U");
 
+    Size size = param.size;
+    std::vector<Mat> images;
+    images_.getMatVector(images);
+    CV_Assert(!images.empty());
+
+    int nch = images[0].channels();
     Scalar scalefactor = param.scalefactor;
-    //  Because 0 is meaningless in scalefactor. Convert the 0 to
-    if (scalefactor[1] == 0 && scalefactor[2] == 0 && scalefactor[3] == 0)
-    {
-        CV_Assert(scalefactor[0] != 0 && "Scalefactor of 0 is meaningless.");
-        scalefactor = Scalar::all(scalefactor[0]);
-    }
 
     if (param.ddepth == CV_8U)
     {
@@ -100,10 +100,6 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
         CV_Assert(param.mean == Scalar() && "Mean subtraction is not supported for CV_8U blob depth");
     }
 
-    Size size = param.size;
-    std::vector<Mat> images;
-    images_.getMatVector(images);
-    CV_Assert(!images.empty());
     for (size_t i = 0; i < images.size(); i++)
     {
         Size imgSize = images[i].size();
@@ -149,21 +145,15 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
             std::swap(scalefactor[0], scalefactor[2]);
         }
 
-        if (images[i].depth() == CV_8U && (param.ddepth == CV_32F || param.ddepth == CV_16F))
+        if (images[i].depth() == CV_8U && param.ddepth == CV_32F)
             images[i].convertTo(images[i], CV_32F);
 
         images[i] -= mean;
         multiply(images[i], scalefactor, images[i]);
-
-        // NOTE: Since the sub and mul calculation of CV_16F Mat are not currently supported,
-        //  if the data type of desired output is CV_16F, we first convert to Mat CV_32F first.
-        if (param.ddepth == CV_16F)
-            images[i].convertTo(images[i], CV_16F);
     }
 
     size_t nimages = images.size();
     Mat image0 = images[0];
-    int nch = image0.channels();
     CV_Assert(image0.dims == 2);
 
     if (param.datalayout == DNN_LAYOUT_NCHW)
