@@ -805,7 +805,6 @@ bool Index::load_(const String& filename)
     Mat data = features_clone;
     bool ok = true;
 
-
     FILE* fin = fopen(filename.c_str(), "rb");
     if (fin == NULL) {
         return false;

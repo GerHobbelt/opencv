@@ -1736,6 +1736,66 @@ template<typename R> struct TheTest
     }
 #endif
 
+    void do_check_cmp64(const Data<R>& dataA, const Data<R>& dataB)
+    {
+        R a = dataA;
+        R b = dataB;
+
+#if CV_SIMD_SCALABLE
+        Data<R> dataEQ = v_eq(a, b);
+        Data<R> dataNE = v_ne(a, b);
+#else
+        Data<R> dataEQ = (a == b);
+        Data<R> dataNE = (a != b);
+#endif
+
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            if (cvtest::debugLevel > 0) cout << "i=" << i << " ( " << dataA[i] << " vs " << dataB[i] << " ): eq=" << dataEQ[i] << " ne=" << dataNE[i] << endl;
+            EXPECT_NE((LaneType)dataEQ[i], (LaneType)dataNE[i]);
+            if (dataA[i] == dataB[i])
+                EXPECT_EQ((LaneType)-1, (LaneType)dataEQ[i]);
+            else
+                EXPECT_EQ((LaneType)0, (LaneType)dataEQ[i]);
+            if (dataA[i] != dataB[i])
+                EXPECT_EQ((LaneType)-1, (LaneType)dataNE[i]);
+            else
+                EXPECT_EQ((LaneType)0, (LaneType)dataNE[i]);
+        }
+    }
+
+    TheTest & test_cmp64()
+    {
+        Data<R> dataA;
+        Data<R> dataB;
+
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            dataA[i] = dataB[i];
+        }
+        dataA[0]++;
+
+        do_check_cmp64(dataA, dataB);
+        do_check_cmp64(dataB, dataA);
+
+        dataA[0] = dataB[0];
+        dataA[1] += (((LaneType)1) << 32);
+        do_check_cmp64(dataA, dataB);
+        do_check_cmp64(dataB, dataA);
+
+        dataA[0] = (LaneType)-1;
+        dataB[0] = (LaneType)-1;
+        dataA[1] = (LaneType)-1;
+        dataB[1] = (LaneType)2;
+
+        do_check_cmp64(dataA, dataB);
+        do_check_cmp64(dataB, dataA);
+
+        return *this;
+    }
+
+
 #if CV_SIMD_64F
     TheTest & test_cmp64()
     {
