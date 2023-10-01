@@ -350,7 +350,6 @@ public:
         size_t dp1 = steps[1][ndims-1]/sizeof(T);
         size_t dp2 = steps[2][ndims-1]/sizeof(T);
 
-        CV_Assert(dp == 1);
         enum { BLOCK_SIZE = 1024 };
         T blck[BLOCK_SIZE];
 

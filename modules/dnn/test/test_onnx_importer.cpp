@@ -1393,6 +1393,20 @@ TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
 }
+// epsilon is larger because onnx does not match with torch/opencv exactly
+TEST_P(Test_ONNX_layers, LSTM_layout_seq)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
+}
+// epsilon is larger because onnx does not match with torch/opencv exactly
+TEST_P(Test_ONNX_layers, LSTM_layout_batch)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_layout_1", npy, 0.005, 0.005, false, false, 3);
+}
 
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
@@ -2179,7 +2193,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 
     // output range: [-11; 8]
     double l1 =  default_l1, lInf = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.02;
         lInf = 0.2;
