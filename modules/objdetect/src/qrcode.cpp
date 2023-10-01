@@ -2727,6 +2727,8 @@ bool QRDecode::samplingForVersion()
     return true;
 }
 
+extern bool decode(const Mat& straight, String& decoded_info);
+
 bool QRDecode::decodingProcess()
 {
 #ifdef HAVE_QUIRC
@@ -2762,14 +2764,13 @@ bool QRDecode::decodingProcess()
     }
     return true;
 #else
-    return false;
+    return decode(straight, result_info);
 #endif
 
 }
 
 bool QRDecode::straightDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!updatePerspective(getHomography()))  { return false; }
     if (!versionDefinition())  { return false; }
     if (useAlignmentMarkers)
@@ -2777,24 +2778,15 @@ bool QRDecode::straightDecodingProcess()
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 bool QRDecode::curvedDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!preparingCurvedQRCodes()) { return false; }
     if (!versionDefinition())  { return false; }
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 QRDecode::QRDecode(bool _useAlignmentMarkers):
