@@ -2093,6 +2093,7 @@ void test_hal_intrin_uint64()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
+        .test_popcount()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
@@ -2115,6 +2116,7 @@ void test_hal_intrin_int64()
         .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         .test_cvt64_double()
+        .test_popcount()
         ;
 }
 
