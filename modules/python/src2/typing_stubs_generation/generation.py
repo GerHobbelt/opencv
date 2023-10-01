@@ -103,9 +103,6 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
     _write_reexported_symbols_section(root, output_stream)
 
-    # Write constants section, because constants don't impose any dependencies
-    _generate_section_stub(StubSection("# Constants", ConstantNode), root,
-                           output_stream, 0)
     # NOTE: Enumerations require special handling, because all enumeration
     # constants are exposed as module attributes
     has_enums = _generate_section_stub(StubSection("# Enumerations", EnumerationNode),
@@ -535,7 +532,7 @@ def check_overload_presence(node: Union[NamespaceNode, ClassNode]) -> bool:
             otherwise.
     """
     for func_node in node.functions.values():
-        if len(func_node.overloads):
+        if len(func_node.overloads) > 1:
             return True
     return False
 
