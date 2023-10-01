@@ -2727,6 +2727,11 @@ TEST_P(Test_ONNX_layers, OpenAI_CLIP_head)
     testONNXModels("clip-vit-base-head");
 }
 
+TEST_P(Test_ONNX_layers, where_node)
+{
+    testONNXModels("where_layer");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
