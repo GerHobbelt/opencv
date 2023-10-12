@@ -229,7 +229,21 @@ if(WITH_JASPER AND NOT HAVE_OPENJPEG)
   if(BUILD_JASPER)
     ocv_clear_vars(JASPER_FOUND)
   else()
+    if(HUNTER_ENABLED)
+      hunter_add_package(jasper)
+      find_package(jasper CONFIG REQUIRED)
+
+      set(JASPER_FOUND TRUE)
+      set(JASPER_LIBRARY jasper::libjasper)
+      set(JASPER_LIBRARIES ${JASPER_LIBRARY})
+      get_target_property(
+          JASPER_INCLUDE_DIR
+          jasper::libjasper
+          INTERFACE_INCLUDE_DIRECTORIES
+      )
+    else()
     include(FindJasper)
+    endif()
   endif()
 
   if(NOT JASPER_FOUND)

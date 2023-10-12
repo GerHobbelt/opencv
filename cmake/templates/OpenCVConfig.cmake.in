@@ -363,3 +363,7 @@ endif()
 if("@TIFF_FOUND@")
   find_dependency(TIFF CONFIG)
 endif()
+
+if("@JASPER_FOUND@")
+  find_dependency(jasper CONFIG)
+endif()
