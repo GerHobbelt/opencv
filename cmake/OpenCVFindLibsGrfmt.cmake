@@ -303,6 +303,7 @@ if(NOT HAVE_SPNG AND WITH_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()
     ocv_clear_internal_cache_vars(PNG_LIBRARY PNG_INCLUDE_DIR)
+    hunter_add_package(PNG)
     find_package(PNG QUIET)
   endif()
 

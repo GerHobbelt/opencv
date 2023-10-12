@@ -367,3 +367,7 @@ endif()
 if("@JASPER_FOUND@")
   find_dependency(jasper CONFIG)
 endif()
+
+if("@PNG_FOUND@")
+  find_dependency(PNG CONFIG)
+endif()
