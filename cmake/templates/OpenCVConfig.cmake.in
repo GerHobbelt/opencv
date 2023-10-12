@@ -379,3 +379,7 @@ endif()
 if("@WEBP_FOUND@")
   find_dependency(WebP CONFIG)
 endif()
+
+if("@Eigen3_FOUND@")
+  find_dependency(Eigen3 CONFIG)
+endif()

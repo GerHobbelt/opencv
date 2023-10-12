@@ -59,6 +59,7 @@ if(WITH_EIGEN AND NOT HAVE_EIGEN)
       OR NOT (CMAKE_VERSION VERSION_LESS "3.0.0")  # Eigen3Targets.cmake required CMake 3.0.0+
       ) AND NOT OPENCV_SKIP_EIGEN_FIND_PACKAGE_CONFIG
   )
+    hunter_add_package(Eigen)
     find_package(Eigen3 CONFIG QUIET)  # Ceres 2.0.0 CMake scripts doesn't work with CMake's FindEigen3.cmake module (due to missing EIGEN3_VERSION_STRING)
   endif()
   if(NOT Eigen3_FOUND)
