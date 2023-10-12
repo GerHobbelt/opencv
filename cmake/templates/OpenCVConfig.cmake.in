@@ -375,3 +375,7 @@ endif()
 if("@JPEG_FOUND@")
   find_dependency(JPEG CONFIG)
 endif()
+
+if("@WEBP_FOUND@")
+  find_dependency(WebP CONFIG)
+endif()
