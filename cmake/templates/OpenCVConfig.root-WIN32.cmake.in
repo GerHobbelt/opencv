@@ -41,6 +41,9 @@ if(CMAKE_VERSION VERSION_GREATER 2.6)
   endif()
 endif()
 
+set(OpenCV_STATIC @OpenCV_STATIC@)
+set(OpenCV_CUDA @OpenCV_CUDA@)
+
 if(NOT DEFINED OpenCV_STATIC)
   # look for global setting
   if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
