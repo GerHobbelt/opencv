@@ -34,6 +34,11 @@ function(download_ippicv root_var)
     return()
   endif()
 
+  if(HUNTER_ENABLED)
+    hunter_add_package(ippicv)
+    set(OPENCV_IPPICV_URL "file://${IPPICV_ROOT}/")
+  endif()
+
   set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/ippicv")
   ocv_download(FILENAME ${OPENCV_ICV_NAME}
                HASH ${OPENCV_ICV_HASH}
