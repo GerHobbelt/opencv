@@ -83,6 +83,13 @@ endfunction()
 
 function(ocv_download)
   cmake_parse_arguments(DL "UNPACK;RELATIVE_URL" "FILENAME;HASH;DESTINATION_DIR;ID;STATUS" "URL" ${ARGN})
+  if(HUNTER_ENABLED)
+    if (DL_ID STREQUAL "IPPICV")
+      message(DEBUG "ocv_download(): IPPICV allowed while using Hunter, continue")
+    else()
+      message(FATAL_ERROR "ocv_download(): downloading external resources not allowed while bulding with Hunter. Args: ${ARGV}")
+    endif()
+  endif()
 
   function(ocv_download_log)
     file(APPEND "${OPENCV_DOWNLOAD_LOG}" "${ARGN}\n")
