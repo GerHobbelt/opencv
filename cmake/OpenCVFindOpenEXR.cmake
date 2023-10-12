@@ -10,7 +10,11 @@
 #
 
 if(NOT OPENCV_SKIP_OPENEXR_FIND_PACKAGE)
+  if(HUNTER_ENABLED)
+    find_package(OpenEXR CONFIG QUIET)
+  else() # no-indent for less diffs
   find_package(OpenEXR 3 QUIET)
+  endif()
   #ocv_cmake_dump_vars(EXR)
   if(OpenEXR_FOUND)
     if(TARGET OpenEXR::OpenEXR)  # OpenEXR 3+
