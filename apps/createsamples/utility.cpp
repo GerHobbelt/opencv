@@ -1168,7 +1168,7 @@ void cvCreateTestSamples( const char* infoname,
             }
             else
             {
-                filename++; // character after last / or \
+                filename++; // character after last '/' or '\'
             }
 
             count = MIN( count, cvbgdata->count );
