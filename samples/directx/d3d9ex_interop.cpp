@@ -259,22 +259,22 @@ public:
 
             buf[0] = 0;
             snprintf(buf, sizeof(buf), "mode: %s", m_modeStr[mode].c_str());
-            ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
+            ::TextOutA(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
             snprintf(buf, sizeof(buf), m_demo_processing ? "blur frame" : "copy frame");
-            ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
+            ::TextOutA(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
             snprintf(buf, sizeof(buf), "time: %4.1f msec", time);
-            ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
+            ::TextOutA(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
             snprintf(buf, sizeof(buf), "OpenCL device: %s", oclDevName.c_str());
-            ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
+            ::TextOutA(hDC, 0, y, buf, (int)strlen(buf));
 
             ::SelectObject(hDC, hOldFont);
         }

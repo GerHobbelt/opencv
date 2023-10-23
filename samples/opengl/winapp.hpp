@@ -45,9 +45,9 @@ public:
     int create()
     {
 #if defined(_WIN32)
-        WNDCLASSEX wcex;
+        WNDCLASSEXA wcex;
 
-        wcex.cbSize        = sizeof(WNDCLASSEX);
+        wcex.cbSize        = sizeof(WNDCLASSEXA);
         wcex.style         = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc   = &WinApp::StaticWndProc;
         wcex.cbClsExtra    = 0;
@@ -60,13 +60,13 @@ public:
         wcex.lpszClassName = WINCLASS;
         wcex.hIconSm       = 0;
 
-        ATOM wc = ::RegisterClassEx(&wcex);
+        ATOM wc = ::RegisterClassExA(&wcex);
 
         RECT rc = { 0, 0, m_width, m_height };
         ::AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, false);
 
-        m_hWnd = ::CreateWindow(
-                     (LPCTSTR)wc, m_window_name.c_str(),
+        m_hWnd = ::CreateWindowA(
+                     (LPCSTR)wc, m_window_name.c_str(),
                      WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                      rc.right - rc.left, rc.bottom - rc.top,
                      NULL, NULL, m_hInstance, (void*)this);

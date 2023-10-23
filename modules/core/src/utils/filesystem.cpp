@@ -439,7 +439,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         cv::String default_cache_path;
 #ifdef _WIN32
         char tmp_path_buf[MAX_PATH+1] = {0};
-        DWORD res = GetTempPath(MAX_PATH, tmp_path_buf);
+        DWORD res = GetTempPathA(MAX_PATH, tmp_path_buf);
         if (res > 0 && res <= MAX_PATH)
         {
             default_cache_path = tmp_path_buf;

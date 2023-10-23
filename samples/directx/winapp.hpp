@@ -26,9 +26,9 @@ public:
 
     virtual int create()
     {
-        WNDCLASSEX wcex;
+        WNDCLASSEXA wcex;
 
-        wcex.cbSize        = sizeof(WNDCLASSEX);
+        wcex.cbSize        = sizeof(WNDCLASSEXA);
         wcex.style         = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc   = &WinApp::StaticWndProc;
         wcex.cbClsExtra    = 0;
@@ -41,7 +41,7 @@ public:
         wcex.lpszClassName = WINCLASS;
         wcex.hIconSm       = 0;
 
-        ATOM wc = ::RegisterClassEx(&wcex);
+        ATOM wc = ::RegisterClassExA(&wcex);
         if (!wc)
             return -1;
 
@@ -49,8 +49,8 @@ public:
         if(!::AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, false))
             return -1;
 
-        m_hWnd = ::CreateWindow(
-                     (LPCTSTR)wc, m_window_name.c_str(),
+        m_hWnd = ::CreateWindowA(
+                     (LPCSTR)wc, m_window_name.c_str(),
                      WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                      rc.right - rc.left, rc.bottom - rc.top,
                      NULL, NULL, m_hInstance, (void*)this);
@@ -92,7 +92,7 @@ public:
     virtual int cleanup()
     {
         ::DestroyWindow(m_hWnd);
-        ::UnregisterClass(WINCLASS, m_hInstance);
+        ::UnregisterClassA(WINCLASS, m_hInstance);
         return 0;
     } // cleanup()
 
