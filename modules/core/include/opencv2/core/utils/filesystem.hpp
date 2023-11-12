@@ -14,7 +14,7 @@ CV_EXPORTS bool isDirectory(const cv::String& path);
 CV_EXPORTS void remove_all(const cv::String& path);
 
 
-CV_EXPORTS cv::String getcwd();
+CV_EXPORTS cv::String getCwd();
 
 /** @brief Converts path p to a canonical absolute path
  * Symlinks are processed if there is support for them on running platform.

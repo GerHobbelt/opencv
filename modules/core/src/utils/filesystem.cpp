@@ -181,7 +181,7 @@ CV_EXPORTS void remove_all(const cv::String& path)
 }
 
 
-cv::String getcwd()
+cv::String getCwd()
 {
     CV_INSTRUMENT_REGION();
     cv::AutoBuffer<char, 4096> buf;
