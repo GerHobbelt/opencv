@@ -709,7 +709,7 @@ public:
         auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
 
         /*
-        CommonLSTM calculation. Fully aligned with ONNX LSTM oeprator (opset 1, 7).
+        CommonLSTM calculation. Fully aligned with ONNX LSTM operator (opset 1, 7).
 
         Inputs: (eight inputs)
             x:                 Each time step is a 4D Tensor. Must be one of the following types: float16, float32.
