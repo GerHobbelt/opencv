@@ -1447,7 +1447,8 @@ bool CvCapture_FFMPEG::processRawPacket()
 #else
         AVCodecContext* ctx = ic->streams[video_stream]->codec;
         int err = av_bitstream_filter_filter(bsfc, ctx, NULL, &packet_filtered.data,
-            &packet_filtered.size, packet.data, packet.size, packet_filtered.flags & AV_PKT_FLAG_KEY);
+            &packet_filtered.size, packet.data, packet.size, packet.flags & AV_PKT_FLAG_KEY);
+        if (packet.flags & AV_PKT_FLAG_KEY) packet_filtered.flags |= AV_PKT_FLAG_KEY;
         if (err < 0)
         {
             CV_WARN("Packet filtering failed");
@@ -2334,7 +2335,13 @@ static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
 static int icv_av_encapsulate_video_FFMPEG(AVFormatContext* oc, AVStream* video_st, AVCodecContext* c,
     uint8_t* data, int sz, const int frame_idx, const bool key_frame)
 {
+#if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(57, 0, 0)
+    AVPacket pkt_;
+    av_init_packet(&pkt_);
+    AVPacket* pkt = &pkt_;
+#else
     AVPacket* pkt = av_packet_alloc();
+#endif
     if(key_frame)
         pkt->flags |= PKT_FLAG_KEY;
     pkt->pts = frame_idx;
@@ -2342,7 +2349,9 @@ static int icv_av_encapsulate_video_FFMPEG(AVFormatContext* oc, AVStream* video_
     pkt->data = data;
     av_packet_rescale_ts(pkt, c->time_base, video_st->time_base);
     int ret = av_write_frame(oc, pkt);
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 0, 0)
     av_packet_free(&pkt);
+#endif
     return ret;
 }
 
@@ -2428,7 +2437,7 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin )
 {
     if (!encode_video) {
-        CV_Assert(cn == 1 && width > 0 && height == 1);
+        CV_Assert(cn == 1 && ((width > 0 && height == 1) || (width == 1 && height > 0 && step == 1)));
         const bool set_key_frame = key_frame ? key_frame : idr_period ? frame_idx % idr_period == 0 : 1;
         bool ret = icv_av_encapsulate_video_FFMPEG(oc, video_st, context, (uint8_t*)data, width, frame_idx, set_key_frame);
         frame_idx++;
@@ -3079,6 +3088,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     HWAccelIterator accel_iter(va_type, true/*isEncoder*/, dict);
     while (accel_iter.good())
     {
+        AVPixelFormat hw_format = AV_PIX_FMT_NONE;
+        AVHWDeviceType hw_type = AV_HWDEVICE_TYPE_NONE;
 #else
     do {
 #endif
