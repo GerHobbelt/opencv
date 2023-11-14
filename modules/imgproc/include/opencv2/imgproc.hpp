@@ -3870,7 +3870,7 @@ enum TemplateMatchModes {
                                   \cdot \left( I(x+x',y+y') - \frac{1}{\sum _{x'',y''} M(x'',y'')}
                                   \cdot \sum _{x'',y''} (I(x+x'',y+y'') \cdot M(x'',y'')) \right)
                                   \end{array} \f] */
-    TM_CCOEFF_NORMED = 5  /*!< \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{
+    TM_CCOEFF_NORMED = 5, /*!< \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{
                                   \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2}
                                   }\f] */
     TM_MINERT_NORMED = 6  /*!< \f[$$R(x,y,R,n)=\left(J_T^n(x,y,R) - J_I^n(x,y,R)\right)^2$$\f]
