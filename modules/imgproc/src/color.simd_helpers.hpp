@@ -79,6 +79,8 @@ enum SizePolicy
     TO_YUV, FROM_YUV, FROM_UYVY, TO_UYVY, NONE
 };
 
+using namespace cv;
+
 template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
 struct CvtHelper
 {
