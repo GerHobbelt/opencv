@@ -20,7 +20,7 @@
 #  ifndef _FILE_OFFSET_BITS
 #    define _FILE_OFFSET_BITS 0
 #  endif
-#  include <zlib.h>
+#  include <zlib-ng.h>
 #else
 typedef void* gzFile;
 #endif

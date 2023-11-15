@@ -522,7 +522,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
         } else {
 #if USE_ZLIB
             char mode[] = {write_mode ? 'w' : 'r', 'b', compression ? compression : '3', '\0'};
-            gzfile = gzopen(filename.c_str(), mode);
+            gzfile = zng_gzopen(filename.c_str(), mode);
             if (!gzfile)
             {
                 CV_LOG_ERROR(NULL, "Can't open archive: '" << filename << "' mode=" << mode);
@@ -778,7 +778,7 @@ void FileStorage::Impl::puts(const char *str) {
         fputs(str, file);
 #if USE_ZLIB
     else if (gzfile)
-        gzputs(gzfile, str);
+		zng_gzputs(gzfile, str);
 #endif
     else
         CV_Error(cv::Error::StsError, "The storage is not opened");
@@ -789,7 +789,7 @@ char *FileStorage::Impl::getsFromFile(char *buf, int count) {
         return fgets(buf, count, file);
 #if USE_ZLIB
     if (gzfile)
-        return gzgets(gzfile, buf, count);
+        return zng_gzgets(gzfile, buf, count);
 #endif
     CV_Error(cv::Error::StsError, "The storage is not opened");
 }
@@ -866,7 +866,7 @@ bool FileStorage::Impl::eof() {
         return feof(file) != 0;
 #if USE_ZLIB
     if (gzfile)
-        return gzeof(gzfile) != 0;
+        return zng_gzeof(gzfile) != 0;
 #endif
     return false;
 }
@@ -880,7 +880,7 @@ void FileStorage::Impl::closeFile() {
         fclose(file);
 #if USE_ZLIB
     else if (gzfile)
-        gzclose(gzfile);
+		zng_gzclose(gzfile);
 #endif
     file = 0;
     gzfile = 0;
@@ -894,7 +894,7 @@ void FileStorage::Impl::rewind() {
         ::rewind(file);
 #if USE_ZLIB
     else if (gzfile)
-        gzrewind(gzfile);
+		zng_gzrewind(gzfile);
 #endif
     strbufpos = 0;
 }
