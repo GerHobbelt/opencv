@@ -62,11 +62,11 @@ void GaussianBlurFixedPoint(const Mat& src, Mat& dst,
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-#if defined(CV_CPU_BASELINE_MODE)
+//#if defined(CV_CPU_BASELINE_MODE)
 // included in dispatch.cpp
-#else
+//#else
 #include "fixedpoint.inl.hpp"
-#endif
+//#endif
 
 namespace {
 
