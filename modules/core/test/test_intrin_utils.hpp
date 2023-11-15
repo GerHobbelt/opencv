@@ -1796,7 +1796,7 @@ template<typename R> struct TheTest
 
 
 #if CV_SIMD_64F
-    TheTest & test_cmp64()
+    TheTest & test_cmp64f()
     {
         Data<R> dataA, dataB;
         R a = dataA, b = dataB;
@@ -2082,8 +2082,10 @@ void test_hal_intrin_uint64()
     TheTest<v_uint64>()
         .test_loadstore()
         .test_addsub()
-#if CV_SIMD_64F
         .test_cmp64()
+        //.test_cmp() - not declared as supported
+#if CV_SIMD_64F
+        .test_cmp64f()
 #endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
@@ -2103,8 +2105,10 @@ void test_hal_intrin_int64()
     TheTest<v_int64>()
         .test_loadstore()
         .test_addsub()
-#if CV_SIMD_64F
         .test_cmp64()
+        //.test_cmp() - not declared as supported
+#if CV_SIMD_64F
+        .test_cmp64f()
 #endif
         .test_shift<1>().test_shift<8>()
         .test_logic()
@@ -2189,7 +2193,8 @@ void test_hal_intrin_float64()
         .test_rotate<2>().test_rotate<3>()
 #endif
         ;
-
+#else
+    std::cout << "SKIP: CV_SIMD_64F is not available" << std::endl;
 #endif
 }
 

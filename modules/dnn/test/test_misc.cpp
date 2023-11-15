@@ -93,8 +93,6 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
     std::vector<double> factorVec = {0.1, 0.2, 0.3, 0.4};
 
     Scalar scalefactor(factorVec[0], factorVec[1], factorVec[2], factorVec[3]);
-    Mat img;
-    merge(ch, 4, img);
 
     Image2BlobParams param;
     param.scalefactor = scalefactor;
@@ -102,7 +100,6 @@ TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
     Mat blob = dnn::blobFromImageWithParams(img, param); // [1, 10, 10, 4]
 
     float* blobPtr = blob.ptr<float>(0);
-
     std::vector<float> targetVec = {(float )factorVec[0] * 0, (float )factorVec[1] * 1, (float )factorVec[2] * 2, (float )factorVec[3] * 3}; // Target Value.
     for (int hi = 0; hi < 10; hi++)
     {
