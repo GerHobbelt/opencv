@@ -53,6 +53,9 @@
 
 namespace cv
 {
+
+#if CV_LASX
+
 namespace opt_LASX
 {
 
@@ -94,5 +97,8 @@ int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X
 }
 
 }
+
+#endif
+
 }
 /* End of file. */

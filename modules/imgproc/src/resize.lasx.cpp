@@ -53,6 +53,9 @@
 
 namespace cv
 {
+
+#if CV_LASX
+		
 namespace opt_LASX
 {
 
@@ -245,5 +248,8 @@ void resizeNN4_LASX(const Range& range, const Mat& src, Mat &dst, int *x_ofs, do
 }
 
 }
+
+#endif
+
 }
 /* End of file. */

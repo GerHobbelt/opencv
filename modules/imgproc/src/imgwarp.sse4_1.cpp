@@ -52,6 +52,9 @@
 
 namespace cv
 {
+
+#if CV_SSE4_1
+
 namespace opt_SSE4_1
 {
 
@@ -501,5 +504,8 @@ Ptr<WarpPerspectiveLine_SSE4> WarpPerspectiveLine_SSE4::getImpl(const double *M)
 }
 
 }
+
+#endif
+
 }
 /* End of file. */
