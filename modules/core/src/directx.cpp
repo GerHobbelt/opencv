@@ -976,8 +976,12 @@ static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11
 
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     cl_context context = (cl_context)ctx.ptr();
-    OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
-    if (nullptr == impl)
+#ifdef _CPPRTTI
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+#else
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>();
+#endif
+	if (nullptr == impl)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
 
     cl_int status = 0;
@@ -1172,7 +1176,11 @@ static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, Out
 
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     cl_context context = (cl_context)ctx.ptr();
-    OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+#ifdef _CPPRTTI
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+#else
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>();
+#endif
     if (nullptr == impl)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
 
@@ -1361,7 +1369,11 @@ void convertToD3D11Texture2D(InputArray src, ID3D11Texture2D* pD3D11Texture2D)
         return;
     }
 #endif
-    OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+#ifdef _CPPRTTI
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+#else
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>();
+#endif
     if (impl) {
         __convertToD3D11Texture2DKHR(src, pD3D11Texture2D);
     }
@@ -1388,8 +1400,12 @@ void convertFromD3D11Texture2D(ID3D11Texture2D* pD3D11Texture2D, OutputArray dst
         return;
     }
 #endif
-    OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
-    if (impl) {
+#ifdef _CPPRTTI
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
+#else
+	OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>();
+#endif
+	if (impl) {
         __convertFromD3D11Texture2DKHR(pD3D11Texture2D, dst);
     }
     else {
@@ -1406,8 +1422,12 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
 #elif defined(HAVE_OPENCL)
 
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
-    OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>().get();
-    if (nullptr == impl)
+#ifdef _CPPRTTI
+	OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>().get();
+#else
+	OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>();
+#endif
+	if (nullptr == impl)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
 
     D3D10_TEXTURE2D_DESC desc = { 0 };
@@ -1469,8 +1489,12 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
     NO_DIRECTX_SUPPORT_ERROR;
 #elif defined(HAVE_OPENCL)
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
-    OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>().get();
-    if (nullptr == impl)
+#ifdef _CPPRTTI
+	OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>().get();
+#else
+	OpenCL_D3D10* impl = ctx.getUserContext<OpenCL_D3D10>();
+#endif
+	if (nullptr == impl)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
 
     D3D10_TEXTURE2D_DESC desc = { 0 };
@@ -1531,8 +1555,12 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
 #elif defined(HAVE_OPENCL)
 
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
-    OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>().get();
-    if (nullptr == impl)
+#ifdef _CPPRTTI
+	OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>().get();
+#else
+	OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>();
+#endif
+	if (nullptr == impl)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
 
     D3DSURFACE_DESC desc;
@@ -1601,8 +1629,12 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
 #elif defined(HAVE_OPENCL)
 
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
-    OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>().get();
-    if (nullptr == impl)
+#ifdef _CPPRTTI
+	OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>().get();
+#else
+	OpenCL_D3D9* impl = ctx.getUserContext<OpenCL_D3D9>();
+#endif
+	if (nullptr == impl)
         CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: Context initilized without DirectX interoperability");
 
     D3DSURFACE_DESC desc;
