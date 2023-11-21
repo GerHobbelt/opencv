@@ -310,8 +310,8 @@ static const char* const mainHighGUIclassName = "Main HighGUI class";
 static void icvCleanupHighgui()
 {
     cvDestroyAllWindows();
-    UnregisterClass(highGUIclassName, hg_hinstance);
-    UnregisterClass(mainHighGUIclassName, hg_hinstance);
+    UnregisterClassA(highGUIclassName, hg_hinstance);
+    UnregisterClassA(mainHighGUIclassName, hg_hinstance);
 }
 
 CV_IMPL int cvInitSystem(int, char**)
@@ -325,7 +325,7 @@ CV_IMPL int cvInitSystem(int, char**)
         (void)getWindowsList();  // Initialize the storage
 
         // Register the class
-        WNDCLASS wndc;
+        WNDCLASSA wndc;
         wndc.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS;
         wndc.lpfnWndProc = WindowProc;
         wndc.cbClsExtra = 0;
@@ -334,17 +334,17 @@ CV_IMPL int cvInitSystem(int, char**)
         wndc.lpszClassName = highGUIclassName;
         wndc.lpszMenuName = highGUIclassName;
         wndc.hIcon = LoadIcon(0, IDI_APPLICATION);
-        wndc.hCursor = (HCURSOR)LoadCursor(0, (LPSTR)(size_t)IDC_CROSS);
+        wndc.hCursor = (HCURSOR)LoadCursorA(0, (LPSTR)(size_t)IDC_CROSS);
         wndc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
 
-        RegisterClass(&wndc);
+        RegisterClassA(&wndc);
 
         wndc.lpszClassName = mainHighGUIclassName;
         wndc.lpszMenuName = mainHighGUIclassName;
         wndc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
         wndc.lpfnWndProc = MainWindowProc;
 
-        RegisterClass(&wndc);
+        RegisterClassA(&wndc);
         atexit(icvCleanupHighgui);
 
         wasInitialized = 1;
@@ -410,16 +410,16 @@ icvLoadWindowPos(const char* name, CvRect& rect)
     rect.x = rect.y = CW_USEDEFAULT;
     rect.width = rect.height = 320;
 
-    if (RegOpenKeyEx(HKEY_CURRENT_USER,szKey,0,KEY_QUERY_VALUE,&hkey) == ERROR_SUCCESS)
+    if (RegOpenKeyExA(HKEY_CURRENT_USER,szKey,0,KEY_QUERY_VALUE,&hkey) == ERROR_SUCCESS)
     {
         // Yes we are installed.
         DWORD dwType = 0;
         DWORD dwSize = sizeof(int);
 
-        RegQueryValueEx(hkey, "Left", NULL, &dwType, (BYTE*)&rect.x, &dwSize);
-        RegQueryValueEx(hkey, "Top", NULL, &dwType, (BYTE*)&rect.y, &dwSize);
-        RegQueryValueEx(hkey, "Width", NULL, &dwType, (BYTE*)&rect.width, &dwSize);
-        RegQueryValueEx(hkey, "Height", NULL, &dwType, (BYTE*)&rect.height, &dwSize);
+        RegQueryValueExA(hkey, "Left", NULL, &dwType, (BYTE*)&rect.x, &dwSize);
+        RegQueryValueExA(hkey, "Top", NULL, &dwType, (BYTE*)&rect.y, &dwSize);
+        RegQueryValueExA(hkey, "Width", NULL, &dwType, (BYTE*)&rect.width, &dwSize);
+        RegQueryValueExA(hkey, "Height", NULL, &dwType, (BYTE*)&rect.height, &dwSize);
 
         // Snap rect into closest monitor in case it falls outside it. // Adi Shavit
         // set WIN32 RECT to be the loaded size
@@ -468,7 +468,7 @@ icvSaveWindowPos(const char* name, CvRect rect)
     strcpy_s(szKey, 1024, icvWindowPosRootKey);
     strcat_s(szKey, 1024, name);
 
-    if (RegOpenKeyEx(HKEY_CURRENT_USER,szKey,0,KEY_READ,&hkey) != ERROR_SUCCESS)
+    if (RegOpenKeyExA(HKEY_CURRENT_USER,szKey,0,KEY_READ,&hkey) != ERROR_SUCCESS)
     {
         HKEY hroot;
         DWORD count = 0;
@@ -478,15 +478,15 @@ icvSaveWindowPos(const char* name, CvRect rect)
 
         strcpy_s(rootKey, 1024, icvWindowPosRootKey);
         rootKey[strlen(rootKey)-1] = '\0';
-        if (RegCreateKeyEx(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS)
-            //RegOpenKeyEx(HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS)
+        if (RegCreateKeyExA(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS)
+            //RegOpenKeyExA(HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS)
             return;
 
         for(;;)
         {
             DWORD csize = sizeof(currentKey);
             FILETIME accesstime = { 0, 0 };
-            LONG code = RegEnumKeyEx(hroot, count, currentKey, &csize, NULL, NULL, NULL, &accesstime);
+            LONG code = RegEnumKeyExA(hroot, count, currentKey, &csize, NULL, NULL, NULL, &accesstime);
             if (code != ERROR_SUCCESS && code != ERROR_MORE_DATA)
                 break;
             count++;
@@ -500,23 +500,23 @@ icvSaveWindowPos(const char* name, CvRect rect)
         }
 
         if (count >= MAX_RECORD_COUNT)
-            RegDeleteKey(hroot, oldestKey);
+            RegDeleteKeyA(hroot, oldestKey);
         RegCloseKey(hroot);
 
-        if (RegCreateKeyEx(HKEY_CURRENT_USER,szKey,0,NULL,REG_OPTION_NON_VOLATILE, KEY_WRITE, 0, &hkey, NULL) != ERROR_SUCCESS)
+        if (RegCreateKeyExA(HKEY_CURRENT_USER,szKey,0,NULL,REG_OPTION_NON_VOLATILE, KEY_WRITE, 0, &hkey, NULL) != ERROR_SUCCESS)
             return;
     }
     else
     {
         RegCloseKey(hkey);
-        if (RegOpenKeyEx(HKEY_CURRENT_USER,szKey,0,KEY_WRITE,&hkey) != ERROR_SUCCESS)
+        if (RegOpenKeyExA(HKEY_CURRENT_USER,szKey,0,KEY_WRITE,&hkey) != ERROR_SUCCESS)
             return;
     }
 
-    RegSetValueEx(hkey, "Left", 0, REG_DWORD, (BYTE*)&rect.x, sizeof(rect.x));
-    RegSetValueEx(hkey, "Top", 0, REG_DWORD, (BYTE*)&rect.y, sizeof(rect.y));
-    RegSetValueEx(hkey, "Width", 0, REG_DWORD, (BYTE*)&rect.width, sizeof(rect.width));
-    RegSetValueEx(hkey, "Height", 0, REG_DWORD, (BYTE*)&rect.height, sizeof(rect.height));
+    RegSetValueExA(hkey, "Left", 0, REG_DWORD, (BYTE*)&rect.x, sizeof(rect.x));
+    RegSetValueExA(hkey, "Top", 0, REG_DWORD, (BYTE*)&rect.y, sizeof(rect.y));
+    RegSetValueExA(hkey, "Width", 0, REG_DWORD, (BYTE*)&rect.width, sizeof(rect.width));
+    RegSetValueExA(hkey, "Height", 0, REG_DWORD, (BYTE*)&rect.height, sizeof(rect.height));
     RegCloseKey(hkey);
 }
 
@@ -817,7 +817,7 @@ void setWindowTitle_W32(const std::string& name, const std::string& title)
     if (!window)
         CV_Error(Error::StsNullPtr, "NULL window");
 
-    if (!SetWindowText(window->frame, title.c_str()))
+    if (!SetWindowTextA(window->frame, title.c_str()))
         CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", name.c_str(), title.c_str()));
 }
 
@@ -1063,7 +1063,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         defStyle |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 #endif
 
-    mainhWnd = CreateWindow(mainHighGUIclassName, name.c_str(), defStyle | WS_OVERLAPPED,
+    mainhWnd = CreateWindowA(mainHighGUIclassName, name.c_str(), defStyle | WS_OVERLAPPED,
                              rect.x, rect.y, rect.width, rect.height, 0, 0, hg_hinstance, 0);
     if (!mainhWnd)
         CV_Error_(Error::StsError, ("Frame window can not be created: '%s'", name.c_str()));
@@ -1071,7 +1071,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
     ShowWindow(mainhWnd, SW_SHOW);
 
     //YV- remove one border by changing the style
-    hWnd = CreateWindow(highGUIclassName, "", (defStyle & ~WS_SIZEBOX) | WS_CHILD, CW_USEDEFAULT, 0, rect.width, rect.height, mainhWnd, 0, hg_hinstance, 0);
+    hWnd = CreateWindowA(highGUIclassName, "", (defStyle & ~WS_SIZEBOX) | WS_CHILD, CW_USEDEFAULT, 0, rect.width, rect.height, mainhWnd, 0, hg_hinstance, 0);
     if (!hWnd)
         CV_Error(Error::StsError, "Frame window can not be created");
 
@@ -2031,7 +2031,7 @@ static void icvUpdateTrackbar(CvTrackbar& trackbar, int pos)
         }
 
         snprintf(pos_text + strlen(pos_text), sizeof(pos_text) - strlen(pos_text), "%s: %d\n", suffix, pos);
-        SetWindowText(trackbar.buddy, pos_text);
+        SetWindowTextA(trackbar.buddy, pos_text);
     }
 }
 
@@ -2139,9 +2139,9 @@ static void showSaveDialog(CvWindow& window)
 
     char szFileName[MAX_PATH] = "";
     // try to use window title as file name
-    GetWindowText(window.frame, szFileName, MAX_PATH);
+    GetWindowTextA(window.frame, szFileName, MAX_PATH);
 
-    OPENFILENAME ofn;
+    OPENFILENAMEA ofn;
     ZeroMemory(&ofn, sizeof(ofn));
 #ifdef OPENFILENAME_SIZE_VERSION_400
     // we are not going to use new fields any way
@@ -2183,7 +2183,7 @@ static void showSaveDialog(CvWindow& window)
     ofn.lpstrDefExt = "bmp";
 #endif
 
-    if (GetSaveFileName(&ofn))
+    if (GetSaveFileNameA(&ofn))
     {
         cv::Mat tmp;
         cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data, (sz.cx * channels + 3) & -4), tmp, 0);
@@ -2465,7 +2465,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     window.toolbar.trackbars.push_back(trackbar);
 
     auto slider_name = cv::format("Trackbar%p", trackbar.get());
-    trackbar->hwnd = CreateWindowEx(0, TRACKBAR_CLASS, slider_name.c_str(),
+    trackbar->hwnd = CreateWindowExA(0, TRACKBAR_CLASSA, slider_name.c_str(),
                         WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS |
                         TBS_FIXEDLENGTH | TBS_HORZ | TBS_BOTTOM,
                         rect.left + HG_BUDDY_WIDTH, rect.top,
@@ -2474,7 +2474,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
                         (HMENU)(size_t)bcount, hg_hinstance, 0);
 
     slider_name = cv::format("Buddy%p", trackbar.get());
-    trackbar->buddy = CreateWindowEx(0, "STATIC", slider_name.c_str(),
+    trackbar->buddy = CreateWindowExA(0, "STATIC", slider_name.c_str(),
                         WS_CHILD | SS_RIGHT,
                         rect.left, rect.top,
                         HG_BUDDY_WIDTH, rect.bottom - rect.top,
@@ -2805,7 +2805,7 @@ public:
         switch ((WindowPropertyFlags)prop)
         {
         case WND_PROP_FULLSCREEN:
-            if (value != WINDOW_NORMAL && value != WINDOW_FULLSCREEN)  // bad arg
+            if (int(round(value)) != WINDOW_NORMAL && int(round(value)) != WINDOW_FULLSCREEN)  // bad arg
                 break;
             setModeWindow_(window, (int)value);
             return true;
@@ -2856,7 +2856,7 @@ public:
         auto window_ptr = window_.lock();
         CV_Assert(window_ptr);
         CvWindow& window = *window_ptr;
-        if (!SetWindowText(window.frame, title.c_str()))
+        if (!SetWindowTextA(window.frame, title.c_str()))
             CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", window.name.c_str(), title.c_str()));
     }
 
