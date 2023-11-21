@@ -26,6 +26,8 @@
 
 #include "precomp.hpp"
 
+#if defined(HAVE_WINRT)
+
 #include <map>
 #include <stdlib.h>
 #include <string.h>
@@ -281,3 +283,5 @@ CV_IMPL int cvStartWindowThread() {
     CV_WINRT_NO_GUI_ERROR("cvStartWindowThread");
     return CV_StsNotImplemented;
 }
+
+#endif

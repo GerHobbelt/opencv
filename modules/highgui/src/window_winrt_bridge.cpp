@@ -26,6 +26,8 @@
 
 #include "precomp.hpp"
 
+#if defined(HAVE_WINRT)
+
 #include "opencv2\highgui\highgui_winrt.hpp"
 #include "window_winrt_bridge.hpp"
 
@@ -362,3 +364,5 @@ void CvWindow::createButton(cv::String name)
 }
 
 // end
+
+#endif
