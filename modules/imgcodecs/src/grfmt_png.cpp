@@ -63,7 +63,11 @@
 #else
 #include <png.h>
 #endif
+#ifdef HAVE_ZLIB_NG
+#include <zlib-ng.h>
+#else
 #include <zlib.h>
+#endif
 
 #include "grfmt_png.hpp"
 
