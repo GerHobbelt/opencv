@@ -132,7 +132,9 @@ public:
     pointer allocate(size_type count, const void* =0) { return reinterpret_cast<pointer>(fastMalloc(count * sizeof (_Tp))); }
     void deallocate(pointer p, size_type) { fastFree(p); }
 
-    void construct(pointer p, const _Tp& v) { new(static_cast<void*>(p)) _Tp(v); }
+#undef new
+
+    void construct(pointer p, const _Tp& v) { auto ptr = static_cast<void*>(p); new(ptr) _Tp(v); }
     void destroy(pointer p) { p->~_Tp(); }
 
     size_type max_size() const { return cv::max(static_cast<_Tp>(-1)/sizeof(_Tp), 1); }
