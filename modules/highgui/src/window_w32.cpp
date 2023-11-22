@@ -1258,9 +1258,17 @@ CV_IMPL void cvDestroyWindow(const char* name)
 
     auto window = icvFindWindowByName(name);
     if (!window)
-        CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", name));
-
-    window->destroy();
+	{
+#if 0
+		CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", name));
+#else
+		CV_LOG_WARNING(NULL, cv::format("cvDestroyWindow: NULL window: '%s'", name));
+#endif
+	}
+	else
+	{
+		window->destroy();
+	}
 }
 
 
@@ -2191,7 +2199,7 @@ static void showSaveDialog(CvWindow& window)
     }
 #else
     CV_UNUSED(window);
-    CV_LOG_WARNING("Save dialog requires enabled 'imgcodecs' module.");
+    CV_LOG_WARNING(NULL, "Save dialog requires enabled 'imgcodecs' module.");
     return;
 #endif
 }
