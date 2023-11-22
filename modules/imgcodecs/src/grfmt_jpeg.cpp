@@ -93,21 +93,21 @@ namespace cv
 
 struct JpegErrorMgr
 {
-    struct jpeg_error_mgr pub;
-    jmp_buf setjmp_buffer;
+    struct jpeg_error_mgr pub{0};
+    jmp_buf setjmp_buffer{0};
 };
 
 struct JpegSource
 {
-    struct jpeg_source_mgr pub;
-    int skip;
+    struct jpeg_source_mgr pub{0};
+    int skip{0};
 };
 
 struct JpegState
 {
-    jpeg_decompress_struct cinfo; // IJG JPEG codec structure
-    JpegErrorMgr jerr; // error processing manager state
-    JpegSource source; // memory buffer source
+	jpeg_decompress_struct cinfo{0};  // IJG JPEG codec structure
+    JpegErrorMgr jerr{0};             // error processing manager state
+    JpegSource source{0};             // memory buffer source
 };
 
 /////////////////////// Error processing /////////////////////
