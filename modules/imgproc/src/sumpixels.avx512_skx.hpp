@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2019-2020, Intel Corporation, all rights reserved.
 
+#include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
 #if defined(__GNUC__) && __GNUC__ == 12
