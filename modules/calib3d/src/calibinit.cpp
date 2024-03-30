@@ -1630,7 +1630,7 @@ void ChessBoardDetector::findQuadNeighbors()
                     {
                         // check edge lengths, make sure they're compatible
                         // edges that are different by more than 1:4 are rejected
-                        float ediff = cur_quad.edge_len - q_k.edge_len;
+                        const float ediff = fabs(cur_quad.edge_len - q_k.edge_len);
                         if (ediff > 32*cur_quad.edge_len ||
                             ediff > 32*q_k.edge_len)
                         {
@@ -1730,8 +1730,8 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
     all_quads.deallocate();
     all_corners.deallocate();
 
-    // empiric bound for minimal allowed perimeter for squares
-    int min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
+    // empiric bound for minimal allowed area for squares
+    const int min_area = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
 
     bool filterQuads = (flags & CALIB_CB_FILTER_QUADS) != 0;
 
@@ -1759,7 +1759,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         const std::vector<Point>& contour = contours[idx];
 
         Rect contour_rect = boundingRect(contour);
-        if (contour_rect.area() < min_size)
+        if (contour_rect.area() < min_area)
             continue;
 
         std::vector<Point> approx_contour;
@@ -1803,7 +1803,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             // than rectangular and which are big enough
             double d3 = sqrt(normL2Sqr<double>(pt[0] - pt[1]));
             double d4 = sqrt(normL2Sqr<double>(pt[1] - pt[2]));
-            if (!(d3*4 > d4 && d4*4 > d3 && d3*d4 < area*1.5 && area > min_size &&
+            if (!(d3*4 > d4 && d4*4 > d3 && d3*d4 < area*1.5 && area > min_area &&
                 d1 >= 0.15 * p && d2 >= 0.15 * p))
                 continue;
         }
