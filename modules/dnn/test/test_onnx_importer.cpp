@@ -1471,6 +1471,8 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
 
 TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
 }
 
@@ -1501,6 +1503,8 @@ TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
 
 TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
 
@@ -3246,6 +3250,12 @@ TEST_P(Test_ONNX_nets, VitTrack) {
 
 TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
+}
+
+TEST_P(Test_ONNX_layers, MatMulAddFusion) {
+    double l1 = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.0018 : default_l1;
+    double lInf = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.011 : default_lInf;
+    testONNXModels("biased_matmul", npy, l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
