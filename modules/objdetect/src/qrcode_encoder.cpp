@@ -196,8 +196,8 @@ protected:
     uint8_t total_num;
     vector<Mat> final_qrcodes;
 
-    Ptr<VersionInfo> version_info;
-    Ptr<BlockParams> cur_ecc_params;
+    const VersionInfo* version_info;
+    const BlockParams* cur_ecc_params;
 
     bool isNumeric(const std::string& input) const;
     bool isAlphaNumeric(const std::string& input) const;
@@ -207,7 +207,7 @@ protected:
     bool encodeNumeric(const std::string& input, vector<uint8_t> &output);
     bool encodeECI(const std::string& input, vector<uint8_t> &output);
     bool encodeKanji(const std::string& input, vector<uint8_t> &output);
-    bool encodeAuto(const std::string& input, vector<uint8_t> &output, EncodeMode *mode);
+    bool encodeAuto(const std::string& input, vector<uint8_t> &output, EncodeMode *mode = nullptr);
     bool encodeStructure(const std::string& input, vector<uint8_t> &output);
     int eccLevelToCode(CorrectionLevel level);
     void padBitStream();
@@ -225,7 +225,7 @@ protected:
     void findAutoMaskType();
     bool estimateVersion(const int input_length, EncodeMode mode, vector<int> &possible_version);
     int versionAuto(const std::string &input_str);
-    int findVersionCapacity(const int input_length, const int ecc, const int version_begin, const int version_end);
+    int findVersionCapacity(const int input_length, const int ecc, const std::vector<int>& possible_versions);
     void generatingProcess(const std::string& input, Mat &qrcode);
     void generateQR(const std::string& input);
 };
@@ -248,17 +248,17 @@ int QRCodeEncoderImpl::eccLevelToCode(CorrectionLevel level)
         "CORRECT_LEVEL_L, CORRECT_LEVEL_M, CORRECT_LEVEL_Q, CORRECT_LEVEL_H." );
 }
 
-int QRCodeEncoderImpl::findVersionCapacity(const int input_length, const int ecc, const int version_begin, const int version_end)
+int QRCodeEncoderImpl::findVersionCapacity(const int input_length, const int ecc, const std::vector<int>& possible_versions)
 {
     int data_codewords, version_index = -1;
     const int byte_len = 8;
     version_index = -1;
 
-    for (int i = version_begin; i < version_end; i++)
+    for (int i : possible_versions)
     {
-        Ptr<BlockParams> tmp_ecc_params = makePtr<BlockParams>(version_info_database[i].ecc[ecc]);
-        data_codewords = tmp_ecc_params->data_codewords_in_G1 * tmp_ecc_params->num_blocks_in_G1 +
-                         tmp_ecc_params->data_codewords_in_G2 * tmp_ecc_params->num_blocks_in_G2;
+        auto& tmp_ecc_params = version_info_database[i].ecc[ecc];
+        data_codewords = tmp_ecc_params.data_codewords_in_G1 * tmp_ecc_params.num_blocks_in_G1 +
+                         tmp_ecc_params.data_codewords_in_G2 * tmp_ecc_params.num_blocks_in_G2;
 
         if (data_codewords * byte_len >= input_length)
         {
@@ -269,34 +269,38 @@ int QRCodeEncoderImpl::findVersionCapacity(const int input_length, const int ecc
     return version_index;
 }
 
+static inline int getCapacity(int version, QRCodeEncoder::CorrectionLevel ecc_level, QRCodeEncoder::EncodeMode mode) {
+    const int* capacity = version_capacity_database[version].ec_level[ecc_level].encoding_modes;
+    switch (mode) {
+        case QRCodeEncoder::EncodeMode::MODE_NUMERIC:
+            return capacity[0];
+        case QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC:
+            return capacity[1];
+        case QRCodeEncoder::EncodeMode::MODE_BYTE:
+            return capacity[2];
+        case QRCodeEncoder::EncodeMode::MODE_KANJI:
+            return capacity[3];
+        default:
+            CV_Error(Error::StsNotImplemented, format("Unexpected mode %d", mode));
+    }
+}
+
 bool QRCodeEncoderImpl::estimateVersion(const int input_length, EncodeMode mode, vector<int>& possible_version)
 {
     possible_version.clear();
 
     CV_Assert(mode != EncodeMode::MODE_AUTO);
 
-    const int mode_index[] = {
-       -1,
-        0, // cv::QRCodeEncoder::EncodeMode::MODE_NUMERIC
-        1, // cv::QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC
-       -1,
-        2, // cv::QRCodeEncoder::EncodeMode::MODE_BYTE
-       -1,
-       -1,
-       -1,
-        3  // cv::QRCodeEncoder::EncodeMode::MODE_KANJI
-    };
-
-    if (input_length > version_capacity_database[40].ec_level[ecc_level].encoding_modes[mode_index[mode]])
+    if (input_length > getCapacity(MAX_VERSION, ecc_level, mode))
     {
         return false;
     }
 
-    int version = 40;
+    int version = MAX_VERSION;
 
     for (; version > 0; --version)
     {
-        if (input_length > version_capacity_database[version].ec_level[ecc_level].encoding_modes[mode_index[mode]]) {
+        if (input_length > getCapacity(version, ecc_level, mode)) {
             break;
         }
     }
@@ -327,8 +331,7 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
         return -1;
     }
 
-    const auto tmp_version = findVersionCapacity((int)payload_tmp.size(), ecc_level,
-                            possible_version.front(), possible_version.back() + 1);
+    const auto tmp_version = findVersionCapacity((int)payload_tmp.size(), ecc_level, possible_version);
 
     return tmp_version;
 }
@@ -372,8 +375,8 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         format = vector<uint8_t> (15, 255);
         version_reserved = vector<uint8_t> (18, 255);
         version_size = (21 + (tmp_version_level - 1) * 4);
-        version_info = makePtr<VersionInfo>(version_info_database[tmp_version_level]);
-        cur_ecc_params = makePtr<BlockParams>(version_info->ecc[ecc_level]);
+        version_info = &version_info_database[tmp_version_level];
+        cur_ecc_params = &version_info->ecc[ecc_level];
         original = Mat(Size(version_size, version_size), CV_8UC1, Scalar(255));
         masked_data = original.clone();
         Mat qrcode = masked_data.clone();
