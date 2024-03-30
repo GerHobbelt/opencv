@@ -5,7 +5,6 @@
 #      $ cmake <PATH_TO_OPENCV_ROOT>
 #
 # ----------------------------------------------------------------------------
-
 # Disable in-source builds to prevent source tree corruption.
 if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "
@@ -471,6 +470,7 @@ OCV_OPTION(WITH_ONNX "Include Microsoft ONNX Runtime support" OFF
 OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_TIMVX)
+# attention: Astra2, Gemini2, and Gemini2L cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT AND NOT MINGW) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
   VERIFY HAVE_OBSENSOR)
@@ -1399,12 +1399,14 @@ if(WITH_AVIF OR HAVE_AVIF)
   endif()
 endif()
 
-if(WITH_PNG OR HAVE_PNG OR WITH_SPNG)
-  if(WITH_SPNG)
+if(WITH_SPNG)
+  if(BUILD_SPNG)
     status("    PNG:" "build-${SPNG_LIBRARY} (ver ${SPNG_VERSION})")
-  else()
-    status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})" ELSE "build (ver ${PNG_VERSION})")
+  elseif(HAVE_SPNG)
+    status("    PNG:" "${SPNG_LIBRARY} (ver ${SPNG_VERSION})")
   endif()
+elseif(WITH_PNG OR HAVE_PNG)
+  status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})" ELSE "build (ver ${PNG_VERSION})")
 endif()
 
 if(WITH_TIFF OR HAVE_TIFF)
