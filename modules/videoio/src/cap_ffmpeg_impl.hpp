@@ -3094,8 +3094,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #else
     do {
 #endif
-        AVPixelFormat hw_format = AV_PIX_FMT_NONE;
-        AVHWDeviceType hw_type = AV_HWDEVICE_TYPE_NONE;
         if (encode_video) {
 #if USE_AV_HW_CODECS
             accel_iter.parse_next();
