@@ -58,11 +58,7 @@
 #  define _FILE_OFFSET_BITS 0
 #endif
 
-#ifdef HAVE_LIBPNG_PNG_H
-#include <libpng/png.h>
-#else
 #include <png.h>
-#endif
 #ifdef HAVE_ZLIB_NG
 #include <zlib-ng.h>
 #else
