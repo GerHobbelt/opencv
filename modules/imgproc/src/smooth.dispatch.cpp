@@ -645,6 +645,18 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
     int sdepth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
+    if (!useOpenCL && (sigma1 == 0.0) && (sigma2 == 0.0) && (ksize.height == ksize.width) && (borderType & BORDER_ISOLATED))
+    {
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+
+        if (src.data == dst.data)
+                src = src.clone();
+
+        CALL_HAL(gaussianBlurSymmetric, cv_hal_gaussianBlurSymmetric, src.ptr(), src.step, dst.ptr(),
+                 dst.step, src.cols, src.rows, sdepth, cn, ksize.width, borderType&~BORDER_ISOLATED);
+    }
+
     Mat kx, ky;
     createGaussianKernels(kx, ky, type, ksize, sigma1, sigma2);
 
@@ -683,8 +695,10 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
             if (src.data == dst.data)
                 src = src.clone();
+
             CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint16_t*)&fkx[0], (int)fkx.size(), (const uint16_t*)&fky[0], (int)fky.size(), borderType),
                 CV_CPU_DISPATCH_MODES_ALL);
+
             return;
         }
     }
@@ -720,8 +734,10 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
             if (src.data == dst.data)
                 src = src.clone();
+
             CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint32_t*)&fkx[0], (int)fkx.size(), (const uint32_t*)&fky[0], (int)fky.size(), borderType),
                 CV_CPU_DISPATCH_MODES_ALL);
+
             return;
         }
     }
