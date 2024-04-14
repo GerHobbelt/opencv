@@ -1,6 +1,10 @@
 #include "opencv2/highgui.hpp"
 
-int main(int argc, char *argv[])
+#if !defined(BUILD_MONOLITHIC)
+
+using namespace cv;
+
+int main(int argc, const char **argv)
 {
     int value = 50;
     int value2 = 0;
@@ -37,3 +41,5 @@ int main(int argc, char *argv[])
     destroyAllWindows();
     return 0;
 }
+
+#endif
