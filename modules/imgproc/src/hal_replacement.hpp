@@ -920,13 +920,17 @@ inline int hal_ni_gaussianBlur(const uchar* src_data, size_t src_step, uchar* ds
    @param height Source image height
    @param depth Depth of source and destination image
    @param cn Number of channels
+   @param margin_left Left margins for source image
+   @param margin_top Top margins for source image
+   @param margin_right Right margins for source image
+   @param margin_bottom Bottom margins for source image
    @param ksize Width of kernel
    @param border_type Border type
 */
-inline int hal_ni_gaussianBlurSymmetric(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t ksize, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom, size_t ksize, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
-#define cv_hal_gaussianBlurSymmetric hal_ni_gaussianBlurSymmetric
+#define cv_hal_gaussianBlurBinomial hal_ni_gaussianBlurBinomial
 //! @endcond
 
 /**
