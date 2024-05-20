@@ -315,6 +315,17 @@ Exception::Exception() { code = 0; line = 0; }
 Exception::Exception(int _code, const String& _err, const String& _func, const String& _file, int _line)
 : code(_code), err(_err), func(_func), file(_file), line(_line)
 {
+    // cut down the absolute source file path to a semi-relative one. 5 directories deep should suffice:
+    const char* fp = file.c_str();
+    int i = file.length();
+    int sepcnt = 0;
+    while (--i >= 0 && sepcnt < 6) {
+        sepcnt += (fp[i] == '/' || fp[i] == '\\');
+    }
+    if (i >= 0) {
+        String f = fp + i + 2;
+        file = f;
+    }
     formatMessage();
 }
 
