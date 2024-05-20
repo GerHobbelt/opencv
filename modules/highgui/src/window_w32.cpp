@@ -1063,17 +1063,18 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         defStyle |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 #endif
 
-    mainhWnd = CreateWindowA(mainHighGUIclassName, name.c_str(), defStyle | WS_OVERLAPPED,
+    mainhWnd = CreateWindowExA(0, mainHighGUIclassName, name.c_str(), defStyle | WS_OVERLAPPED,
                              rect.x, rect.y, rect.width, rect.height, 0, 0, hg_hinstance, 0);
     if (!mainhWnd)
-        CV_Error_(Error::StsError, ("Frame window can not be created: '%s'", name.c_str()));
+        CV_Error_(Error::StsError, ("Main frame window can not be created: '%s'; Win32 error: %u(0x%08x)", name.c_str(), (int)GetLastError(), (int)GetLastError()));
 
     ShowWindow(mainhWnd, SW_SHOW);
 
     //YV- remove one border by changing the style
-    hWnd = CreateWindowA(highGUIclassName, "", (defStyle & ~WS_SIZEBOX) | WS_CHILD, CW_USEDEFAULT, 0, rect.width, rect.height, mainhWnd, 0, hg_hinstance, 0);
-    if (!hWnd)
-        CV_Error(Error::StsError, "Frame window can not be created");
+    hWnd = CreateWindowExA(0, highGUIclassName, "CHILD", (defStyle & ~WS_SIZEBOX) | WS_CHILD, CW_USEDEFAULT, CW_USEDEFAULT, rect.width, rect.height, mainhWnd, 0, hg_hinstance, 0);
+    if (!hWnd) {
+        CV_Error_(Error::StsError, ("Child frame window can not be created; Win32 error: %u(0x%08x)", (int)GetLastError(), (int)GetLastError()));
+    }
 
 #ifndef HAVE_OPENGL
     if (flags & cv::WINDOW_OPENGL)
