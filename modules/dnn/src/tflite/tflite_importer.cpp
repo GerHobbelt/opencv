@@ -734,20 +734,25 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
         // Since applying the NCHW permutation to a NCHW tensor mirrors the NHWC permutation applied to an NHWC tensor,
         // an additional NHWC -> NCHW conversion is requred to match the data layout.
 
+        // For implementation details, please refer to the disscusion:
+        // https://github.com/opencv/opencv/pull/25297#issuecomment-2049762298
+
         if (perm[0] != 0) {
             CV_Error(Error::StsParseError, "The first axis should not be permuted.");
         }
         if (perm[1] == 1 && perm[2] == 2 && perm[3] == 3) {
             std::vector<int> orderLP = {0, 1, 2, 3};
             layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
         }
         else if (perm[1] == 1 && perm[2] == 3 && perm[3] == 2) {
-            std::vector<int> orderLP = {0, 3, 1, 2};
+            std::vector<int> orderLP = {0, 3, 2, 1};
             layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
         }
         else if (perm[1] == 2 && perm[2] == 1 && perm[3] == 3) {
             std::vector<int> orderLP = {0, 1, 3, 2};
             layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
         }
         else if (perm[1] == 2 && perm[2] == 3 && perm[3] == 1) {
             std::vector<int> orderLP = {0, 2, 3, 1};
