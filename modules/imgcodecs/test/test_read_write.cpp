@@ -286,7 +286,7 @@ TEST(Imgcodecs_Image, regression_9376)
 
 TEST(Imgcodecs_Image, write_umat)
 {
-    const string src_name = TS::ptr()->get_data_path() + "../python/images/baboon.bmp";
+    const string src_name = TS::ptr()->get_data_path() + "../cv/shared/baboon.bmp";
     const string dst_name = cv::tempfile(".bmp");
 
     Mat image1 = imread(src_name);
