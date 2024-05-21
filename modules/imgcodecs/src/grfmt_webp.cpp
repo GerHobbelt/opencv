@@ -40,9 +40,9 @@
 //
 //M*/
 
-#ifdef HAVE_WEBP
-
 #include "precomp.hpp"
+
+#ifdef HAVE_WEBP
 
 #include <webp/decode.h>
 #include <webp/encode.h>

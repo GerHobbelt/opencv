@@ -48,6 +48,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_TIFF
+
 #include <opencv2/core/utils/logger.hpp>
 
 #include "grfmt_tiff.hpp"

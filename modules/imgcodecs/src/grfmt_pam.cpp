@@ -48,7 +48,6 @@
 
 #include "precomp.hpp"
 
-
 #ifdef HAVE_IMGCODEC_PXM
 
 #include <cerrno>
