@@ -675,7 +675,7 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 
         Point ofs;
         Size wsz(src.cols, src.rows);
-        src.locateROI(wsz, ofs);
+        //src.locateROI(wsz, ofs);
 
         CALL_HAL(gaussianBlurBinomial, cv_hal_gaussianBlurBinomial, src.ptr(), src.step, dst.ptr(),
                 dst.step, src.cols, src.rows, sdepth, cn, ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, borderType & ~BORDER_ISOLATED);
