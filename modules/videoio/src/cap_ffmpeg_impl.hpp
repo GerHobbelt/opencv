@@ -527,6 +527,8 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 struct CvCapture_FFMPEG
 {
     bool open(const char* filename, const VideoCaptureParameters& params);
+    bool open(const std::vector<uchar>& buffer, const VideoCaptureParameters& params);
+    bool open(const char* filename, const std::vector<uchar>& buffer, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -560,6 +562,9 @@ struct CvCapture_FFMPEG
     AVFrame         * picture;
     AVFrame           rgb_picture;
     int64_t           picture_pts;
+
+    AVIOContext     * avio_context;
+    AVBufferRef       avio_buffer;
 
     AVPacket          packet;
     Image_FFMPEG      frame;
@@ -625,6 +630,7 @@ void CvCapture_FFMPEG::init()
 
     avcodec = 0;
     context = 0;
+    avio_context = 0;
     frame_number = 0;
     eps_zero = 0.000025;
 
@@ -730,6 +736,12 @@ void CvCapture_FFMPEG::close()
 #else
         av_bitstream_filter_close(bsfc);
 #endif
+    }
+
+    if (avio_context)
+    {
+        av_free(avio_context->buffer);
+        av_freep(&avio_context);
     }
 
     init();
@@ -1025,6 +1037,16 @@ static bool isThreadSafe() {
 
 bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
 {
+    return open(_filename, {}, params);
+}
+
+bool CvCapture_FFMPEG::open(const std::vector<uchar>& buffer, const VideoCaptureParameters& params)
+{
+    return open(nullptr, buffer, params);
+}
+
+bool CvCapture_FFMPEG::open(const char* _filename, const std::vector<uchar>& buffer, const VideoCaptureParameters& params)
+{
     const bool threadSafe = isThreadSafe();
     InternalFFMpegRegister::init(threadSafe);
 
@@ -1153,6 +1175,27 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
       input_format = av_find_input_format(entry->value);
     }
 
+    if (!buffer.empty())
+    {
+        avio_buffer.size = buffer.size();
+        avio_buffer.data = const_cast<uint8_t*>(buffer.data());
+
+        size_t avio_ctx_buffer_size = 4096;
+        uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
+        CV_Assert(avio_ctx_buffer);
+        avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, &avio_buffer,
+            [](void *opaque, uint8_t *buf, int buf_size) -> int {
+                auto src = reinterpret_cast<AVBufferRef*>(opaque);
+                buf_size = FFMIN(buf_size, src->size);
+                memcpy(buf, src->data, buf_size);
+                src->data += buf_size;
+                src->size -= buf_size;
+                return buf_size;
+            },
+            NULL, NULL);
+        CV_Assert(avio_context);
+        ic->pb = avio_context;
+    }
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
 
     if (err < 0)
@@ -3294,6 +3337,22 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
         return 0;
     capture->init();
     if (capture->open(filename, params))
+        return capture;
+
+    capture->close();
+    free(capture);
+    return 0;
+}
+
+static
+CvCapture_FFMPEG* cvCreateBufferCaptureWithParams_FFMPEG(const std::vector<uchar>& buffer, const VideoCaptureParameters& params)
+{
+    // FIXIT: remove unsafe malloc() approach
+    CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
+    if (!capture)
+        return 0;
+    capture->init();
+    if (capture->open(buffer, params))
         return capture;
 
     capture->close();
