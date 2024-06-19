@@ -338,7 +338,7 @@ public:
 
         Mat response = input_response.getMat();
         if(response.empty()) {
-            float middle = LDR_SIZE / 2.0f;
+            float middle = int(LDR_SIZE) / 2.0f;
             response = linearResponse(channels) / middle;
         }
         CV_Assert(response.rows == LDR_SIZE && response.cols == 1 &&
