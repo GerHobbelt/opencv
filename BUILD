@@ -12,7 +12,6 @@ cc_library(
     name = "opencv_deps",
     linkopts = [
         "-ldl", 
-        "-lz", 
         "-lpthread",
         "-L/opt/homebrew/opt/ffmpeg/lib", 
         "-L/opt/homebrew/Cellar/libx11/1.8.6/lib", 
