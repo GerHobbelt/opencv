@@ -1,20 +1,19 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
-load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
 
 filegroup(
     name = "all",
     srcs = glob(["**"]),
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "opencv_deps",
     linkopts = [
-        "-ldl", 
+        "-ldl",
         "-lpthread",
-        "-L/opt/homebrew/opt/ffmpeg/lib", 
-        "-L/opt/homebrew/Cellar/libx11/1.8.6/lib", 
+        "-L/opt/homebrew/opt/ffmpeg/lib",
+        "-L/opt/homebrew/Cellar/libx11/1.8.6/lib",
     ],
 )
 
