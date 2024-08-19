@@ -81,5 +81,8 @@ cmake(
         "install",
     ],
     visibility = ["//visibility:public"],
-    deps = [":opencv_deps"],
+    deps = [
+        ":opencv_deps",
+        "@libjpeg//:jpeg"
+    ],
 )
