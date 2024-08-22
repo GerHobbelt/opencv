@@ -1,3 +1,9 @@
+opencv (4.2.0+dfsg-5ubuntu1.1cuda11.4) unstable; urgency=medium
+
+  * Add CUDA.
+
+ -- Martin Pecka <peckama2@fel.cvut.cz>  Thu, 22 Aug 2024 12:11:00 +0200
+
 opencv (4.2.0+dfsg-5) unstable; urgency=medium
 
   [ Mo Zhou ]
