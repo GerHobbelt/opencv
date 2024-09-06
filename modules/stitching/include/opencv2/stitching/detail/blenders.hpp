@@ -49,6 +49,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/musa.hpp"
 
 namespace cv {
 namespace detail {
@@ -156,6 +157,21 @@ private:
     cuda::GpuMat gpu_img_;
     cuda::GpuMat gpu_weight_map_;
     cuda::GpuMat gpu_add_mask_;
+    int gpu_feed_idx_;
+    bool gpu_initialized_;
+#elif defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING)
+    std::vector<musa::GpuMat> gpu_dst_pyr_laplace_;
+    std::vector<musa::GpuMat> gpu_dst_band_weights_;
+    std::vector<Point> gpu_tl_points_;
+    std::vector<musa::GpuMat> gpu_imgs_with_border_;
+    std::vector<std::vector<musa::GpuMat> > gpu_weight_pyr_gauss_vec_;
+    std::vector<std::vector<musa::GpuMat> > gpu_src_pyr_laplace_vec_;
+    std::vector<std::vector<musa::GpuMat> > gpu_ups_;
+    musa::GpuMat gpu_dst_mask_;
+    musa::GpuMat gpu_mask_;
+    musa::GpuMat gpu_img_;
+    musa::GpuMat gpu_weight_map_;
+    musa::GpuMat gpu_add_mask_;
     int gpu_feed_idx_;
     bool gpu_initialized_;
 #endif

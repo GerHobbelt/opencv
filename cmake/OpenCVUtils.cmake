@@ -346,7 +346,7 @@ endfunction()
 
 # adds include directories in such a way that directories from the OpenCV source tree go first
 function(ocv_target_include_directories target)
-  #ocv_debug_message("ocv_target_include_directories(${target} ${ARGN})")
+  # ocv_debug_message("ocv_target_include_directories(${target} ${ARGN})")
   _ocv_fix_target(target)
   set(__params "")
   if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
@@ -369,7 +369,8 @@ function(ocv_target_include_directories target)
       endif()
     endif()
   endforeach()
-  if(HAVE_CUDA OR CMAKE_VERSION VERSION_LESS 2.8.11)
+  # ocv_debug_message("ocv_target_include_directories(${target} ${__params})")
+  if(HAVE_CUDA OR HAVE_MUSA OR CMAKE_VERSION VERSION_LESS 2.8.11)
     include_directories(${__params})
     include_directories(SYSTEM ${__system_params})
   else()
@@ -1556,7 +1557,16 @@ function(ocv_add_library target)
     set(OPENCV_MODULE_${target}_CUDA_OBJECTS ${cuda_objs} CACHE INTERNAL "Compiled CUDA object files")
   endif()
 
-  add_library(${target} ${ARGN} ${cuda_objs})
+  # add_library(${target} ${ARGN} ${cuda_objs})
+
+  if(HAVE_MUSA AND ARGN MATCHES "\\.mu")
+    # ocv_debug_message("ocv_add_library musa: ${ARGN}")
+    ocv_include_directories(${MUSA_INCLUDE_DIRS})
+    ocv_musa_compile(${target}_musa_objs ${ARGN})
+    set(OPENCV_MODULE_${target}_MUSA_OBJECTS ${${target}_musa_objs} CACHE INTERNAL "Compiled MUSA object files")
+  endif()
+
+  add_library(${target} ${ARGN} ${cuda_objs} ${${target}_musa_objs})
 
   if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
     message(STATUS "Setting Apple target properties for ${target}")

@@ -10,6 +10,7 @@
 #endif
 
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/musa.hpp"
 
 namespace opencv_test { namespace {
 
@@ -1995,7 +1996,9 @@ class TestInputArrayRangeChecking {
         C(STD_ARRAY_MAT);
         C(STD_VECTOR_UMAT);
         C(CUDA_GPU_MAT);
+        C(MUSA_GPU_MAT);
         C(STD_VECTOR_CUDA_GPU_MAT);
+        C(STD_VECTOR_MUSA_GPU_MAT);
         #undef C
         default:
             return "<unsupported>";
@@ -2078,16 +2081,19 @@ class TestInputArrayRangeChecking {
         cv::Mat M;
         cv::UMat uM;
         cv::cuda::GpuMat gM;
+        cv::musa::GpuMat mM;
 
         std::vector<cv::Mat> vec = {M, M};
         std::array<cv::Mat, 2> arr = {M, M};
         std::vector<cv::UMat> uvec = {uM, uM};
         std::vector<cv::cuda::GpuMat> gvec = {gM, gM};
+        std::vector<cv::musa::GpuMat> mvec = {mM, mM};
 
         testB(vec, f, "offset");
         testB(arr, f, "offset");
         testB(uvec, f, "offset");
         testB(gvec, f, "offset");
+        testB(mvec, f, "offset");
     }
 
     static void test_step()
@@ -2097,16 +2103,19 @@ class TestInputArrayRangeChecking {
         cv::Mat M;
         cv::UMat uM;
         cv::cuda::GpuMat gM;
+        cv::musa::GpuMat mM;
 
         std::vector<cv::Mat> vec = {M, M};
         std::array<cv::Mat, 2> arr = {M, M};
         std::vector<cv::UMat> uvec = {uM, uM};
         std::vector<cv::cuda::GpuMat> gvec = {gM, gM};
+        std::vector<cv::musa::GpuMat> mvec = {mM, mM};
 
         testB(vec, f, "step");
         testB(arr, f, "step");
         testB(uvec, f, "step");
         testB(gvec, f, "step");
+        testB(mvec, f, "step");
     }
 
 public:

@@ -257,7 +257,7 @@ private:
 };
 
 
-#ifdef HAVE_OPENCV_CUDALEGACY
+#if defined(HAVE_OPENCV_CUDALEGACY) || defined(HAVE_OPENCV_MUSALEGACY)
 class CV_EXPORTS GraphCutSeamFinderGpu : public GraphCutSeamFinderBase, public PairwiseSeamFinder
 {
 public:

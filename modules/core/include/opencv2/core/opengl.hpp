@@ -187,6 +187,9 @@ public:
     void copyFrom(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     /** @overload */
+    void copyFrom(InputArray arr, musa::Stream& stream, Target target = ARRAY_BUFFER, bool autoRelease = false);
+
+    /** @overload */
     void copyFrom(InputArray arr, cuda::Stream& stream, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     /** @brief Copies from OpenGL buffer to host/device memory or another OpenGL buffer object.
@@ -195,6 +198,9 @@ public:
     ogl::Buffer ).
      */
     void copyTo(OutputArray arr) const;
+
+    /** @overload */
+    void copyTo(OutputArray arr, musa::Stream& stream) const;
 
     /** @overload */
     void copyTo(OutputArray arr, cuda::Stream& stream) const;
@@ -241,6 +247,7 @@ public:
 
     //! map to device memory (blocking)
     cuda::GpuMat mapDevice();
+    musa::GpuMat mapMusaDevice();
     void unmapDevice();
 
     /** @brief Maps OpenGL buffer to CUDA device memory.
@@ -250,10 +257,12 @@ public:
     A mapped data store must be unmapped with ogl::Buffer::unmapDevice before its buffer object is used.
      */
     cuda::GpuMat mapDevice(cuda::Stream& stream);
+    musa::GpuMat mapDevice(musa::Stream& stream);
 
     /** @brief Unmaps OpenGL buffer.
     */
     void unmapDevice(cuda::Stream& stream);
+    void unmapDevice(musa::Stream& stream);
 
     int rows() const;
     int cols() const;
@@ -561,7 +570,7 @@ CV_EXPORTS void unmapGLBuffer(UMat& u);
 //! @}
 }} // namespace cv::ogl
 
-namespace cv { namespace cuda {
+namespace cv { namespace musa {
 
 /** @brief Sets a CUDA device and initializes it for the current thread with OpenGL interoperability.
 
@@ -571,7 +580,21 @@ This function should be explicitly called after OpenGL context creation and befo
  */
 CV_EXPORTS void setGlDevice(int device = 0);
 
-}}
+}
+
+namespace cuda {
+
+/** @brief Sets a CUDA device and initializes it for the current thread with OpenGL interoperability.
+
+This function should be explicitly called after OpenGL context creation and before any CUDA calls.
+@param device System index of a CUDA device starting with 0.
+@ingroup core_opengl
+ */
+CV_EXPORTS void setGlDevice(int device = 0);
+
+}
+
+}
 
 //! @cond IGNORED
 

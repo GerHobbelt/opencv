@@ -171,7 +171,7 @@ if(MSVC AND NOT BUILD_SHARED_LIBS AND BUILD_WITH_STATIC_CRT)
   set_target_properties(${the_module} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /NODEFAULTLIB:libcmt.lib /DEBUG")
 endif()
 
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations -Wdeprecated-copy)
 endmacro()
 
 if(NOT BUILD_opencv_world)

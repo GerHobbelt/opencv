@@ -17,6 +17,10 @@
 #include "opencv2/core/cuda.hpp"
 #endif
 
+#ifdef HAVE_MUSA
+#include "opencv2/core/musa.hpp"
+#endif
+
 #ifdef __ANDROID__
 # include <sys/time.h>
 #endif
@@ -56,6 +60,10 @@ extern bool         test_ipp_check;
 
 #ifdef HAVE_CUDA
 static int          param_cuda_device;
+#endif
+
+#ifdef HAVE_MUSA
+static int          param_musa_device;
 #endif
 
 #ifdef __ANDROID__
@@ -1000,6 +1008,10 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
         "{   perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
 #endif
+#ifdef HAVE_MUSA
+        "{   perf_musa_device            |0        |run MUSA test suite onto specific MUSA capable device}"
+        "{   perf_musa_info_only         |false    |print an information about system and an available MUSA devices and then exit.}"
+#endif
         "{ skip_unstable                 |false    |skip unstable tests }"
 
         CV_TEST_TAGS_PARAMS
@@ -1101,6 +1113,14 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         exit(0);
 #endif
 
+#ifdef HAVE_MUSA
+
+    bool printOnly        = args.get<bool>("perf_musa_info_only");
+
+    if (printOnly)
+        exit(0);
+#endif
+
     skipUnstableTests = args.get<bool>("skip_unstable");
 
     if (available_impls.size() > 1)
@@ -1120,6 +1140,25 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         }
 
         cv::cuda::setDevice(param_cuda_device);
+
+        printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name()), fflush(stdout);
+    }
+#endif
+
+#ifdef HAVE_MUSA
+
+    param_musa_device      = std::max(0, std::min(cv::musa::getMusaEnabledDeviceCount(), args.get<int>("perf_musa_device")));
+
+    if (param_impl == "musa")
+    {
+        cv::musa::DeviceInfo info(param_musa_device);
+        if (!info.isCompatible())
+        {
+            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current MUSA module build.\n[----------]\n", info.name()), fflush(stdout);
+            exit(-1);
+        }
+
+        cv::musa::setDevice(param_musa_device);
 
         printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name()), fflush(stdout);
     }
@@ -1172,6 +1211,14 @@ void TestBase::RecordRunParameters()
     {
         cv::cuda::DeviceInfo info(param_cuda_device);
         ::testing::Test::RecordProperty("cv_cuda_gpu", info.name());
+    }
+#endif
+
+#ifdef HAVE_MUSA
+    if (param_impl == "musa")
+    {
+        cv::musa::DeviceInfo info(param_musa_device);
+        ::testing::Test::RecordProperty("cv_musa_gpu", info.name());
     }
 #endif
 }
@@ -2025,6 +2072,11 @@ void TestBase::RunPerfTestBody()
             if (e.code == cv::Error::GpuApiCallError)
                 cv::cuda::resetDevice();
         #endif
+
+        #ifdef HAVE_MUSA
+            if (e.code == cv::Error::GpuApiCallError)
+                cv::musa::resetDevice();
+        #endif
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
     }
     catch(const std::exception& e)
@@ -2204,6 +2256,10 @@ void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors
 bool perf::GpuPerf::targetDevice()
 {
     return param_impl == "cuda";
+}
+bool perf::musaGpuPerf::musaTargetDevice()
+{
+    return param_impl == "musa";
 }
 
 /*****************************************************************************************\

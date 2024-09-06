@@ -49,6 +49,17 @@ To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
   endif()
 endif(WITH_CUDA)
 
+# --- CUDA ---
+if(WITH_MUSA)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectMUSA.cmake")
+  if(NOT HAVE_MUSA)
+    message(WARNING "OpenCV is not able to find/configure MUSA SDK (required by WITH_MUSA).
+MUSA support will be disabled in OpenCV build.
+To eliminate this warning remove WITH_MUSA=ON CMake configuration option.
+")
+  endif()
+endif(WITH_MUSA)
+
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
   if((OPENCV_FORCE_EIGEN_FIND_PACKAGE_CONFIG

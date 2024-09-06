@@ -318,6 +318,8 @@ if(CUDA_FOUND)
   endforeach()
   set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -D_FORCE_INLINES)
 
+  ocv_debug_message("OPENCV_CUDA_ARCH_BIN: ${OPENCV_CUDA_ARCH_BIN}")
+
   # Tell NVCC to add PTX intermediate code for the specified architectures
   string(REGEX MATCHALL "[0-9]+" ARCH_LIST "${ARCH_PTX_NO_POINTS}")
   foreach(ARCH IN LISTS ARCH_LIST)
@@ -423,6 +425,7 @@ if(CUDA_FOUND)
     endif()
 
     CUDA_COMPILE(${VAR} ${ARGN})
+    # ocv_debug_message("ocv cuda compile var: ${VAR} arg: ${ARGN}")
 
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
       set(${var} "${${var}_backup_in_cuda_compile_}")
@@ -521,6 +524,7 @@ if(HAVE_CUDA)
   endif()
 
   set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  ocv_debug_message("OPENCV_LINKER_LIBS: ${OPENCV_LINKER_LIBS}")
   if(HAVE_CUBLAS)
     set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} ${CUDA_cublas_LIBRARY})
   endif()

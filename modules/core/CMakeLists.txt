@@ -31,7 +31,7 @@ set(PARALLEL_ENABLE_PLUGINS "${PARALLEL_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "All
 
 
 ocv_add_module(core
-               OPTIONAL opencv_cudev
+               OPTIONAL opencv_cudev opencv_mudev
                WRAP java objc python js)
 
 set(extra_libs "")
@@ -55,21 +55,39 @@ if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
+if(HAVE_MUSA)
+  if(NOT HAVE_opencv_mudev)
+    message(FATAL_ERROR "MUSA: OpenCV requires enabled 'mudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
+  endif()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow -Wunused-parameter -Wmissing-prototypes -Wsign-compare -Wunused-local-typedef -Wdeprecated-declarations -Wdeprecated-copy -Wimplicit-const-int-float-conversion)
+endif()
+
 if(CV_TRACE AND HAVE_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
 
-file(GLOB lib_cuda_hdrs
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.h")
-file(GLOB lib_cuda_hdrs_detail
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.h")
-file(GLOB_RECURSE module_opencl_hdrs
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*")
+# TODO(ming.xu): use another way to avoid add these definitions
+# file(GLOB lib_cuda_hdrs
+#     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
+#     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.h")
+# file(GLOB lib_cuda_hdrs_detail
+#     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.hpp"
+#     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/detail/*.h")
+# file(GLOB_RECURSE module_opencl_hdrs
+#     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/opencl/*")
 
-source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
-source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
+# source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
+# source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
+
+file(GLOB lib_musa_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/musa/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/musa/*.h")
+file(GLOB lib_musa_hdrs_detail
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/musa/detail/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/musa/detail/*.h")
+
+source_group("Include\\Musa Headers"         FILES ${lib_musa_hdrs})
+source_group("Include\\Musa Headers\\Detail" FILES ${lib_musa_hdrs_detail})
 
 file(GLOB_RECURSE core_parallel_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/parallel/*.hpp"
@@ -78,8 +96,9 @@ ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${c
 
 source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
+# ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail}
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
-                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs}  ${lib_musa_hdrs}  ${lib_musa_hdrs_detail})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(ANDROID AND HAVE_CPUFEATURES)

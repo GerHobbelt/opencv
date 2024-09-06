@@ -24,10 +24,11 @@
 #define __CV_CPU_DISPATCH_EXPAND(fn, args, ...) __CV_EXPAND(__CV_CPU_DISPATCH(fn, args, __VA_ARGS__))
 #define CV_CPU_DISPATCH(fn, args, ...) __CV_CPU_DISPATCH_EXPAND(fn, args, __VA_ARGS__, END) // expand macros
 
-
+// musa porting
 #if defined CV_ENABLE_INTRINSICS \
     && !defined CV_DISABLE_OPTIMIZATION \
     && !defined __CUDACC__ /* do not include SSE/AVX/NEON headers for NVCC compiler */ \
+    && !defined __MUSACC__ /* do not include SSE/AVX/NEON headers for MUSA compiler */ \
 
 #ifdef CV_CPU_COMPILE_SSE2
 #  include <emmintrin.h>
@@ -187,7 +188,7 @@
 #  include <riscv_vector.h>
 #endif
 
-#endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
+#endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__ && !__MUSACC__
 
 #if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
 struct VZeroUpperGuard {
@@ -212,9 +213,10 @@ struct VZeroUpperGuard {
 #endif // __OPENCV_BUILD
 
 
-
+//musa porting
 #if !defined __OPENCV_BUILD /* Compatibility code */ \
-    && !defined __CUDACC__ /* do not include SSE/AVX/NEON headers for NVCC compiler */
+    && !defined __CUDACC__ /* do not include SSE/AVX/NEON headers for NVCC compiler */ \
+    && !defined __MUSACC__ /* do not include SSE/AVX/NEON headers for MUSA compiler */ 
 #if defined __SSE2__ || defined _M_X64 || (defined _M_IX86_FP && _M_IX86_FP >= 2)
 #  include <emmintrin.h>
 #  define CV_MMX 1
@@ -240,7 +242,7 @@ struct VZeroUpperGuard {
 #  define CV_FP16 1
 #endif
 
-#endif // !__OPENCV_BUILD && !__CUDACC (Compatibility code)
+#endif // !__OPENCV_BUILD && !__CUDACC && !__MUSACC (Compatibility code)
 
 
 

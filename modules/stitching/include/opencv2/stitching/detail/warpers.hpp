@@ -45,6 +45,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/musa.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/opencv_modules.hpp"
 
@@ -498,6 +499,7 @@ public:
 };
 
 
+// cuda
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:
@@ -559,7 +561,70 @@ private:
     cuda::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
 
+// musa
+class CV_EXPORTS PlaneWarperMusaGpu : public PlaneWarper
+{
+public:
+    PlaneWarperMusaGpu(float scale = 1.f) : PlaneWarper(scale) {}
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) CV_OVERRIDE
+    {
+        Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, OutputArray xmap, OutputArray ymap) CV_OVERRIDE
+    {
+        Rect result = buildMaps(src_size, K, R, T, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
+    Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+               OutputArray dst) CV_OVERRIDE
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+
+    Point warp(InputArray src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
+               OutputArray dst) CV_OVERRIDE
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, T, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
+
+    // musa
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, musa::GpuMat & xmap, musa::GpuMat & ymap);
+
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, musa::GpuMat & xmap, musa::GpuMat & ymap);
+
+    Point warp(const musa::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
+               musa::GpuMat & dst);
+
+    Point warp(const musa::GpuMat & src, InputArray K, InputArray R, InputArray T, int interp_mode, int border_mode,
+               musa::GpuMat & dst);
+
+private:
+    musa::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+};
+
+// cuda
 class CV_EXPORTS SphericalWarperGpu : public SphericalWarper
 {
 public:
@@ -594,12 +659,53 @@ public:
 
     Point warp(const cuda::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
                cuda::GpuMat & dst);
-
+    
 private:
     cuda::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
 
+// musa
+class CV_EXPORTS SphericalWarperMusaGpu : public SphericalWarper
+{
+public:
+    SphericalWarperMusaGpu(float scale) : SphericalWarper(scale) {}
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) CV_OVERRIDE
+    {
+        Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
+    Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+               OutputArray dst) CV_OVERRIDE
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
+
+    // musa
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, musa::GpuMat & xmap, musa::GpuMat & ymap);
+
+    Point warp(const musa::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
+               musa::GpuMat & dst);
+
+private:
+    musa::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+};
+
+// cuda
 class CV_EXPORTS CylindricalWarperGpu : public CylindricalWarper
 {
 public:
@@ -639,6 +745,45 @@ private:
     cuda::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
 };
 
+// musa
+class CV_EXPORTS CylindricalWarperMusaGpu : public CylindricalWarper
+{
+public:
+    CylindricalWarperMusaGpu(float scale) : CylindricalWarper(scale) {}
+
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) CV_OVERRIDE
+    {
+        Rect result = buildMaps(src_size, K, R, d_xmap_, d_ymap_);
+        d_xmap_.download(xmap);
+        d_ymap_.download(ymap);
+        return result;
+    }
+
+    Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+               OutputArray dst) CV_OVERRIDE
+    {
+        d_src_.upload(src);
+        Point result = warp(d_src_, K, R, interp_mode, border_mode, d_dst_);
+        d_dst_.download(dst);
+        return result;
+    }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
+    // musa
+    Rect buildMaps(Size src_size, InputArray K, InputArray R, musa::GpuMat & xmap, musa::GpuMat & ymap);
+
+    Point warp(const musa::GpuMat & src, InputArray K, InputArray R, int interp_mode, int border_mode,
+               musa::GpuMat & dst);
+
+private:
+    musa::GpuMat d_xmap_, d_ymap_, d_src_, d_dst_;
+};
 
 struct CV_EXPORTS SphericalPortraitProjector : ProjectorBase
 {

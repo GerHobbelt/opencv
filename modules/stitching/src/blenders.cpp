@@ -43,8 +43,23 @@
 #include "precomp.hpp"
 #include "opencl_kernels_stitching.hpp"
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA)
     namespace cv { namespace cuda { namespace device
+    {
+        namespace blend
+        {
+            void addSrcWeightGpu16S(const PtrStep<short> src, const PtrStep<short> src_weight,
+                                    PtrStep<short> dst, PtrStep<short> dst_weight, cv::Rect &rc);
+            void addSrcWeightGpu32F(const PtrStep<short> src, const PtrStepf src_weight,
+                                    PtrStep<short> dst, PtrStepf dst_weight, cv::Rect &rc);
+            void normalizeUsingWeightMapGpu16S(const PtrStep<short> weight, PtrStep<short> src,
+                                               const int width, const int height);
+            void normalizeUsingWeightMapGpu32F(const PtrStepf weight, PtrStep<short> src,
+                                               const int width, const int height);
+        }
+    }}}
+#elif defined(HAVE_MUSA)
+    namespace cv { namespace musa { namespace device
     {
         namespace blend
         {
@@ -221,6 +236,9 @@ MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 #if defined(HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
     can_use_gpu_ = try_gpu && cuda::getCudaEnabledDeviceCount();
     gpu_feed_idx_ = 0;
+#elif defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING)
+    can_use_gpu_ = try_gpu && musa::getMusaEnabledDeviceCount();
+    gpu_feed_idx_ = 0;
 #else
     CV_UNUSED(try_gpu);
     can_use_gpu_ = false;
@@ -244,7 +262,7 @@ void MultiBandBlender::prepare(Rect dst_roi)
 
     Blender::prepare(dst_roi);
 
-#if defined(HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
+#if (defined(HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)) || (defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING))
     if (can_use_gpu_)
     {
         gpu_initialized_ = false;
@@ -330,7 +348,7 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
 
     UMat img;
 
-#if defined(HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)
+#if (defined(HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING)) || (defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING))
     // If using gpu save the top left coordinate when running first time after prepare
     if (can_use_gpu_)
     {
@@ -355,6 +373,12 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
     else
     {
         gpu_img_ = _img.getGpuMat();
+        img = UMat(gpu_img_.rows, gpu_img_.cols, gpu_img_.type());
+    }
+#elif defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING)
+    else
+    {
+        gpu_img_ = _img.getMUSAGpuMat();
         img = UMat(gpu_img_.rows, gpu_img_.cols, gpu_img_.type());
     }
 #endif
@@ -468,6 +492,96 @@ void MultiBandBlender::feed(InputArray _img, InputArray mask, Point tl)
             cuda::GpuMat _dst_band_weights = gpu_dst_band_weights_[i](rc);
 
             using namespace cv::cuda::device::blend;
+            if (weight_type_ == CV_32F)
+            {
+                addSrcWeightGpu32F(_src_pyr_laplace, _weight_pyr_gauss, _dst_pyr_laplace, _dst_band_weights, rc);
+            }
+            else
+            {
+                addSrcWeightGpu16S(_src_pyr_laplace, _weight_pyr_gauss, _dst_pyr_laplace, _dst_band_weights, rc);
+            }
+            x_tl /= 2; y_tl /= 2;
+            x_br /= 2; y_br /= 2;
+        }
+        ++gpu_feed_idx_;
+        return;
+    }
+#elif defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING)
+    if (can_use_gpu_)
+    {
+        if (!gpu_initialized_)
+        {
+            gpu_imgs_with_border_.push_back(musa::GpuMat());
+            gpu_weight_pyr_gauss_vec_.push_back(std::vector<musa::GpuMat>(num_bands_+1));
+            gpu_src_pyr_laplace_vec_.push_back(std::vector<musa::GpuMat>(num_bands_+1));
+            gpu_ups_.push_back(std::vector<musa::GpuMat>(num_bands_));
+        }
+
+        // If _img is not GpuMat upload it to gpu else gpu_img_ was set already
+        if (!_img.isGpuMat())
+        {
+            gpu_img_.upload(img);
+        }
+
+        // Create the source image Laplacian pyramid
+        musa::copyMakeBorder(gpu_img_, gpu_imgs_with_border_[gpu_feed_idx_], top, bottom,
+                             left, right, BORDER_REFLECT);
+        gpu_imgs_with_border_[gpu_feed_idx_].convertTo(gpu_src_pyr_laplace_vec_[gpu_feed_idx_][0], CV_16S);
+        for (int i = 0; i < num_bands_; ++i)
+            musa::pyrDown(gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i],
+                          gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i + 1]);
+        for (int i = 0; i < num_bands_; ++i)
+        {
+            musa::pyrUp(gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i + 1], gpu_ups_[gpu_feed_idx_][i]);
+            musa::subtract(gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i],
+                           gpu_ups_[gpu_feed_idx_][i],
+                           gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i]);
+        }
+
+        // Create the weight map Gaussian pyramid only if not yet initialized
+        if (!gpu_initialized_)
+        {
+            if (mask.isGpuMat())
+            {
+                gpu_mask_ = mask.getMUSAGpuMat();
+            }
+            else
+            {
+                gpu_mask_.upload(mask);
+            }
+
+            if (weight_type_ == CV_32F)
+            {
+                gpu_mask_.convertTo(gpu_weight_map_, CV_32F, 1. / 255.);
+            }
+            else // weight_type_ == CV_16S
+            {
+                gpu_mask_.convertTo(gpu_weight_map_, CV_16S);
+                musa::compare(gpu_mask_, 0, gpu_add_mask_, CMP_NE);
+                musa::add(gpu_weight_map_, Scalar::all(1), gpu_weight_map_, gpu_add_mask_);
+            }
+            musa::copyMakeBorder(gpu_weight_map_, gpu_weight_pyr_gauss_vec_[gpu_feed_idx_][0], top,
+                                 bottom, left, right, BORDER_CONSTANT);
+            for (int i = 0; i < num_bands_; ++i)
+                musa::pyrDown(gpu_weight_pyr_gauss_vec_[gpu_feed_idx_][i],
+                              gpu_weight_pyr_gauss_vec_[gpu_feed_idx_][i + 1]);
+        }
+
+        int y_tl = tl_new.y - dst_roi_.y;
+        int y_br = br_new.y - dst_roi_.y;
+        int x_tl = tl_new.x - dst_roi_.x;
+        int x_br = br_new.x - dst_roi_.x;
+
+        // Add weighted layer of the source image to the final Laplacian pyramid layer
+        for (int i = 0; i <= num_bands_; ++i)
+        {
+            Rect rc(x_tl, y_tl, x_br - x_tl, y_br - y_tl);
+            musa::GpuMat &_src_pyr_laplace = gpu_src_pyr_laplace_vec_[gpu_feed_idx_][i];
+            musa::GpuMat _dst_pyr_laplace = gpu_dst_pyr_laplace_[i](rc);
+            musa::GpuMat &_weight_pyr_gauss = gpu_weight_pyr_gauss_vec_[gpu_feed_idx_][i];
+            musa::GpuMat _dst_band_weights = gpu_dst_band_weights_[i](rc);
+
+            using namespace cv::musa::device::blend;
             if (weight_type_ == CV_32F)
             {
                 addSrcWeightGpu32F(_src_pyr_laplace, _weight_pyr_gauss, _dst_pyr_laplace, _dst_band_weights, rc);
@@ -643,6 +757,73 @@ void MultiBandBlender::blend(InputOutputArray dst, InputOutputArray dst_mask)
             cuda::compare(gpu_dst_band_weights_[0](dst_rc), WEIGHT_EPS, gpu_dst_mask_, CMP_GT);
 
             cuda::compare(gpu_dst_mask_, 0, gpu_mask_, CMP_EQ);
+
+            gpu_dst_pyr_laplace_[0](dst_rc).setTo(Scalar::all(0), gpu_mask_);
+            gpu_dst_pyr_laplace_[0](dst_rc).convertTo(gpu_dst, CV_16S);
+
+        }
+        else
+        {
+            gpu_dst_pyr_laplace_[0](dst_rc).download(dst_);
+            Mat dst_band_weights_0;
+            gpu_dst_band_weights_[0].download(dst_band_weights_0);
+
+            compare(dst_band_weights_0(dst_rc), WEIGHT_EPS, dst_mask_, CMP_GT);
+            Blender::blend(dst, dst_mask);
+        }
+
+        // Set destination Mats to 0 so new image can be blended
+        for (size_t i = 0; i < (size_t)(num_bands_ + 1); ++i)
+        {
+            gpu_dst_band_weights_[i].setTo(0);
+            gpu_dst_pyr_laplace_[i].setTo(Scalar::all(0));
+        }
+        gpu_feed_idx_ = 0;
+        gpu_initialized_ = true;
+    }
+    else
+#elif defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING)
+    if (can_use_gpu_)
+    {
+        if (!gpu_initialized_)
+        {
+            gpu_ups_.push_back(std::vector<musa::GpuMat>(num_bands_+1));
+        }
+
+        for (int i = 0; i <= num_bands_; ++i)
+        {
+            musa::GpuMat dst_i = gpu_dst_pyr_laplace_[i];
+            musa::GpuMat weight_i = gpu_dst_band_weights_[i];
+
+            using namespace ::cv::musa::device::blend;
+            if (weight_type_ == CV_32F)
+            {
+                normalizeUsingWeightMapGpu32F(weight_i, dst_i, weight_i.cols, weight_i.rows);
+            }
+            else
+            {
+                normalizeUsingWeightMapGpu16S(weight_i, dst_i, weight_i.cols, weight_i.rows);
+            }
+        }
+
+        // Restore image from Laplacian pyramid
+        for (size_t i = num_bands_; i > 0; --i)
+        {
+            musa::pyrUp(gpu_dst_pyr_laplace_[i], gpu_ups_[gpu_ups_.size()-1][num_bands_-i]);
+            musa::add(gpu_ups_[gpu_ups_.size()-1][num_bands_-i],
+                      gpu_dst_pyr_laplace_[i - 1],
+                      gpu_dst_pyr_laplace_[i - 1]);
+        }
+
+        // If dst is GpuMat do masking on gpu and return dst as a GpuMat
+        // else download the image to cpu and return it as an ordinary Mat
+        if (dst.isGpuMat())
+        {
+            musa::GpuMat &gpu_dst = dst.getMUSAGpuMatRef();
+
+            musa::compare(gpu_dst_band_weights_[0](dst_rc), WEIGHT_EPS, gpu_dst_mask_, CMP_GT);
+
+            musa::compare(gpu_dst_mask_, 0, gpu_mask_, CMP_EQ);
 
             gpu_dst_pyr_laplace_[0](dst_rc).setTo(Scalar::all(0), gpu_mask_);
             gpu_dst_pyr_laplace_[0](dst_rc).convertTo(gpu_dst, CV_16S);
@@ -853,11 +1034,28 @@ void createLaplacePyrGpu(InputArray img, int num_levels, std::vector<UMat> &pyr)
     }
 
     gpu_pyr[num_levels].download(pyr[num_levels]);
+#elif defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING)
+    pyr.resize(num_levels + 1);
+
+    std::vector<musa::GpuMat> gpu_pyr(num_levels + 1);
+    gpu_pyr[0].upload(img);
+    for (int i = 0; i < num_levels; ++i)
+        musa::pyrDown(gpu_pyr[i], gpu_pyr[i + 1]);
+
+    musa::GpuMat tmp;
+    for (int i = 0; i < num_levels; ++i)
+    {
+        musa::pyrUp(gpu_pyr[i + 1], tmp);
+        musa::subtract(gpu_pyr[i], tmp, gpu_pyr[i]);
+        gpu_pyr[i].download(pyr[i]);
+    }
+
+    gpu_pyr[num_levels].download(pyr[num_levels]);
 #else
     CV_UNUSED(img);
     CV_UNUSED(num_levels);
     CV_UNUSED(pyr);
-    CV_Error(Error::StsNotImplemented, "CUDA optimization is unavailable");
+    CV_Error(Error::StsNotImplemented, "CUDA/MUSA optimization is unavailable");
 #endif
 }
 
@@ -893,9 +1091,25 @@ void restoreImageFromLaplacePyrGpu(std::vector<UMat> &pyr)
     }
 
     gpu_pyr[0].download(pyr[0]);
+#elif defined(HAVE_MUSA) && defined(HAVE_OPENCV_MUSAARITHM) && defined(HAVE_OPENCV_MUSAWARPING)
+    if (pyr.empty())
+        return;
+
+    std::vector<musa::GpuMat> gpu_pyr(pyr.size());
+    for (size_t i = 0; i < pyr.size(); ++i)
+        gpu_pyr[i].upload(pyr[i]);
+
+    musa::GpuMat tmp;
+    for (size_t i = pyr.size() - 1; i > 0; --i)
+    {
+        musa::pyrUp(gpu_pyr[i], tmp);
+        musa::add(tmp, gpu_pyr[i - 1], gpu_pyr[i - 1]);
+    }
+
+    gpu_pyr[0].download(pyr[0]);
 #else
     CV_UNUSED(pyr);
-    CV_Error(Error::StsNotImplemented, "CUDA optimization is unavailable");
+    CV_Error(Error::StsNotImplemented, "CUDA/MUSA optimization is unavailable");
 #endif
 }
 

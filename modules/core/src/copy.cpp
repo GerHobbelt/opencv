@@ -306,10 +306,16 @@ void Mat::copyTo( OutputArray _dst ) const
 {
     CV_INSTRUMENT_REGION();
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA)
     if (_dst.isGpuMat())
     {
         _dst.getGpuMat().upload(*this);
+        return;
+    }
+#elif defined(HAVE_MUSA)
+    if (_dst.isMUSAGpuMat())
+    {
+        _dst.getMUSAGpuMat().upload(*this);
         return;
     }
 #endif

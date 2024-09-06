@@ -87,6 +87,22 @@
 #  include "opencv2/cudalegacy.hpp"
 #endif
 
+#ifdef HAVE_OPENCV_MUSAARITHM
+#  include "opencv2/musaarithm.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_MUSAWARPING
+#  include "opencv2/musawarping.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_MUSAFEATURES2D
+#  include "opencv2/musafeatures2d.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_MUSALEGACY
+#  include "opencv2/musalegacy.hpp"
+#endif
+
 #include "opencv2/core/private.hpp"
 
 #include "util_log.hpp"

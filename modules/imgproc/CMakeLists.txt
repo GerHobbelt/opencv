@@ -10,6 +10,8 @@ ocv_add_dispatched_file(median_blur SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(morph SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(smooth SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(sumpixels SSE2 AVX2 AVX512_SKX)
+
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wdeprecated-copy)
 ocv_define_module(imgproc opencv_core WRAP java objc python js)
 
 ocv_check_environment_variables(OPENCV_IPP_GAUSSIAN_BLUR)

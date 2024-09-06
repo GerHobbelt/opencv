@@ -44,7 +44,7 @@
 
 #ifdef HAVE_OPENGL
 #  include "gl_core_3_1.hpp"
-#  ifdef HAVE_CUDA
+#  if defined(HAVE_CUDA)
 #    if (defined(__arm__) || defined(__aarch64__)) \
          && !defined(OPENCV_SKIP_CUDA_OPENGL_ARM_WORKAROUND)
 #      include <GL/gl.h>
@@ -53,13 +53,22 @@
 #      endif
 #    endif
 #    include <cuda_gl_interop.h>
-#  endif
+#  elif defined(HAVE_MUSA)
+#    if (defined(__arm__) || defined(__aarch64__)) \
+         && !defined(OPENCV_SKIP_MUSA_OPENGL_ARM_WORKAROUND)
+#      include <GL/gl.h>
+#      ifndef GL_VERSION
+#        define GL_VERSION 0x1F02
+#      endif
+#    endif
+#    include <musa_gl_interop.h>
+#endif
 #else // HAVE_OPENGL
 #  define NO_OPENGL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenGL support")
 #endif // HAVE_OPENGL
 
 using namespace cv;
-using namespace cv::cuda;
+//using namespace cv::cuda;
 
 #if defined(_MSC_VER)
 #pragma warning(disable : 4702)  // unreachable code
@@ -127,13 +136,29 @@ void cv::cuda::setGlDevice(int device)
 #endif
 }
 
+void cv::musa::setGlDevice(int device)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(device);
+    throw_no_ogl();
+#else
+    #ifndef HAVE_MUSA
+        CV_UNUSED(device);
+        throw_no_musa();
+    #else
+        musaSafeCall( musaGLSetGLDevice(device) );
+    #endif
+#endif
+}
+
 ////////////////////////////////////////////////////////////////////////
 // CudaResource
 
-#if defined(HAVE_OPENGL) && defined(HAVE_CUDA)
+#ifdef HAVE_OPENGL
 
-namespace
+namespace 
 {
+#if defined(HAVE_CUDA)
     class CudaResource
     {
     public:
@@ -279,9 +304,157 @@ namespace
 
         cudaGraphicsUnmapResources(1, &resource_, stream);
     }
-}
 
+#elif defined(HAVE_MUSA)
+    class MusaResource
+    {
+    public:
+        MusaResource();
+        ~MusaResource();
+
+        void registerBuffer(GLuint buffer);
+        void release();
+
+        void copyFrom(const void* src, size_t spitch, size_t width, size_t height, musaStream_t stream = 0);
+        void copyTo(void* dst, size_t dpitch, size_t width, size_t height, musaStream_t stream = 0);
+
+        void* map(musaStream_t stream = 0);
+        void unmap(musaStream_t stream = 0);
+
+    private:
+        musaGraphicsResource_t resource_;
+        GLuint buffer_;
+
+        class GraphicsMapHolder;
+    };
+
+    MusaResource::MusaResource() : resource_(0), buffer_(0)
+    {
+    }
+
+    MusaResource::~MusaResource()
+    {
+        release();
+    }
+
+    void MusaResource::registerBuffer(GLuint buffer)
+    {
+        CV_DbgAssert( buffer != 0 );
+
+        if (buffer_ == buffer)
+            return;
+
+        musaGraphicsResource_t resource;
+        musaSafeCall( musaGraphicsGLRegisterBuffer(&resource, buffer, musaGraphicsMapFlagsNone) );
+
+        release();
+
+        resource_ = resource;
+        buffer_ = buffer;
+    }
+
+    void MusaResource::release()
+    {
+        if (resource_)
+            musaGraphicsUnregisterResource(resource_);
+
+        resource_ = 0;
+        buffer_ = 0;
+    }
+
+    class MusaResource::GraphicsMapHolder
+    {
+    public:
+        GraphicsMapHolder(musaGraphicsResource_t* resource, musaStream_t stream);
+        ~GraphicsMapHolder();
+
+        void reset();
+
+    private:
+        musaGraphicsResource_t* resource_;
+        musaStream_t stream_;
+    };
+
+    MusaResource::GraphicsMapHolder::GraphicsMapHolder(musaGraphicsResource_t* resource, musaStream_t stream) : resource_(resource), stream_(stream)
+    {
+        if (resource_)
+            musaSafeCall( musaGraphicsMapResources(1, resource_, stream_) );
+    }
+
+    MusaResource::GraphicsMapHolder::~GraphicsMapHolder()
+    {
+        if (resource_)
+            musaGraphicsUnmapResources(1, resource_, stream_);
+    }
+
+    void MusaResource::GraphicsMapHolder::reset()
+    {
+        resource_ = 0;
+    }
+
+    void MusaResource::copyFrom(const void* src, size_t spitch, size_t width, size_t height, musaStream_t stream)
+    {
+        CV_DbgAssert( resource_ != 0 );
+
+        GraphicsMapHolder h(&resource_, stream);
+        CV_UNUSED(h);
+
+        void* dst;
+        size_t size;
+        musaSafeCall( musaGraphicsResourceGetMappedPointer(&dst, &size, resource_) );
+
+        CV_DbgAssert( width * height == size );
+
+        if (stream == 0)
+            musaSafeCall( musaMemcpy2D(dst, width, src, spitch, width, height, musaMemcpyDeviceToDevice) );
+        else
+            musaSafeCall( musaMemcpy2DAsync(dst, width, src, spitch, width, height, musaMemcpyDeviceToDevice, stream) );
+    }
+
+    void MusaResource::copyTo(void* dst, size_t dpitch, size_t width, size_t height, musaStream_t stream)
+    {
+        CV_DbgAssert( resource_ != 0 );
+
+        GraphicsMapHolder h(&resource_, stream);
+        CV_UNUSED(h);
+
+        void* src;
+        size_t size;
+        musaSafeCall( musaGraphicsResourceGetMappedPointer(&src, &size, resource_) );
+
+        CV_DbgAssert( width * height == size );
+
+        if (stream == 0)
+            musaSafeCall( musaMemcpy2D(dst, dpitch, src, width, width, height, musaMemcpyDeviceToDevice) );
+        else
+            musaSafeCall( musaMemcpy2DAsync(dst, dpitch, src, width, width, height, musaMemcpyDeviceToDevice, stream) );
+    }
+
+    void* MusaResource::map(musaStream_t stream)
+    {
+        CV_DbgAssert( resource_ != 0 );
+
+        GraphicsMapHolder h(&resource_, stream);
+
+        void* ptr;
+        size_t size;
+        musaSafeCall( musaGraphicsResourceGetMappedPointer(&ptr, &size, resource_) );
+
+        h.reset();
+
+        return ptr;
+    }
+
+    void MusaResource::unmap(musaStream_t stream)
+    {
+        CV_Assert( resource_ != 0 );
+
+        musaGraphicsUnmapResources(1, &resource_, stream);
+    }
 #endif
+}
+#endif
+
 
 ////////////////////////////////////////////////////////////////////////
 // ogl::Buffer
@@ -313,12 +486,18 @@ public:
     void* mapHost(GLenum access);
     void unmapHost();
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA)
     void copyFrom(const void* src, size_t spitch, size_t width, size_t height, cudaStream_t stream = 0);
     void copyTo(void* dst, size_t dpitch, size_t width, size_t height, cudaStream_t stream = 0) const;
 
     void* mapDevice(cudaStream_t stream = 0);
     void unmapDevice(cudaStream_t stream = 0);
+#elif defined(HAVE_MUSA)
+    void copyFrom(const void* src, size_t spitch, size_t width, size_t height, musaStream_t stream = 0);
+    void copyTo(void* dst, size_t dpitch, size_t width, size_t height, musaStream_t stream = 0) const;
+
+    void* mapDevice(musaStream_t stream = 0);
+    void unmapDevice(musaStream_t stream = 0);
 #endif
 
     void setAutoRelease(bool flag) { autoRelease_ = flag; }
@@ -331,8 +510,10 @@ private:
     GLuint bufId_;
     bool autoRelease_;
 
-#ifdef HAVE_CUDA
+#if defined(HAVE_CUDA)
     mutable CudaResource cudaResource_;
+#elif defined(HAVE_MUSA)
+    mutable MusaResource musaResource_;
 #endif
 };
 
@@ -427,7 +608,6 @@ void cv::ogl::Buffer::Impl::unmapHost()
 }
 
 #ifdef HAVE_CUDA
-
 void cv::ogl::Buffer::Impl::copyFrom(const void* src, size_t spitch, size_t width, size_t height, cudaStream_t stream)
 {
     cudaResource_.registerBuffer(bufId_);
@@ -450,8 +630,30 @@ void cv::ogl::Buffer::Impl::unmapDevice(cudaStream_t stream)
 {
     cudaResource_.unmap(stream);
 }
+#elif defined(HAVE_MUSA)
+void cv::ogl::Buffer::Impl::copyFrom(const void* src, size_t spitch, size_t width, size_t height, musaStream_t stream)
+{
+    musaResource_.registerBuffer(bufId_);
+    musaResource_.copyFrom(src, spitch, width, height, stream);
+}
 
-#endif // HAVE_CUDA
+void cv::ogl::Buffer::Impl::copyTo(void* dst, size_t dpitch, size_t width, size_t height, musaStream_t stream) const
+{
+    musaResource_.registerBuffer(bufId_);
+    musaResource_.copyTo(dst, dpitch, width, height, stream);
+}
+
+void* cv::ogl::Buffer::Impl::mapDevice(musaStream_t stream)
+{
+    musaResource_.registerBuffer(bufId_);
+    return musaResource_.map(stream);
+}
+
+void cv::ogl::Buffer::Impl::unmapDevice(musaStream_t stream)
+{
+    musaResource_.unmap(stream);
+}
+#endif // HAVE_CUDA and HAVE_MUSA
 
 #endif // HAVE_OPENGL
 
@@ -513,7 +715,9 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
     case _InputArray::CUDA_GPU_MAT:
         copyFrom(arr, target, autoRelease);
         break;
-
+    case _InputArray::MUSA_GPU_MAT:
+        copyFrom(arr, target, autoRelease);
+        break;
     default:
         {
             Mat mat = arr.getMat();
@@ -598,9 +802,21 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
     case _InputArray::CUDA_GPU_MAT:
         {
             #ifndef HAVE_CUDA
-                throw_no_cuda();
+                throw_no_cuda();    
             #else
-                GpuMat dmat = arr.getGpuMat();
+                cv::cuda::GpuMat dmat = arr.getGpuMat();
+                impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows);
+            #endif
+
+            break;
+        }
+
+    case _InputArray::MUSA_GPU_MAT:
+        {
+            #ifndef HAVE_MUSA
+                throw_no_musa();    
+            #else
+                cv::musa::GpuMat dmat = arr.getMUSAGpuMat();
                 impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows);
             #endif
 
@@ -633,11 +849,36 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target targ
         CV_UNUSED(autoRelease);
         throw_no_cuda();
     #else
-        GpuMat dmat = arr.getGpuMat();
+        cv::cuda::GpuMat dmat = arr.getGpuMat();
 
         create(dmat.size(), dmat.type(), target, autoRelease);
 
         impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
+    #endif
+#endif
+}
+
+void cv::ogl::Buffer::copyFrom(InputArray arr, musa::Stream& stream, Target target, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(arr);
+    CV_UNUSED(stream);
+    CV_UNUSED(target);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    #ifndef HAVE_MUSA
+        CV_UNUSED(arr);
+        CV_UNUSED(stream);
+        CV_UNUSED(target);
+        CV_UNUSED(autoRelease);
+        throw_no_musa();
+    #else
+        cv::musa::GpuMat dmat = arr.getMUSAGpuMat();
+
+        create(dmat.size(), dmat.type(), target, autoRelease);
+
+        impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, musa::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -663,7 +904,20 @@ void cv::ogl::Buffer::copyTo(OutputArray arr) const
             #ifndef HAVE_CUDA
                 throw_no_cuda();
             #else
-                GpuMat& dmat = arr.getGpuMatRef();
+                cv::cuda::GpuMat& dmat = arr.getGpuMatRef();
+                dmat.create(rows_, cols_, type_);
+                impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows);
+            #endif
+
+            break;
+        }
+
+    case _InputArray::MUSA_GPU_MAT:
+        {
+            #ifndef HAVE_MUSA
+                throw_no_musa();
+            #else
+                cv::musa::GpuMat& dmat = arr.getMUSAGpuMatRef();
                 dmat.create(rows_, cols_, type_);
                 impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows);
             #endif
@@ -695,8 +949,27 @@ void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
         throw_no_cuda();
     #else
         arr.create(rows_, cols_, type_);
-        GpuMat dmat = arr.getGpuMat();
+        cv::cuda::GpuMat dmat = arr.getGpuMat();
         impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
+    #endif
+#endif
+}
+
+void cv::ogl::Buffer::copyTo(OutputArray arr, musa::Stream& stream) const
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(arr);
+    CV_UNUSED(stream);
+    throw_no_ogl();
+#else
+    #ifndef HAVE_MUSA
+        CV_UNUSED(arr);
+        CV_UNUSED(stream);
+        throw_no_musa();
+    #else
+        arr.create(rows_, cols_, type_);
+        cv::musa::GpuMat dmat = arr.getMUSAGpuMat();
+        impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, musa::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -754,7 +1027,7 @@ void cv::ogl::Buffer::unmapHost()
 #endif
 }
 
-GpuMat cv::ogl::Buffer::mapDevice()
+cv::cuda::GpuMat cv::ogl::Buffer::mapDevice()
 {
 #ifndef HAVE_OPENGL
     throw_no_ogl();
@@ -762,7 +1035,20 @@ GpuMat cv::ogl::Buffer::mapDevice()
     #ifndef HAVE_CUDA
         throw_no_cuda();
     #else
-        return GpuMat(rows_, cols_, type_, impl_->mapDevice());
+        return cv::cuda::GpuMat(rows_, cols_, type_, impl_->mapDevice());
+    #endif
+#endif
+}
+
+musa::GpuMat cv::ogl::Buffer::mapMusaDevice()
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    #ifndef HAVE_MUSA
+        throw_no_musa();
+    #else
+        return cv::musa::GpuMat(rows_, cols_, type_, impl_->mapMUSADevice());
     #endif
 #endif
 }
@@ -774,6 +1060,9 @@ void cv::ogl::Buffer::unmapDevice()
 #else
     #ifndef HAVE_CUDA
         throw_no_cuda();
+        #ifndef HAVE_MUSA
+            throw_no_musa();
+        #endif
     #else
         impl_->unmapDevice();
     #endif
@@ -790,7 +1079,22 @@ cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
         CV_UNUSED(stream);
         throw_no_cuda();
     #else
-        return GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
+        return cv::cuda::GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
+    #endif
+#endif
+}
+
+musa::GpuMat cv::ogl::Buffer::mapDevice(musa::Stream& stream)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(stream);
+    throw_no_ogl();
+#else
+    #ifndef HAVE_MUSA
+        CV_UNUSED(stream);
+        throw_no_musa();
+    #else
+        return cv::musa::GpuMat(rows_, cols_, type_, impl_->mapDevice(musa::StreamAccessor::getStream(stream)));
     #endif
 #endif
 }
@@ -806,6 +1110,21 @@ void cv::ogl::Buffer::unmapDevice(cuda::Stream& stream)
         throw_no_cuda();
     #else
         impl_->unmapDevice(cuda::StreamAccessor::getStream(stream));
+    #endif
+#endif
+}
+
+void cv::ogl::Buffer::unmapDevice(musa::Stream& stream)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(stream);
+    throw_no_ogl();
+#else
+    #ifndef HAVE_MUSA
+        CV_UNUSED(stream);
+        throw_no_musa();
+    #else
+        impl_->unmapDevice(musa::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -1017,7 +1336,23 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
             #ifndef HAVE_CUDA
                 throw_no_cuda();
             #else
-                GpuMat dmat = arr.getGpuMat();
+                cv::cuda::GpuMat dmat = arr.getGpuMat();
+                ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.setAutoRelease(true);
+                buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease));
+                ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
+            #endif
+
+            break;
+        }
+
+    case _InputArray::MUSA_GPU_MAT:
+        {
+            #ifndef HAVE_MUSA
+                throw_no_musa();
+            #else
+                cv::musa::GpuMat dmat = arr.getMUSAGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
@@ -1131,7 +1466,23 @@ void cv::ogl::Texture2D::copyFrom(InputArray arr, bool autoRelease)
             #ifndef HAVE_CUDA
                 throw_no_cuda();
             #else
-                GpuMat dmat = arr.getGpuMat();
+                cv::cuda::GpuMat dmat = arr.getGpuMat();
+                ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                buf.setAutoRelease(true);
+                buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
+                impl_->copyFrom(asize.width, asize.height, srcFormats[cn], gl_types[depth], 0);
+                ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
+            #endif
+
+            break;
+        }
+
+    case _InputArray::MUSA_GPU_MAT:
+        {
+            #ifndef HAVE_MUSA
+                throw_no_musa();
+            #else
+                cv::musa::GpuMat dmat = arr.getMUSAGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 buf.setAutoRelease(true);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
@@ -1182,6 +1533,22 @@ void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) c
         {
             #ifndef HAVE_CUDA
                 throw_no_cuda();
+            #else
+                ogl::Buffer buf(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), ogl::Buffer::PIXEL_PACK_BUFFER);
+                buf.setAutoRelease(true);
+                buf.bind(ogl::Buffer::PIXEL_PACK_BUFFER);
+                impl_->copyTo(dstFormat, gl_types[ddepth], 0);
+                ogl::Buffer::unbind(ogl::Buffer::PIXEL_PACK_BUFFER);
+                buf.copyTo(arr);
+            #endif
+
+            break;
+        }
+
+    case _InputArray::MUSA_GPU_MAT:
+        {
+            #ifndef HAVE_MUSA
+                throw_no_musa();
             #else
                 ogl::Buffer buf(rows_, cols_, CV_MAKE_TYPE(ddepth, cn), ogl::Buffer::PIXEL_PACK_BUFFER);
                 buf.setAutoRelease(true);

@@ -224,7 +224,14 @@ public:
   static bool targetDevice();
 };
 
+class musaGpuPerf
+{
+public:
+  static bool musaTargetDevice();
+};
+
 #define PERF_RUN_CUDA()  ::perf::GpuPerf::targetDevice()
+#define PERF_RUN_MUSA()  ::perf::musaGpuPerf::musaTargetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *

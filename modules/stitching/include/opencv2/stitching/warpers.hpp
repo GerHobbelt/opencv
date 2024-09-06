@@ -270,6 +270,28 @@ public:
 };
 #endif
 
+#ifdef HAVE_OPENCV_MUSAWARPING
+class PlaneWarperMusaGpu: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::PlaneWarperMusaGpu>(scale); }
+};
+
+
+class CylindricalWarperMusaGpu: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::CylindricalWarperMusaGpu>(scale); }
+};
+
+
+class SphericalWarperMusaGpu: public WarperCreator
+{
+public:
+    Ptr<detail::RotationWarper> create(float scale) const CV_OVERRIDE { return makePtr<detail::SphericalWarperMusaGpu>(scale); }
+};
+#endif
+
 //! @} stitching_warp
 
 } // namespace cv

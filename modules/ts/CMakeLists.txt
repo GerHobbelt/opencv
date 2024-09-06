@@ -14,7 +14,7 @@ if(WINRT)
   add_env_definitions(OPENCV_PERF_VALIDATION_DIR)
 endif()
 
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wdeprecated-copy -Wunused-function -Wmacro-redefined)
 
 ocv_add_module(ts INTERNAL opencv_core opencv_imgproc opencv_imgcodecs opencv_videoio opencv_highgui)
 

@@ -21,6 +21,7 @@ else()
   endif()
 endif()
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wdeprecated-copy -Wimplicit-exception-spec-mismatch)
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java objc python)
 
 set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)

@@ -19,6 +19,15 @@
 /* Compile for 'virtual' NVIDIA PTX architectures */
 #define CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX}"
 
+/* Compile for 'real' Moore Threads GPU architectures */
+#define MUSA_ARCH_BIN "${OPENCV_MUSA_ARCH_BIN}"
+
+/* Moore Threads GPU features are used */
+#define MUSA_ARCH_FEATURES "${OPENCV_MUSA_ARCH_FEATURES}"
+
+/* Compile for 'virtual' Moore Threads PTX architectures */
+#define MUSA_ARCH_PTX "${OPENCV_MUSA_ARCH_PTX}"
+
 /* AMD's Basic Linear Algebra Subprograms Library*/
 #cmakedefine HAVE_CLAMDBLAS
 
@@ -39,6 +48,18 @@
 
 /* NVIDIA CUDA Fast Fourier Transform (FFT) API*/
 #cmakedefine HAVE_CUFFT
+
+/* Moore Threads MUSA Runtime API*/
+#cmakedefine HAVE_MUSA
+
+/* Moore Threads MUSA Basic Linear Algebra Subprograms (BLAS) API*/
+#cmakedefine HAVE_MUBLAS
+
+/* Moore Threads Deep Neural Network (DNN) API*/
+#cmakedefine HAVE_MUDNN
+
+/* Moore Threads MUSA Fast Fourier Transform (FFT) API*/
+#cmakedefine HAVE_MUFFT
 
 /* DirectX */
 #cmakedefine HAVE_DIRECTX
@@ -149,4 +170,4 @@
 /* Library QR-code decoding */
 #cmakedefine HAVE_QUIRC
 
-#endif // OPENCV_CVCONFIG_H_INCLUDED
+#endif  // OPENCV_CVCONFIG_H_INCLUDED

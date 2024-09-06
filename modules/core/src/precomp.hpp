@@ -2,7 +2,8 @@
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
-//  By downloading, copying, installing or using the software you agree to this license.
+//  By downloading, copying, installing or using the software you agree to this
+license.
 //  If you do not agree to this license, do not download, install,
 //  copy or use the software.
 //
@@ -14,23 +15,29 @@
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
-// Redistribution and use in source and binary forms, with or without modification,
+// Redistribution and use in source and binary forms, with or without
+modification,
 // are permitted provided that the following conditions are met:
 //
 //   * Redistribution's of source code must retain the above copyright notice,
 //     this list of conditions and the following disclaimer.
 //
-//   * Redistribution's in binary form must reproduce the above copyright notice,
+//   * Redistribution's in binary form must reproduce the above copyright
+notice,
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote
+products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors "as is"
+and
 // any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
+// warranties of merchantability and fitness for a particular purpose are
+disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any
+direct,
 // indirect, incidental, special, exemplary, or consequential damages
 // (including, but not limited to, procurement of substitute goods or services;
 // loss of use, data, or profits; or business interruption) however caused
@@ -53,11 +60,13 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/musa.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/va_intel.hpp"
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.cuda.hpp"
+#include "opencv2/core/private.musa.hpp"
 #ifdef HAVE_OPENCL
 #include "opencv2/core/ocl.hpp"
 #endif
@@ -72,17 +81,16 @@
 #include <string.h>
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdlib>
-#include <limits>
-#include <float.h>
 #include <cstring>
-#include <cassert>
+#include <limits>
 
-#define USE_SSE2  (cv::checkHardwareSupport(CV_CPU_SSE2))
-#define USE_SSE4_2  (cv::checkHardwareSupport(CV_CPU_SSE4_2))
-#define USE_AVX  (cv::checkHardwareSupport(CV_CPU_AVX))
-#define USE_AVX2  (cv::checkHardwareSupport(CV_CPU_AVX2))
+#define USE_SSE2 (cv::checkHardwareSupport(CV_CPU_SSE2))
+#define USE_SSE4_2 (cv::checkHardwareSupport(CV_CPU_SSE4_2))
+#define USE_AVX (cv::checkHardwareSupport(CV_CPU_AVX))
+#define USE_AVX2 (cv::checkHardwareSupport(CV_CPU_AVX2))
 
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
@@ -93,177 +101,199 @@
 
 #define GET_OPTIMIZED(func) (func)
 
-namespace cv
-{
+namespace cv {
 
 // -128.f ... 255.f
 extern const float g_8x32fTab[];
-#define CV_8TO32F(x)  cv::g_8x32fTab[(x)+128]
+#define CV_8TO32F(x) cv::g_8x32fTab[(x) + 128]
 
 extern const ushort g_8x16uSqrTab[];
-#define CV_SQR_8U(x)  cv::g_8x16uSqrTab[(x)+255]
+#define CV_SQR_8U(x) cv::g_8x16uSqrTab[(x) + 255]
 
 extern const uchar g_Saturate8u[];
-#define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
-#define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
-#define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
+#define CV_FAST_CAST_8U(t) \
+  (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t) + 256])
+#define CV_MIN_8U(a, b) ((a)-CV_FAST_CAST_8U((a) - (b)))
+#define CV_MAX_8U(a, b) ((a) + CV_FAST_CAST_8U((b) - (a)))
 
-template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
+template <typename T1, typename T2 = T1, typename T3 = T1>
+struct OpAdd {
+  typedef T1 type1;
+  typedef T2 type2;
+  typedef T3 rtype;
+  T3 operator()(const T1 a, const T2 b) const {
+    return saturate_cast<T3>(a + b);
+  }
 };
 
-template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a - b); }
+template <typename T1, typename T2 = T1, typename T3 = T1>
+struct OpSub {
+  typedef T1 type1;
+  typedef T2 type2;
+  typedef T3 rtype;
+  T3 operator()(const T1 a, const T2 b) const {
+    return saturate_cast<T3>(a - b);
+  }
 };
 
-template<typename T1, typename T2=T1, typename T3=T1> struct OpRSub
-{
-    typedef T1 type1;
-    typedef T2 type2;
-    typedef T3 rtype;
-    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(b - a); }
+template <typename T1, typename T2 = T1, typename T3 = T1>
+struct OpRSub {
+  typedef T1 type1;
+  typedef T2 type2;
+  typedef T3 rtype;
+  T3 operator()(const T1 a, const T2 b) const {
+    return saturate_cast<T3>(b - a);
+  }
 };
 
-template<typename T> struct OpMin
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(const T a, const T b) const { return std::min(a, b); }
+template <typename T>
+struct OpMin {
+  typedef T type1;
+  typedef T type2;
+  typedef T rtype;
+  T operator()(const T a, const T b) const { return std::min(a, b); }
 };
 
-template<typename T> struct OpMax
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator ()(const T a, const T b) const { return std::max(a, b); }
+template <typename T>
+struct OpMax {
+  typedef T type1;
+  typedef T type2;
+  typedef T rtype;
+  T operator()(const T a, const T b) const { return std::max(a, b); }
 };
 
-template<typename T> struct OpAbsDiff
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator()(T a, T b) const { return a > b ? a - b : b - a; }
+template <typename T>
+struct OpAbsDiff {
+  typedef T type1;
+  typedef T type2;
+  typedef T rtype;
+  T operator()(T a, T b) const { return a > b ? a - b : b - a; }
 };
 
 // specializations to prevent "-0" results
-template<> struct OpAbsDiff<float>
-{
-    typedef float type1;
-    typedef float type2;
-    typedef float rtype;
-    float operator()(float a, float b) const { return std::abs(a - b); }
+template <>
+struct OpAbsDiff<float> {
+  typedef float type1;
+  typedef float type2;
+  typedef float rtype;
+  float operator()(float a, float b) const { return std::abs(a - b); }
 };
-template<> struct OpAbsDiff<double>
-{
-    typedef double type1;
-    typedef double type2;
-    typedef double rtype;
-    double operator()(double a, double b) const { return std::abs(a - b); }
-};
-
-template<typename T> struct OpAnd
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator()( T a, T b ) const { return a & b; }
+template <>
+struct OpAbsDiff<double> {
+  typedef double type1;
+  typedef double type2;
+  typedef double rtype;
+  double operator()(double a, double b) const { return std::abs(a - b); }
 };
 
-template<typename T> struct OpOr
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator()( T a, T b ) const { return a | b; }
+template <typename T>
+struct OpAnd {
+  typedef T type1;
+  typedef T type2;
+  typedef T rtype;
+  T operator()(T a, T b) const { return a & b; }
 };
 
-template<typename T> struct OpXor
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator()( T a, T b ) const { return a ^ b; }
+template <typename T>
+struct OpOr {
+  typedef T type1;
+  typedef T type2;
+  typedef T rtype;
+  T operator()(T a, T b) const { return a | b; }
 };
 
-template<typename T> struct OpNot
-{
-    typedef T type1;
-    typedef T type2;
-    typedef T rtype;
-    T operator()( T a, T ) const { return ~a; }
+template <typename T>
+struct OpXor {
+  typedef T type1;
+  typedef T type2;
+  typedef T rtype;
+  T operator()(T a, T b) const { return a ^ b; }
 };
 
-template<> inline uchar OpAdd<uchar>::operator ()(uchar a, uchar b) const
-{ return CV_FAST_CAST_8U(a + b); }
+template <typename T>
+struct OpNot {
+  typedef T type1;
+  typedef T type2;
+  typedef T rtype;
+  T operator()(T a, T) const { return ~a; }
+};
 
-template<> inline uchar OpSub<uchar>::operator ()(uchar a, uchar b) const
-{ return CV_FAST_CAST_8U(a - b); }
+template <>
+inline uchar OpAdd<uchar>::operator()(uchar a, uchar b) const {
+  return CV_FAST_CAST_8U(a + b);
+}
 
-template<> inline short OpAbsDiff<short>::operator ()(short a, short b) const
-{ return saturate_cast<short>(std::abs(a - b)); }
+template <>
+inline uchar OpSub<uchar>::operator()(uchar a, uchar b) const {
+  return CV_FAST_CAST_8U(a - b);
+}
 
-template<> inline schar OpAbsDiff<schar>::operator ()(schar a, schar b) const
-{ return saturate_cast<schar>(std::abs(a - b)); }
+template <>
+inline short OpAbsDiff<short>::operator()(short a, short b) const {
+  return saturate_cast<short>(std::abs(a - b));
+}
 
-template<> inline uchar OpMin<uchar>::operator ()(uchar a, uchar b) const { return CV_MIN_8U(a, b); }
+template <>
+inline schar OpAbsDiff<schar>::operator()(schar a, schar b) const {
+  return saturate_cast<schar>(std::abs(a - b));
+}
 
-template<> inline uchar OpMax<uchar>::operator ()(uchar a, uchar b) const { return CV_MAX_8U(a, b); }
+template <>
+inline uchar OpMin<uchar>::operator()(uchar a, uchar b) const {
+  return CV_MIN_8U(a, b);
+}
 
-typedef void (*UnaryFunc)(const uchar* src1, size_t step1,
-                       uchar* dst, size_t step, Size sz,
-                       void*);
+template <>
+inline uchar OpMax<uchar>::operator()(uchar a, uchar b) const {
+  return CV_MAX_8U(a, b);
+}
 
-typedef void (*BinaryFunc)(const uchar* src1, size_t step1,
-                       const uchar* src2, size_t step2,
-                       uchar* dst, size_t step, Size sz,
-                       void*);
+typedef void (*UnaryFunc)(const uchar* src1, size_t step1, uchar* dst,
+                          size_t step, Size sz, void*);
 
-typedef void (*BinaryFuncC)(const uchar* src1, size_t step1,
-                       const uchar* src2, size_t step2,
-                       uchar* dst, size_t step, int width, int height,
-                       void*);
+typedef void (*BinaryFunc)(const uchar* src1, size_t step1, const uchar* src2,
+                           size_t step2, uchar* dst, size_t step, Size sz,
+                           void*);
+
+typedef void (*BinaryFuncC)(const uchar* src1, size_t step1, const uchar* src2,
+                            size_t step2, uchar* dst, size_t step, int width,
+                            int height, void*);
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
 BinaryFunc getConvertScaleFunc(int sdepth, int ddepth);
 BinaryFunc getCopyMaskFunc(size_t esz);
 
 /* default memory block for sparse array elements */
-#define  CV_SPARSE_MAT_BLOCK     (1<<12)
+#define CV_SPARSE_MAT_BLOCK (1 << 12)
 
 /* initial hash table size */
-#define  CV_SPARSE_HASH_SIZE0    (1<<10)
+#define CV_SPARSE_HASH_SIZE0 (1 << 10)
 
-/* maximal average node_count/hash_size ratio beyond which hash table is resized */
-#define  CV_SPARSE_HASH_RATIO    3
+/* maximal average node_count/hash_size ratio beyond which hash table is resized
+ */
+#define CV_SPARSE_HASH_RATIO 3
 
 // There is some mess in code with vectors representation.
 // Both vector-column / vector-rows are used with dims=2 (as Mat2D always).
-// Reshape matrices if necessary (in case of vectors) and returns size with scaled width.
-Size getContinuousSize2D(Mat& m1, int widthScale=1);
-Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale=1);
-Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale=1);
+// Reshape matrices if necessary (in case of vectors) and returns size with
+// scaled width.
+Size getContinuousSize2D(Mat& m1, int widthScale = 1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, int widthScale = 1);
+Size getContinuousSize2D(Mat& m1, Mat& m2, Mat& m3, int widthScale = 1);
 
-void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps=false );
+void setSize(Mat& m, int _dims, const int* _sz, const size_t* _steps,
+             bool autoSteps = false);
 void finalizeHdr(Mat& m);
-int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step);
+int updateContinuityFlag(int flags, int dims, const int* size,
+                         const size_t* step);
 
-struct NoVec
-{
-    size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
+struct NoVec {
+  size_t operator()(const void*, const void*, void*, size_t) const { return 0; }
 };
 
-#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) ((INT_MAX/4)/(cn)) // HAL implementation accepts 'int' len, so INT_MAX doesn't work here
+#define CV_SPLIT_MERGE_MAX_BLOCK_SIZE(cn) \
+  ((INT_MAX / 4) / (cn))  // HAL implementation accepts 'int' len, so INT_MAX
+                          // doesn't work here
 
 enum { BLOCK_SIZE = 1024 };
 
@@ -273,77 +303,72 @@ enum { BLOCK_SIZE = 1024 };
 #define ARITHM_USE_IPP 0
 #endif
 
-inline bool checkScalar(const Mat& sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
-{
-    if( sc.dims > 2 || !sc.isContinuous() )
-        return false;
-    Size sz = sc.size();
-    if(sz.width != 1 && sz.height != 1)
-        return false;
-    int cn = CV_MAT_CN(atype);
-    if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
-        return false;
-    return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
-           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+inline bool checkScalar(const Mat& sc, int atype, _InputArray::KindFlag sckind,
+                        _InputArray::KindFlag akind) {
+  if (sc.dims > 2 || !sc.isContinuous()) return false;
+  Size sz = sc.size();
+  if (sz.width != 1 && sz.height != 1) return false;
+  int cn = CV_MAT_CN(atype);
+  if (akind == _InputArray::MATX && sckind != _InputArray::MATX) return false;
+  return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
+         (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
-inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
-{
-    if( sc.dims() > 2 || !sc.isContinuous() )
-        return false;
-    Size sz = sc.size();
-    if(sz.width != 1 && sz.height != 1)
-        return false;
-    int cn = CV_MAT_CN(atype);
-    if( akind == _InputArray::MATX && sckind != _InputArray::MATX )
-        return false;
-    return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
-           (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
+inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind,
+                        _InputArray::KindFlag akind) {
+  if (sc.dims() > 2 || !sc.isContinuous()) return false;
+  Size sz = sc.size();
+  if (sz.width != 1 && sz.height != 1) return false;
+  int cn = CV_MAT_CN(atype);
+  if (akind == _InputArray::MATX && sckind != _InputArray::MATX) return false;
+  return sz == Size(1, 1) || sz == Size(1, cn) || sz == Size(cn, 1) ||
+         (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
-void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize );
+void convertAndUnrollScalar(const Mat& sc, int buftype, uchar* scbuf,
+                            size_t blocksize);
 
 #ifdef CV_COLLECT_IMPL_DATA
-struct ImplCollector
-{
-    ImplCollector()
-    {
-        useCollection   = false;
-        implFlags       = 0;
-    }
-    bool useCollection; // enable/disable impl data collection
+struct ImplCollector {
+  ImplCollector() {
+    useCollection = false;
+    implFlags = 0;
+  }
+  bool useCollection;  // enable/disable impl data collection
 
-    int implFlags;
-    std::vector<int>    implCode;
-    std::vector<String> implFun;
+  int implFlags;
+  std::vector<int> implCode;
+  std::vector<String> implFun;
 
-    cv::Mutex mutex;
+  cv::Mutex mutex;
 };
 #endif
 
-struct CoreTLSData
-{
-    CoreTLSData() :
-//#ifdef HAVE_OPENCL
-        oclExecutionContextInitialized(false), useOpenCL(-1),
-//#endif
+struct CoreTLSData {
+  CoreTLSData()
+      :  //#ifdef HAVE_OPENCL
+        oclExecutionContextInitialized(false),
+        useOpenCL(-1),
+        //#endif
         useIPP(-1),
         useIPP_NE(-1)
 #ifdef HAVE_OPENVX
-        ,useOpenVX(-1)
+        ,
+        useOpenVX(-1)
 #endif
-    {}
+  {
+  }
 
-    RNG rng;
-//#ifdef HAVE_OPENCL
-    ocl::OpenCLExecutionContext oclExecutionContext;
-    bool oclExecutionContextInitialized;
-    int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
-//#endif
-    int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
-    int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
+  RNG rng;
+  //#ifdef HAVE_OPENCL
+  ocl::OpenCLExecutionContext oclExecutionContext;
+  bool oclExecutionContextInitialized;
+  int useOpenCL;  // 1 - use, 0 - do not use, -1 - auto/not initialized
+                  //#endif
+  int useIPP;     // 1 - use, 0 - do not use, -1 - auto/not initialized
+  int useIPP_NE;  // 1 - use, 0 - do not use, -1 - auto/not initialized
 #ifdef HAVE_OPENVX
-    int useOpenVX; // 1 - use, 0 - do not use, -1 - auto/not initialized
+  int useOpenVX;  // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif
 };
 
@@ -353,7 +378,7 @@ CoreTLSData& getCoreTlsData();
 #if defined _WIN32 || defined WINCE
 #define CL_RUNTIME_EXPORT __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
-#define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))
+#define CL_RUNTIME_EXPORT __attribute__((visibility("default")))
 #else
 #define CL_RUNTIME_EXPORT
 #endif
@@ -361,9 +386,9 @@ CoreTLSData& getCoreTlsData();
 #define CL_RUNTIME_EXPORT
 #endif
 
-extern CV_EXPORTS
-bool __termination;  // skip some cleanups, because process is terminating
-                     // (for example, if ExitProcess() was already called)
+extern CV_EXPORTS bool
+    __termination;  // skip some cleanups, because process is terminating
+                    // (for example, if ExitProcess() was already called)
 
 CV_EXPORTS
 cv::Mutex& getInitializationMutex();
@@ -371,19 +396,20 @@ cv::Mutex& getInitializationMutex();
 /// @brief Returns timestamp in nanoseconds since program launch
 int64 getTimestampNS();
 
-
 #define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
-    static TYPE* const instance = INITIALIZER; \
-    return RET_VALUE;
+  static TYPE* const instance = INITIALIZER;                  \
+  return RET_VALUE;
 
-#define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
-#define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
+#define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) \
+  CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
+#define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) \
+  CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
 CV_EXPORTS void releaseTlsStorageThread();
 
 int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
-}
+}  // namespace cv
 
 #endif  // BUILD_PLUGIN
 #endif  // __OPENCV_PRECOMP_H__

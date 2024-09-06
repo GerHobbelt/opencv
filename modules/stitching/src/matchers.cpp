@@ -47,9 +47,14 @@
 using namespace cv;
 using namespace cv::detail;
 using namespace cv::cuda;
+using namespace cv::musa;
 
 #ifdef HAVE_OPENCV_CUDAIMGPROC
 #  include "opencv2/cudaimgproc.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_MUSAIMGPROC
+#  include "opencv2/musaimgproc.hpp"
 #endif
 
 namespace {
@@ -128,7 +133,7 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_CUDAFEATURES2D
+#if defined(HAVE_OPENCV_CUDAFEATURES2D)
 class GpuMatcher CV_FINAL : public FeaturesMatcher
 {
 public:
@@ -139,8 +144,24 @@ public:
 
 private:
     float match_conf_;
-    GpuMat descriptors1_, descriptors2_;
-    GpuMat train_idx_, distance_, all_dist_;
+    cv::cuda::GpuMat descriptors1_, descriptors2_;
+    cv::cuda::GpuMat train_idx_, distance_, all_dist_;
+    std::vector< std::vector<DMatch> > pair_matches;
+};
+
+#elif defined(HAVE_OPENCV_MUSAFEATURES2D)
+class GpuMatcher CV_FINAL : public FeaturesMatcher
+{
+public:
+    GpuMatcher(float match_conf) : match_conf_(match_conf) {}
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info);
+
+    void collectGarbage();
+
+private:
+    float match_conf_;
+    cv::musa::GpuMat descriptors1_, descriptors2_;
+    cv::musa::GpuMat train_idx_, distance_, all_dist_;
     std::vector< std::vector<DMatch> > pair_matches;
 };
 #endif
@@ -210,15 +231,15 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifdef HAVE_OPENCV_CUDAFEATURES2D
+#if defined(HAVE_OPENCV_CUDAFEATURES2D)
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     CV_INSTRUMENT_REGION();
 
     matches_info.matches.clear();
 
-    ensureSizeIsEnough(features1.descriptors.size(), features1.descriptors.type(), descriptors1_);
-    ensureSizeIsEnough(features2.descriptors.size(), features2.descriptors.type(), descriptors2_);
+    cuda::ensureSizeIsEnough(features1.descriptors.size(), features1.descriptors.type(), descriptors1_);
+    cuda::ensureSizeIsEnough(features2.descriptors.size(), features2.descriptors.type(), descriptors2_);
 
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
@@ -228,6 +249,68 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     //      More accurate fix in this place should be done in the future -- the type of the norm
     //      should be either a parameter of this method, or a field of the class.
     Ptr<cuda::DescriptorMatcher> matcher = cuda::DescriptorMatcher::createBFMatcher(NORM_L1);
+
+    MatchesSet matches;
+
+    // Find 1->2 matches
+    pair_matches.clear();
+    matcher->knnMatch(descriptors1_, descriptors2_, pair_matches, 2);
+    for (size_t i = 0; i < pair_matches.size(); ++i)
+    {
+        if (pair_matches[i].size() < 2)
+            continue;
+        const DMatch& m0 = pair_matches[i][0];
+        const DMatch& m1 = pair_matches[i][1];
+        if (m0.distance < (1.f - match_conf_) * m1.distance)
+        {
+            matches_info.matches.push_back(m0);
+            matches.insert(std::make_pair(m0.queryIdx, m0.trainIdx));
+        }
+    }
+
+    // Find 2->1 matches
+    pair_matches.clear();
+    matcher->knnMatch(descriptors2_, descriptors1_, pair_matches, 2);
+    for (size_t i = 0; i < pair_matches.size(); ++i)
+    {
+        if (pair_matches[i].size() < 2)
+            continue;
+        const DMatch& m0 = pair_matches[i][0];
+        const DMatch& m1 = pair_matches[i][1];
+        if (m0.distance < (1.f - match_conf_) * m1.distance)
+            if (matches.find(std::make_pair(m0.trainIdx, m0.queryIdx)) == matches.end())
+                matches_info.matches.push_back(DMatch(m0.trainIdx, m0.queryIdx, m0.distance));
+    }
+}
+
+void GpuMatcher::collectGarbage()
+{
+    descriptors1_.release();
+    descriptors2_.release();
+    train_idx_.release();
+    distance_.release();
+    all_dist_.release();
+    std::vector< std::vector<DMatch> >().swap(pair_matches);
+}
+
+#elif defined(HAVE_OPENCV_MUSAFEATURES2D)
+void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
+{
+    CV_INSTRUMENT_REGION();
+
+    matches_info.matches.clear();
+
+    musa::ensureSizeIsEnough(features1.descriptors.size(), features1.descriptors.type(), descriptors1_);
+    musa::ensureSizeIsEnough(features2.descriptors.size(), features2.descriptors.type(), descriptors2_);
+
+    descriptors1_.upload(features1.descriptors);
+    descriptors2_.upload(features2.descriptors);
+
+    //TODO: NORM_L1 allows to avoid matcher crashes for ORB features, but is not absolutely correct for them.
+    //      The best choice for ORB features is NORM_HAMMING, but it is incorrect for SURF features.
+    //      More accurate fix in this place should be done in the future -- the type of the norm
+    //      should be either a parameter of this method, or a field of the class.
+    Ptr<musa::DescriptorMatcher> matcher = musa::DescriptorMatcher::createBFMatcher(NORM_L1);
 
     MatchesSet matches;
 
@@ -369,8 +452,14 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 {
     CV_UNUSED(try_use_gpu);
 
-#ifdef HAVE_OPENCV_CUDAFEATURES2D
+#if defined(HAVE_OPENCV_CUDAFEATURES2D)
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
+    {
+        impl_ = makePtr<GpuMatcher>(match_conf);
+    }
+    else
+#elif defined(HAVE_OPENCV_MUSAFEATURES2D)
+    if (try_use_gpu && getMusaEnabledDeviceCount() > 0)
     {
         impl_ = makePtr<GpuMatcher>(match_conf);
     }

@@ -680,6 +680,7 @@ macro(ocv_include_modules)
         ocv_include_directories("${OPENCV_MODULE_${d}_LOCATION}/include")
       endif()
     elseif(EXISTS "${d}")
+      ocv_debug_message("ocv include dir in module ${d}")
       ocv_include_directories("${d}")
     endif()
   endforeach()
@@ -747,7 +748,7 @@ endmacro()
 # Usage:
 # ocv_set_module_sources([HEADERS] <list of files> [SOURCES] <list of files>)
 macro(ocv_set_module_sources)
-  ocv_debug_message("ocv_set_module_sources(" ${ARGN} ")")
+  # ocv_debug_message("ocv_set_module_sources(" ${ARGN} ")")
 
   set(OPENCV_MODULE_${the_module}_HEADERS "")
   set(OPENCV_MODULE_${the_module}_SOURCES "")
@@ -783,8 +784,9 @@ endmacro()
 # finds and sets headers and sources for the standard OpenCV module
 # Usage:
 # ocv_glob_module_sources([EXCLUDE_CUDA] [EXCLUDE_OPENCL] <extra sources&headers in the same format as used in ocv_set_module_sources>)
+# TODO(ming.xu): add EXCLUDE_MUSA
 macro(ocv_glob_module_sources)
-  ocv_debug_message("ocv_glob_module_sources(" ${ARGN} ")")
+  # ocv_debug_message("ocv_glob_module_sources(" ${ARGN} ")")
   set(_argn ${ARGN})
   list(FIND _argn "EXCLUDE_CUDA" exclude_cuda)
   if(NOT exclude_cuda EQUAL -1)
@@ -838,6 +840,23 @@ macro(ocv_glob_module_sources)
     )
     source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
   endif()
+  ocv_debug_message("lib_cuda_srcs: ${lib_cuda_srcs}, lib_cuda_hdrs: ${lib_cuda_hdrs}")
+
+  set(lib_musa_srcs "")
+  set(lib_musa_hdrs "")
+  ocv_debug_message("test exclude musa: ${exclude_musa}, have musa: ${HAVE_MUSA}")
+  # TODO(ming.xu): add excude_musa, and disable cuda when use musa
+  if(HAVE_MUSA)
+  # if(HAVE_MUSA AND exclude_musa EQUAL -1)
+    file(GLOB lib_musa_srcs
+         "${CMAKE_CURRENT_LIST_DIR}/src/musa/*.mu"
+    )
+    file(GLOB lib_musa_hdrs
+         "${CMAKE_CURRENT_LIST_DIR}/src/musa/*.hpp"
+    )
+    source_group("Src\\Musa"      FILES ${lib_musa_srcs} ${lib_musa_hdrs})
+  endif()
+  ocv_debug_message("lib_musa_srcs: ${lib_musa_srcs}, lib_musa_hdrs: ${lib_musa_hdrs}")
 
   file(GLOB cl_kernels
        "${CMAKE_CURRENT_LIST_DIR}/src/opencl/*.cl"
@@ -859,7 +878,7 @@ macro(ocv_glob_module_sources)
   endif()
 
   ocv_set_module_sources(${_argn} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+                         SOURCES ${lib_srcs} ${lib_int_hdrs} ${lib_cuda_srcs} ${lib_cuda_hdrs} ${lib_musa_srcs} ${lib_musa_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder
@@ -868,7 +887,7 @@ endmacro()
 #   ocv_create_module(<extra link dependencies>)
 #   ocv_create_module()
 macro(ocv_create_module)
-  ocv_debug_message("${the_module}: ocv_create_module(" ${ARGN} ")")
+  ocv_debug_message("${the_module}: ocv_create_module(" ${ARGN} ") test")
   if(OPENCV_MODULE_${the_module}_CLASS STREQUAL "BINDINGS")
     message(FATAL_ERROR "Bindings module can't call ocv_create_module()")
   endif()
@@ -879,6 +898,7 @@ macro(ocv_create_module)
     # nothing
     set(the_module_target opencv_world)
   else()
+    ocv_debug_message("${the_module}: begin calling _ocv_create_module")
     _ocv_create_module(${ARGN})
     set(the_module_target ${the_module})
   endif()
@@ -907,6 +927,7 @@ macro(ocv_create_module)
 endmacro()
 
 macro(_ocv_create_module)
+  ocv_debug_message("begin calling _ocv_create_module ${ARGN}")
   add_definitions(-D__OPENCV_BUILD=1)
 
   ocv_compiler_optimization_process_sources(OPENCV_MODULE_${the_module}_SOURCES OPENCV_MODULE_${the_module}_DEPS_EXT ${the_module})
@@ -982,6 +1003,10 @@ macro(_ocv_create_module)
   ocv_target_link_libraries(${the_module} PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_HAL_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
   if (HAVE_CUDA)
     ocv_target_link_libraries(${the_module} PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  endif()
+
+  if (HAVE_MUSA)
+    ocv_target_link_libraries(${the_module} PRIVATE ${MUSA_LIBRARIES} ${MUSA_mupp_LIBRARY})
   endif()
 
   if(OPENCV_MODULE_${the_module}_COMPILE_DEFINITIONS)

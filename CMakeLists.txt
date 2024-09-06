@@ -74,6 +74,11 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)  # CMake 3.13+: option() honors normal variables.
 endif()
 
+if(POLICY CMP0119)
+  cmake_policy(SET CMP0119 OLD) # CMake 3.20+: DO NOT add -x cpp
+endif()
+
+
 #
 # Configure OpenCV CMake hooks
 #
@@ -266,6 +271,18 @@ OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library s
 OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" OFF  # disabled, details: https://github.com/opencv/opencv/issues/14850
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
+OCV_OPTION(WITH_MUSA "Include Moore Threads MUSA runtime support" OFF
+  VISIBLE_IF NOT IOS AND NOT WINRT
+  VERIFY HAVE_MUSA)
+OCV_OPTION(WITH_MUFFT "Include Moore Threads MUSA Fast Fourier Transform (FFT) library support" WITH_MUSA
+  VISIBLE_IF WITH_MUSA
+  VERIFY HAVE_MUFFT)
+OCV_OPTION(WITH_MUBLAS "Include Moore Threads MUSA Basic Linear Algebra Subprograms (BLAS) library support" WITH_MUSA
+  VISIBLE_IF WITH_MUSA
+  VERIFY HAVE_MUBLAS)
+OCV_OPTION(WITH_MUDNN "Include Moore Threads Deep Neural Network (DNN) library support" WITH_MUSA
+  VISIBLE_IF WITH_MUSA
+  VERIFY HAVE_MUDNN)
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_EIGEN)
@@ -483,6 +500,7 @@ OCV_OPTION(BUILD_WITH_STATIC_CRT    "Enables use of statically linked CRT for st
 OCV_OPTION(BUILD_WITH_DYNAMIC_IPP   "Enables dynamic linking of IPP (only for standalone IPP)" OFF )
 OCV_OPTION(BUILD_FAT_JAVA_LIB       "Create Java wrapper exporting all functions of OpenCV library (requires static build of OpenCV modules)" ANDROID IF NOT BUILD_SHARED_LIBS)
 OCV_OPTION(BUILD_ANDROID_SERVICE    "Build OpenCV Manager for Google Play" OFF IF ANDROID )
+# TODO(ming.xue): may need to set same option for MUSA
 OCV_OPTION(BUILD_CUDA_STUBS         "Build CUDA modules stubs when no CUDA SDK" OFF  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_JAVA               "Enable Java support"                         (ANDROID OR NOT CMAKE_CROSSCOMPILING)  IF (ANDROID OR (NOT APPLE_FRAMEWORK AND NOT WINRT)) )
 OCV_OPTION(BUILD_OBJC               "Enable Objective-C support"                  ON  IF APPLE_FRAMEWORK )
@@ -547,6 +565,11 @@ endif()
 
 set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
 
+if (DEFINED ENV{GCOV_TEST})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+  message("Add setting for GCOV[WA].")
+endif()
+
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
 # ----------------------------------------------------------------------------
@@ -558,8 +581,10 @@ ocv_cmake_hook(POST_OPTIONS)
 #  Build & install layouts
 # ----------------------------------------------------------------------------
 
+set(OPENCV_TEST_DATA_PATH "" CACHE PATH "Where to look for testdata")
 if(OPENCV_TEST_DATA_PATH)
   get_filename_component(OPENCV_TEST_DATA_PATH ${OPENCV_TEST_DATA_PATH} ABSOLUTE)
+  message("-- OPENCV_TEST_DATA_PATH = ${OPENCV_TEST_DATA_PATH}")
 endif()
 
 # Save libs and executables in the same place
@@ -1669,11 +1694,25 @@ if(WITH_CUDA OR HAVE_CUDA)
     status("    NVIDIA GPU arch:"      ${OPENCV_CUDA_ARCH_BIN})
     status("    NVIDIA PTX archs:"     ${OPENCV_CUDA_ARCH_PTX})
   endif()
- endif()
+endif()
 
- if(WITH_CUDNN OR HAVE_CUDNN)
+if(WITH_CUDNN OR HAVE_CUDNN)
     status("")
     status("  cuDNN:" HAVE_CUDNN THEN "YES (ver ${CUDNN_VERSION})" ELSE NO)
+endif()
+
+if(WITH_MUSA OR HAVE_MUSA)
+  ocv_build_features_string(musa_features
+    IF HAVE_MUFFT THEN "MUFFT"
+    IF HAVE_MUBLAS THEN "MUBLAS"
+    ELSE "no extra features")
+  status("")
+  status("  Moore Threads MUSA:" HAVE_MUSA THEN "YES (${musa_features})" ELSE NO)
+endif()
+
+if(WITH_MUDNN OR HAVE_MUDNN)
+    status("")
+    status("  muDNN:" HAVE_MUDNN THEN "YES (ver ${MUDNN_VERSION})" ELSE NO)
 endif()
 
 if(WITH_VULKAN OR HAVE_VULKAN)
