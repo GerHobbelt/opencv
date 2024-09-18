@@ -11,6 +11,13 @@
 #include <emscripten/version.h>
 #include "opencv2/core/saturate.hpp"
 
+// Emscripten after v2.* does not automatically add version macros, if this file exist pull it in
+#if defined __has_include
+#  if __has_include (<emscripten/version.h>)
+#    include <emscripten/version.h>
+#  endif
+#endif
+
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 0 // Now all implementation of f64 use fallback, so disable it.
 #define CV_SIMD128_FP16 0
@@ -32,7 +39,66 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define wasm_f32x4_convert_u32x4 wasm_convert_f32x4_u32x4
 #define wasm_f64x2_convert_i64x2 wasm_convert_f64x2_i64x2
 #define wasm_f64x2_convert_u64x2 wasm_convert_f64x2_u64x2
-#endif // COMPATIBILITY: <1.38.46
+#elif __EMSCRIPTEN_major__ >= 2
+  // More up to date, now taken from llvm project, clang/lib/Headers/wasm_simd128.h
+  // Assume latest conventions based on deprecation warnings
+  #ifdef wasm_v8x16_shuffle
+    #undef wasm_v8x16_shuffle
+  #endif
+  #define wasm_v8x16_shuffle wasm_i8x16_shuffle
+  #ifdef wasm_i32x4_trunc_saturate_f32x4
+    #undef wasm_i32x4_trunc_saturate_f32x4
+  #endif
+  #define wasm_i32x4_trunc_saturate_f32x4 wasm_i32x4_trunc_sat_f32x4
+  #ifdef wasm_u32x4_trunc_saturate_f32x4
+    #undef wasm_u32x4_trunc_saturate_f32x4
+  #endif
+  #define wasm_u32x4_trunc_saturate_f32x4 wasm_u32x4_trunc_sat_f32x4
+  #ifdef wasm_i8x16_any_true
+    #undef wasm_i8x16_any_true
+  #endif
+  #define wasm_i8x16_any_true wasm_v128_any_true
+  #ifdef wasm_u16x8_sub_saturate
+    #undef wasm_u16x8_sub_saturate
+  #endif
+  #define wasm_u16x8_sub_saturate wasm_u16x8_sub_sat
+  #ifdef wasm_i16x8_sub_saturate
+    #undef wasm_i16x8_sub_saturate
+  #endif
+  #define wasm_i16x8_sub_saturate wasm_i16x8_sub_sat
+  #ifdef wasm_u8x16_add_saturate
+    #undef wasm_u8x16_add_saturate
+  #endif
+  #define wasm_u8x16_add_saturate wasm_u8x16_add_sat
+  #ifdef wasm_u8x16_sub_saturate
+    #undef wasm_u8x16_sub_saturate
+  #endif
+  #define wasm_u8x16_sub_saturate wasm_u8x16_sub_sat
+  #ifdef wasm_i8x16_add_saturate
+    #undef wasm_i8x16_add_saturate
+  #endif
+  #define wasm_i8x16_add_saturate wasm_i8x16_add_sat
+  #ifdef wasm_i8x16_sub_saturate
+    #undef wasm_i8x16_sub_saturate
+  #endif
+  #define wasm_i8x16_sub_saturate wasm_i8x16_sub_sat
+  #ifdef wasm_u16x8_add_saturate
+    #undef wasm_u16x8_add_saturate
+  #endif
+  #define wasm_u16x8_add_saturate wasm_u16x8_add_sat
+  #ifdef wasm_u16x8_sub_saturate
+    #undef wasm_u16x8_sub_saturate
+  #endif
+  #define wasm_u16x8_sub_saturate wasm_u16x8_sub_sat
+  #ifdef wasm_i16x8_add_saturate
+    #undef wasm_i16x8_add_saturate
+  #endif
+  #define wasm_i16x8_add_saturate wasm_i16x8_add_sat
+  #ifdef wasm_i16x8_sub_saturate
+    #undef wasm_i16x8_sub_saturate
+  #endif
+  #define wasm_i16x8_sub_saturate wasm_i16x8_sub_sat
+#endif // COMPATIBILITY
 
 ///////// Types ///////////
 

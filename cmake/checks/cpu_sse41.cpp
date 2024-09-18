@@ -1,3 +1,6 @@
+#ifdef __EMSCRIPTEN__
+#error "False positive for emscripten builds  - ignore"
+#endif
 #include <smmintrin.h>
 int main() {
     __m128i a = _mm_setzero_si128(), b = _mm_setzero_si128();

@@ -172,6 +172,13 @@ CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(uint64, int64, uint64, uint64, void, uint64)
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int64, int64, uint64, uint64, void, int64);
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(double, int64, uint64, double, void, double);
 
+#if defined(__EMSCRIPTEN__) && !defined(__wasm_simd128__)
+    // IDscan Jul 2023. Out of the box the explicit wasm hal implementation
+    // assumes the simd128 target feature is enabled. If not fall back to
+    // using pure C++ version.
+    #define CV_FORCE_SIMD128_CPP 1
+#endif
+
 #ifndef CV_DOXYGEN
 
 #ifndef CV_CPU_OPTIMIZATION_HAL_NAMESPACE

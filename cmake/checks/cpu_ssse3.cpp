@@ -1,3 +1,6 @@
+#ifdef __EMSCRIPTEN__
+#error "False positive for emscripten builds  - ignore"
+#endif
 #include <tmmintrin.h>
 const double v = 0;
 int main() {
