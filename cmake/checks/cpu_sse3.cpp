@@ -1,3 +1,6 @@
+#ifdef __EMSCRIPTEN__
+#error "False positive for emscripten builds  - ignore"
+#endif
 #include <pmmintrin.h>
 int main() {
     __m128 u, v;

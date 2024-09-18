@@ -53,6 +53,7 @@ SET(OpenCV_VERSION_TWEAK  0)
 SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 
 include(FindPackageHandleStandardArgs)
+include(hunter_add_package)
 
 if(NOT CMAKE_VERSION VERSION_LESS 2.8.8
     AND OpenCV_FIND_COMPONENTS  # prevent excessive output
@@ -359,10 +360,12 @@ find_package_handle_standard_args(OpenCV REQUIRED_VARS OpenCV_INSTALL_PATH
 include(CMakeFindDependencyMacro)
 
 if("@ZLIB_FOUND@")
+  hunter_add_package(ZLIB)
   find_dependency(ZLIB CONFIG)
 endif()
 
 if("@TIFF_FOUND@")
+  hunter_add_package(TIFF)
   find_dependency(TIFF CONFIG)
 endif()
 
@@ -371,10 +374,12 @@ if("@JASPER_FOUND@")
 endif()
 
 if("@PNG_FOUND@")
+  hunter_add_package(PNG)
   find_dependency(PNG CONFIG)
 endif()
 
 if("@JPEG_FOUND@")
+  hunter_add_package(JPEG)
   find_dependency(JPEG CONFIG)
 endif()
 
@@ -390,7 +395,7 @@ if("@OPENEXR_FOUND@")
   find_dependency(OpenEXR CONFIG)
 endif()
 
-if("@WITH_FFMPEG@")
+if("@FOUND_FFMPEG@")
   find_dependency(ffmpeg CONFIG)
 endif()
 
@@ -427,3 +432,7 @@ if("@Qt5OpenGL_FOUND@")
 endif()
 # AWP: Qt5 dependencies -- end
 
+# Idscan
+# Iconv::Iconv is used by module wechat_qrcode in contrib. Add in here for convenience.
+# Note use find_package not find_dependency, so we can override QUIET and REQUIRED
+find_package(Iconv QUIET)

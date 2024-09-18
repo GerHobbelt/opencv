@@ -1,3 +1,6 @@
+#ifdef __EMSCRIPTEN__
+#error "False positive for emscripten builds  - ignore"
+#endif
 #include <emmintrin.h>
 
 inline __m128i _v128_comgt_epu32(const __m128i& a, const __m128i& b)
