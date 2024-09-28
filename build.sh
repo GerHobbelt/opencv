@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build opencv.xcframework for iOS
 
-OUTPUT_DIR=../FaceSDK/FaceSDK/Lib
+OUTPUT_DIR=build/Lib
 
 python platforms/apple/build_xcframework.py \
     --out ${OUTPUT_DIR} \
@@ -10,7 +10,6 @@ python platforms/apple/build_xcframework.py \
     --without=highgui \
     --without=calib3d \
     --without=features2d \
-    --without=objdetect \
     --without=ml \
     --without=flann \
     --without=photo \
