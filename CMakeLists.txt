@@ -248,7 +248,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
 
 # Optional 3rd party components
 # ===================================================
-OCV_OPTION(WITH_1394 "Include IEEE1394 support" ON
+OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_DC1394_2)
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
@@ -1027,15 +1027,7 @@ foreach(hal ${OpenCV_HAL})
     if(";${CPU_BASELINE_FINAL};" MATCHES ";NEON;")
       add_subdirectory(3rdparty/carotene/hal)
       ocv_hal_register(CAROTENE_HAL_LIBRARIES CAROTENE_HAL_HEADERS CAROTENE_HAL_INCLUDE_DIRS)
-
-      if( NOT DEFINED CAROTENE_NEON_ARCH)
-          set(CAROTENE_NEON_MSG "Auto detected")
-      elseif( CAROTENE_NEON_ARCH GREATER 7)
-          set(CAROTENE_NEON_MSG "Force ARMv8+")
-      else()
-          set(CAROTENE_NEON_MSG "Force ARMv7")
-      endif()
-      list(APPEND OpenCV_USED_HAL "carotene (ver ${CAROTENE_HAL_VERSION}, ${CAROTENE_NEON_MSG})")
+      list(APPEND OpenCV_USED_HAL "carotene (ver ${CAROTENE_HAL_VERSION})")
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
     endif()
