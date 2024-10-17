@@ -649,7 +649,7 @@ Below is an example that utilizes BufferPool with StackAllocator:
     using namespace cv;
     using namespace cv::cuda
 
-    int main()
+    int main(void)
     {
         setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
         setBufferPoolConfig(getDevice(), 1024 * 1024 * 64, 2);  // Allocate 64 MB, 2 stacks (default is 10 MB, 5 stacks)
@@ -692,7 +692,7 @@ erroneous usage that violates LIFO rule. If OpenCV is compiled in Debug mode, th
 sample code will emit CV_Assert error.
 
 @code
-    int main()
+    int main(void)
     {
         setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
         Stream stream;                                          // A default size (10 MB) stack is allocated to this stream
@@ -710,7 +710,7 @@ the code sample below satisfies the LIFO rule. Local GpuMat's are deallocated
 and the corresponding memory is automatically returned to the pool for later usage.
 
 @code
-    int main()
+    int main(void)
     {
         setBufferPoolUsage(true);                               // Tell OpenCV that we are going to utilize BufferPool
         setBufferPoolConfig(getDevice(), 1024 * 1024 * 64, 2);  // Allocate 64 MB, 2 stacks (default is 10 MB, 5 stacks)
