@@ -15,6 +15,8 @@
 #endif
 #include <opencv2/core/utils/logger.hpp>
 
+#ifndef _WIN32
+
 #include <unistd.h>
 #include <stdio.h>
 #include <termios.h>
@@ -796,3 +798,5 @@ const std::string FramebufferBackend::getName() const
 }
 
 }} // cv::highgui_backend::
+
+#endif

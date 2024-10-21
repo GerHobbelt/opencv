@@ -7,6 +7,8 @@
 
 #include "backend.hpp"
 
+#ifndef _WIN32
+
 #include <linux/fb.h>
 #include <linux/input.h>
 
@@ -131,5 +133,7 @@ public:
 };
 
 }} // cv::highgui_backend::
+
+#endif
 
 #endif
