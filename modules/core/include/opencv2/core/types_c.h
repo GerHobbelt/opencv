@@ -1840,13 +1840,19 @@ CvSeqReader;
 
 #define  CV_SEQ_ELEM( seq, elem_type, index )                    \
 /** assert gives some guarantee that <seq> parameter is valid */  \
-(   assert(sizeof((seq)->first[0]) == sizeof(CvSeqBlock) &&      \
-    (seq)->elem_size == sizeof(elem_type)),                      \
+(                                                                \
+(                                                                \
+ [seq]() {                                                       \
+   assert(sizeof((seq)->first[0]) == sizeof(CvSeqBlock) &&       \
+    (seq)->elem_size == sizeof(elem_type));                      \
+}()),                                                            \
     (elem_type*)((seq)->first && (unsigned)index <               \
     (unsigned)((seq)->first->count) ?                            \
     (seq)->first->data + (index) * sizeof(elem_type) :           \
-    cvGetSeqElem( (CvSeq*)(seq), (index) )))
-#define CV_GET_SEQ_ELEM( elem_type, seq, index ) CV_SEQ_ELEM( (seq), elem_type, (index) )
+    cvGetSeqElem( (CvSeq*)(seq), (index) ))                      \
+)
+
+#define CV_GET_SEQ_ELEM( elem_type, seq, index ) CV_SEQ_ELEM( seq, elem_type, index )
 
 /** Add element to sequence: */
 #define CV_WRITE_SEQ_ELEM_VAR( elem_ptr, writer )     \
