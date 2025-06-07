@@ -258,6 +258,34 @@ bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full 
     return h.run();
 }
 
+static UMat init_sdiv_table()
+{
+    std::vector<int> sdiv(256);
+
+    const int hsv_shift = 12;
+    const int v = 255 << hsv_shift;
+
+    sdiv[0] = 0;
+    for(int i = 1; i < 256; i++ )
+        sdiv[i] = saturate_cast<int>(v/(1.*i));
+
+    return UMat(sdiv, true);
+}
+
+static UMat init_hdiv_table(int hrange)
+{
+    std::vector<int> hdiv(256);
+
+    const int hsv_shift = 12;
+    const int v = hrange << hsv_shift;
+
+    hdiv[0] = 0;
+    for (int i = 1; i < 256; i++ )
+        hdiv[i] = saturate_cast<int>(v/(6.*i));
+
+    return UMat(hdiv, true);
+}
+
 bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full )
 {
     OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
@@ -275,44 +303,22 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
     if(_src.depth() == CV_8U)
     {
-        static std::mutex mtx;
-        static UMat sdiv_data;
-        static UMat hdiv_data180;
-        static UMat hdiv_data256;
-        static int combined_table[256];
-        static std::atomic<bool> initialized180(false), initialized256(false);
-        std::atomic<bool>& initialized = hrange == 180 ? initialized180 : initialized256;
+        static UMat sdiv_data = init_sdiv_table();
+        UMat hdiv_data;
 
-        if (!initialized)
+        if (hrange == 180)
         {
-            std::lock_guard<std::mutex> lock(mtx);
-            if (!initialized)
-            {
-                int * const hdiv_table = hrange == 180 ? combined_table : &combined_table[128], hsv_shift = 12;
-                UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
-
-                combined_table[0] = 0;
-
-                int v = 255 << hsv_shift;
-                if (!initialized180 && !initialized256)
-                {
-                    for(int i = 1; i < 256; i++ )
-                        combined_table[i] = saturate_cast<int>(v/(1.*i));
-                    Mat(1, 256, CV_32SC1, combined_table).copyTo(sdiv_data);
-                }
-
-                v = hrange << hsv_shift;
-                for (int i = 1; i < 256; i++ )
-                    hdiv_table[i] = saturate_cast<int>(v/(6.*i));
-
-                Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
-                initialized.store(true);
-            }
+            static UMat hdiv_data180 = init_hdiv_table(180);
+            hdiv_data = hdiv_data180;
+        }
+        else
+        {
+            static UMat hdiv_data256 = init_hdiv_table(256);
+            hdiv_data = hdiv_data256;
         }
 
         h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
-        h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
-                                 ocl::KernelArg::PtrReadOnly(hdiv_data180));
+        h.setArg(ocl::KernelArg::PtrReadOnly(hdiv_data));
     }
 
     return h.run();
