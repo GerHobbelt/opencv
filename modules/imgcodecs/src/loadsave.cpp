@@ -83,6 +83,9 @@ static Size validateInputImageSize(const Size& size)
 
 static inline int calcType(int type, int flags)
 {
+    if ( (flags & (IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH)) == (IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH))
+        return type;
+
     if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
     {
         if( (flags & IMREAD_ANYDEPTH) == 0 )
@@ -148,14 +151,18 @@ struct ImageCodecInitializer
     */
     ImageCodecInitializer()
     {
-#ifdef HAVE_AVIF
-        decoders.push_back(makePtr<AvifDecoder>());
-        encoders.push_back(makePtr<AvifEncoder>());
-#endif
         /// BMP Support
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
 
+    #ifdef HAVE_IMGCODEC_GIF
+        decoders.push_back( makePtr<GifDecoder>() );
+        encoders.push_back( makePtr<GifEncoder>() );
+    #endif
+    #ifdef HAVE_AVIF
+        decoders.push_back(makePtr<AvifDecoder>());
+        encoders.push_back(makePtr<AvifEncoder>());
+    #endif
     #ifdef HAVE_IMGCODEC_HDR
         decoders.push_back( makePtr<HdrDecoder>() );
         encoders.push_back( makePtr<HdrEncoder>() );

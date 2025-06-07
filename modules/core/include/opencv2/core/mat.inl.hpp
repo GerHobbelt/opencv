@@ -2090,7 +2090,7 @@ SparseMatConstIterator_<_Tp> SparseMat::end() const
 template<typename _Tp> inline
 SparseMat_<_Tp>::SparseMat_()
 {
-    flags = MAGIC_VAL + traits::Type<_Tp>::value;
+    flags = +MAGIC_VAL + traits::Type<_Tp>::value;
 }
 
 template<typename _Tp> inline
