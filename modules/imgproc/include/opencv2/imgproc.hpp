@@ -329,7 +329,8 @@ enum ThresholdTypes {
     THRESH_TOZERO_INV = 4, //!< \f[\texttt{dst} (x,y) =  \fork{0}{if \(\texttt{src}(x,y) > \texttt{thresh}\)}{\texttt{src}(x,y)}{otherwise}\f]
     THRESH_MASK       = 7,
     THRESH_OTSU       = 8, //!< flag, use Otsu algorithm to choose the optimal threshold value
-    THRESH_TRIANGLE   = 16 //!< flag, use Triangle algorithm to choose the optimal threshold value
+    THRESH_TRIANGLE   = 16, //!< flag, use Triangle algorithm to choose the optimal threshold value
+    THRESH_DRYRUN     = 128 //!< flag, compute threshold only (useful for OTSU/TRIANGLE) but does not actually run thresholding
 };
 
 //! adaptive threshold algorithm
@@ -4855,6 +4856,11 @@ CV_EXPORTS void ellipse2Poly(Point2d center, Size2d axes, int angle,
 The function cv::putText renders the specified text string in the image. Symbols that cannot be rendered
 using the specified font are replaced by question marks. See #getTextSize for a text rendering code
 example.
+
+The `fontScale` parameter is a scale factor that is multiplied by the base font size:
+- When scale > 1, the text is magnified.
+- When 0 < scale < 1, the text is minimized.
+- When scale < 0, the text is mirrored or reversed.
 
 @param img Image.
 @param text Text string to be drawn.
