@@ -526,9 +526,7 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 
 struct CvCapture_FFMPEG
 {
-    bool open(const char* filename, const VideoCaptureParameters& params);
-    bool open(const std::vector<uchar>& buffer, const VideoCaptureParameters& params);
-    bool open(const char* filename, const std::vector<uchar>& buffer, const VideoCaptureParameters& params);
+    bool open(const char* filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -566,7 +564,6 @@ struct CvCapture_FFMPEG
     int64_t           dts_delay_in_fps_time_base;
 
     AVIOContext     * avio_context;
-    AVBufferRef       avio_buffer;
 
     AVPacket          packet;
     Image_FFMPEG      frame;
@@ -584,6 +581,8 @@ struct CvCapture_FFMPEG
    and so the filename is needed to reopen the file on backward seeking.
 */
     char              * filename;
+
+    Ptr<IStreamReader> readStream;
 
     AVDictionary *dict;
 #if USE_AV_INTERRUPT_CALLBACK
@@ -638,6 +637,8 @@ void CvCapture_FFMPEG::init()
     eps_zero = 0.000025;
 
     rotation_angle = 0;
+
+    readStream.reset();
 
     dict = NULL;
 
@@ -741,6 +742,7 @@ void CvCapture_FFMPEG::close()
         av_free(avio_context->buffer);
         av_freep(&avio_context);
     }
+    readStream.reset();
 
     init();
 }
@@ -1031,17 +1033,7 @@ static bool isThreadSafe() {
     return threadSafe;
 }
 
-bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
-{
-    return open(_filename, {}, params);
-}
-
-bool CvCapture_FFMPEG::open(const std::vector<uchar>& buffer, const VideoCaptureParameters& params)
-{
-    return open(nullptr, buffer, params);
-}
-
-bool CvCapture_FFMPEG::open(const char* _filename, const std::vector<uchar>& buffer, const VideoCaptureParameters& params)
+bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
 {
     const bool threadSafe = isThreadSafe();
     InternalFFMpegRegister::init(threadSafe);
@@ -1055,6 +1047,8 @@ bool CvCapture_FFMPEG::open(const char* _filename, const std::vector<uchar>& buf
     int nThreads = 0;
 
     close();
+
+    readStream = stream;
 
     if (!params.empty())
     {
@@ -1167,24 +1161,53 @@ bool CvCapture_FFMPEG::open(const char* _filename, const std::vector<uchar>& buf
       input_format = av_find_input_format(entry->value);
     }
 
-    if (!buffer.empty())
+    if (!_filename)
     {
-        avio_buffer.size = buffer.size();
-        avio_buffer.data = const_cast<uint8_t*>(buffer.data());
-
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
         CV_Assert(avio_ctx_buffer);
-        avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, &avio_buffer,
+        avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, this,
             [](void *opaque, uint8_t *buf, int buf_size) -> int {
-                auto src = reinterpret_cast<AVBufferRef*>(opaque);
-                buf_size = FFMIN(buf_size, src->size);
-                memcpy(buf, src->data, buf_size);
-                src->data += buf_size;
-                src->size -= buf_size;
-                return buf_size;
+                try {
+                    auto capture = reinterpret_cast<CvCapture_FFMPEG*>(opaque);
+                    auto is = capture->readStream;
+                    int result = (int)is->read(reinterpret_cast<char*>(buf), buf_size);
+
+                    // https://github.com/FFmpeg/FFmpeg/commit/858db4b01fa2b55ee55056c033054ca54ac9b0fd#diff-863c87afc9bb02fe42d071015fc8218972c80b146d603239f20b483ad0988ae9R394
+                    // https://github.com/FFmpeg/FFmpeg/commit/a606f27f4c610708fa96e35eed7b7537d3d8f712
+                    // https://github.com/FFmpeg/FFmpeg/blob/n4.0/libavformat/version.h#L83C41-L83C73
+#if (LIBAVFORMAT_VERSION_MAJOR >= 58) && (LIBAVFORMAT_VERSION_MICRO >= 100)  // FFmpeg n4.0+
+                    if (result == 0 && buf_size > 0)
+                    {
+                        result = AVERROR_EOF;
+                    }
+#endif
+
+                    CV_LOG_VERBOSE(NULL, 0, "FFMPEG: IStreamReader::read(" << buf_size << ") = " << result);
+                    return result;
+                } catch (...) {
+                    CV_LOG_WARNING(NULL, "FFMPEG: IStreamReader::read(" << buf_size << ") failed");
+                    return 0;
+                }
             },
-            NULL, NULL);
+            NULL,
+            [](void *opaque, int64_t offset, int whence) -> int64_t {
+                try {
+                    int64_t result = -1;
+                    auto capture = reinterpret_cast<CvCapture_FFMPEG*>(opaque);
+                    auto is = capture->readStream;
+                    int origin = whence & (~AVSEEK_FORCE);
+                    if (origin == SEEK_SET || origin == SEEK_CUR || origin == SEEK_END)
+                    {
+                        result = is->seek(offset, origin);
+                    }
+                    CV_LOG_VERBOSE(NULL, 0, "FFMPEG: IStreamReader::seek(" << offset << ", whence=" << whence << ") = " << result);
+                    return result;
+                } catch (...) {
+                    CV_LOG_WARNING(NULL, "FFMPEG: IStreamReader::seek(" << offset << ", whence=" << whence << ") failed");
+                    return -1;
+                }
+            });
         CV_Assert(avio_context);
         ic->pb = avio_context;
     }
@@ -3335,32 +3358,30 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 static
 CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, const VideoCaptureParameters& params)
 {
-    // FIXIT: remove unsafe malloc() approach
-    CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
+    CvCapture_FFMPEG* capture = new CvCapture_FFMPEG();
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(filename, params))
+    if (capture->open(filename, nullptr, params))
         return capture;
 
     capture->close();
-    free(capture);
+    delete capture;
     return 0;
 }
 
 static
-CvCapture_FFMPEG* cvCreateBufferCaptureWithParams_FFMPEG(const std::vector<uchar>& buffer, const VideoCaptureParameters& params)
+CvCapture_FFMPEG* cvCreateStreamCaptureWithParams_FFMPEG(const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
 {
-    // FIXIT: remove unsafe malloc() approach
-    CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));
+    CvCapture_FFMPEG* capture = new CvCapture_FFMPEG();
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(buffer, params))
+    if (capture->open(nullptr, stream, params))
         return capture;
 
     capture->close();
-    free(capture);
+    delete capture;
     return 0;
 }
 
@@ -3369,7 +3390,7 @@ void cvReleaseCapture_FFMPEG(CvCapture_FFMPEG** capture)
     if( capture && *capture )
     {
         (*capture)->close();
-        free(*capture);
+        delete *capture;
         *capture = 0;
     }
 }
@@ -3403,14 +3424,14 @@ int cvRetrieveFrame2_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int
 static CvVideoWriter_FFMPEG* cvCreateVideoWriterWithParams_FFMPEG( const char* filename, int fourcc, double fps,
                                                   int width, int height, const VideoWriterParameters& params )
 {
-    CvVideoWriter_FFMPEG* writer = (CvVideoWriter_FFMPEG*)malloc(sizeof(*writer));
+    CvVideoWriter_FFMPEG* writer = new CvVideoWriter_FFMPEG();
     if (!writer)
         return 0;
     writer->init();
     if( writer->open( filename, fourcc, fps, width, height, params ))
         return writer;
     writer->close();
-    free(writer);
+    delete writer;
     return 0;
 }
 
@@ -3427,7 +3448,7 @@ void cvReleaseVideoWriter_FFMPEG( CvVideoWriter_FFMPEG** writer )
     if( writer && *writer )
     {
         (*writer)->close();
-        free(*writer);
+        delete *writer;
         *writer = 0;
     }
 }
