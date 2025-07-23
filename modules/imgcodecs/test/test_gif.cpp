@@ -456,7 +456,8 @@ TEST_P(Imgcodecs_Gif_loop_count, imwriteanimation)
         EXPECT_NE(pos, buf.end()) << "Netscape Application Block should be included if Animation.loop_count != 1";
     }
 
-    remove(gif_filename.c_str());
+    ifs.close();
+    EXPECT_EQ(0, remove(gif_filename.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/,
@@ -498,7 +499,7 @@ TEST_P(Imgcodecs_Gif_duration, imwriteanimation)
     EXPECT_NO_THROW(ret = imwriteanimation(gif_filename, anim));
     EXPECT_EQ(ret, ( (0 <= duration) && (duration <= 655350) ) );
 
-    remove(gif_filename.c_str());
+    EXPECT_EQ(0, remove(gif_filename.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/,
