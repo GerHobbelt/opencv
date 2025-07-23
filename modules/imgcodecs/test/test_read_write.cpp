@@ -34,6 +34,16 @@ const tuple<string, Size> images[] =
     make_tuple<string, Size>("../highgui/readwrite/ordinary.bmp", Size(480, 272)),
 };
 
+const string root = cvtest::TS::ptr()->get_data_path();
+const string page_files[] = {
+        root + "readwrite/multipage_p1.tif",
+        root + "readwrite/multipage_p2.tif",
+        root + "readwrite/multipage_p3.tif",
+        root + "readwrite/multipage_p4.tif",
+        root + "readwrite/multipage_p5.tif",
+        root + "readwrite/multipage_p6.tif"
+};
+
 TEST_P(Imgcodecs_Resize, imread_reduce_flags)
 {
     const string file_name = findDataFile(get<0>(get<0>(GetParam())));
@@ -302,7 +312,6 @@ TEST(Imgcodecs_Image, regression_9376)
 
 TEST(Imgcodecs_Image, imread_overload)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
     const string imgName = findDataFile("../highgui/readwrite/ordinary.bmp");
 
     Mat ref = imread(imgName);
@@ -353,7 +362,6 @@ TEST(Imgcodecs_Image, write_umat)
 #ifdef HAVE_TIFF
 TEST(Imgcodecs_Image, multipage_collection_size)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
 
     ImageCollection collection(filename, IMREAD_ANYCOLOR);
@@ -364,14 +372,6 @@ TEST(Imgcodecs_Image, multipage_collection_read_pages_iterator)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
-    const string page_files[] = {
-            root + "readwrite/multipage_p1.tif",
-            root + "readwrite/multipage_p2.tif",
-            root + "readwrite/multipage_p3.tif",
-            root + "readwrite/multipage_p4.tif",
-            root + "readwrite/multipage_p5.tif",
-            root + "readwrite/multipage_p6.tif"
-    };
 
     ImageCollection collection(filename, IMREAD_ANYCOLOR);
 
@@ -385,16 +385,7 @@ TEST(Imgcodecs_Image, multipage_collection_read_pages_iterator)
 
 TEST(Imgcodecs_Image, multipage_collection_two_iterator)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
-    const string page_files[] = {
-            root + "readwrite/multipage_p1.tif",
-            root + "readwrite/multipage_p2.tif",
-            root + "readwrite/multipage_p3.tif",
-            root + "readwrite/multipage_p4.tif",
-            root + "readwrite/multipage_p5.tif",
-            root + "readwrite/multipage_p6.tif"
-    };
 
     ImageCollection collection(filename, IMREAD_ANYCOLOR);
     auto firstIter = collection.begin();
@@ -414,7 +405,6 @@ TEST(Imgcodecs_Image, multipage_collection_two_iterator)
 
 TEST(Imgcodecs_Image, multipage_collection_operator_plusplus)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
 
     // operator++ test
@@ -429,16 +419,7 @@ TEST(Imgcodecs_Image, multipage_collection_operator_plusplus)
 
 TEST(Imgcodecs_Image, multipage_collection_backward_decoding)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
-    const string page_files[] = {
-            root + "readwrite/multipage_p1.tif",
-            root + "readwrite/multipage_p2.tif",
-            root + "readwrite/multipage_p3.tif",
-            root + "readwrite/multipage_p4.tif",
-            root + "readwrite/multipage_p5.tif",
-            root + "readwrite/multipage_p6.tif"
-    };
 
     ImageCollection collection(filename, IMREAD_ANYCOLOR);
     EXPECT_EQ((size_t)6, collection.size());
@@ -447,7 +428,7 @@ TEST(Imgcodecs_Image, multipage_collection_backward_decoding)
     for(int i = (int)collection.size() - 1; i >= 0; --i)
     {
         cv::Mat ithPage = imread(page_files[i]);
-        EXPECT_FALSE(ithPage.empty());
+        ASSERT_FALSE(ithPage.empty());
         double diff = cv::norm(collection[i], ithPage, NORM_INF);
         EXPECT_EQ(diff, 0.);
     }
@@ -463,16 +444,7 @@ TEST(Imgcodecs_Image, multipage_collection_backward_decoding)
 
 TEST(ImgCodecs, multipage_collection_decoding_range_based_for_loop_test)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
-    const string page_files[] = {
-            root + "readwrite/multipage_p1.tif",
-            root + "readwrite/multipage_p2.tif",
-            root + "readwrite/multipage_p3.tif",
-            root + "readwrite/multipage_p4.tif",
-            root + "readwrite/multipage_p5.tif",
-            root + "readwrite/multipage_p6.tif"
-    };
 
     ImageCollection collection(filename, IMREAD_ANYCOLOR);
 
@@ -480,7 +452,7 @@ TEST(ImgCodecs, multipage_collection_decoding_range_based_for_loop_test)
     for(auto &i: collection)
     {
         cv::Mat ithPage = imread(page_files[index]);
-        EXPECT_FALSE(ithPage.empty());
+        ASSERT_FALSE(ithPage.empty());
         double diff = cv::norm(i, ithPage, NORM_INF);
         EXPECT_EQ(0., diff);
         ++index;
@@ -501,7 +473,6 @@ TEST(ImgCodecs, multipage_collection_decoding_range_based_for_loop_test)
 
 TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/multipage.tif";
 
     ImageCollection imcol(filename, IMREAD_ANYCOLOR);
