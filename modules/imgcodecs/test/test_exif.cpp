@@ -522,6 +522,42 @@ TEST(Imgcodecs_Png, Read_Exif_From_Text)
     EXPECT_EQ(read_metadata[0], exif_data);
 }
 
+TEST(Imgcodecs_Png, Read_ICCP)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/swap-990000-iCCP.png";
+
+    std::vector<int> read_metadata_types;
+    std::vector<std::vector<uchar> > read_metadata;
+    Mat img = imreadWithMetadata(filename, read_metadata_types, read_metadata, IMREAD_UNCHANGED);
+
+    std::vector<int> metadata_types = { IMAGE_METADATA_ICCP };
+    EXPECT_EQ(read_metadata_types, metadata_types);
+
+    std::vector<uchar> compressed_with_metadata;
+    std::vector<uchar> compressed_without_metadata;
+
+    imencodeWithMetadata(".webp", img, metadata_types, read_metadata, compressed_with_metadata);
+    imencode(".webp", img, compressed_without_metadata);
+
+    Mat img_read_compressed_with_metadata = imdecode(compressed_with_metadata);
+    EXPECT_EQ(cv::norm(img, img_read_compressed_with_metadata, NORM_INF), 0.);
+
+    Mat img_read_compressed_without_metadata = imdecode(compressed_without_metadata);
+    EXPECT_EQ(cv::norm(img, img_read_compressed_without_metadata, NORM_INF), 0.);
+
+    imwriteWithMetadata("a.webp", img, metadata_types, read_metadata);
+    imencodeWithMetadata(".webp", img, metadata_types, read_metadata, compressed_with_metadata);
+    imencode(".png", img, compressed_without_metadata);
+    Mat img2 = imdecode(compressed_without_metadata, IMREAD_UNCHANGED);
+
+    imshow("img", compressed_with_metadata);
+    imshow("img1", compressed_without_metadata);
+    imshow("img2", img);
+    waitKey();
+
+}
+
 static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)
 {
     size_t plen = pattern.size();
