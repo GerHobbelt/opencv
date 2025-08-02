@@ -104,7 +104,7 @@ extern const ushort g_8x16uSqrTab[];
 #define CV_SQR_8U(x)  cv::g_8x16uSqrTab[(x)+255]
 
 extern const uchar g_Saturate8u[];
-#define CV_FAST_CAST_8U(t)   (assert(-256 <= (t) && (t) <= 512), cv::g_Saturate8u[(t)+256])
+#define CV_FAST_CAST_8U(t)   ([](decltype(t) x){ assert(-256 <= x && x <= 512); }(t), cv::g_Saturate8u[(t)+256])
 #define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
 #define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
 
