@@ -583,8 +583,10 @@ CV_INLINE CvMat cvMat(const CvMat& m)
 
 
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
-    (assert( (unsigned)(row) < (unsigned)(mat).rows &&   \
-             (unsigned)(col) < (unsigned)(mat).cols ),   \
+    ([&](){                                              \
+       assert( (unsigned)(row) < (unsigned)(mat).rows &&   \
+             (unsigned)(col) < (unsigned)(mat).cols );   \
+    }(),                                                 \
      (mat).data.ptr + (size_t)(mat).step*(row) + (pix_size)*(col))
 
 #define CV_MAT_ELEM_PTR( mat, row, col )                 \
@@ -1944,7 +1946,9 @@ CvSeqReader;
 
 /** Return next graph edge for given vertex: */
 #define  CV_NEXT_GRAPH_EDGE( edge, vertex )                              \
-     (assert((edge)->vtx[0] == (vertex) || (edge)->vtx[1] == (vertex)),  \
+     ([&](){                                                             \
+       assert((edge)->vtx[0] == (vertex) || (edge)->vtx[1] == (vertex)); \
+     }(),                                                                \
       (edge)->next[(edge)->vtx[1] == (vertex)])
 
 
