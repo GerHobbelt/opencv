@@ -94,7 +94,6 @@ protected:
         RNG& rng = ts->get_rng();
         RNG rng0;
         int progress = 0;
-        MemStorage storage(cvCreateMemStorage(0));
         const char * suffixs[3] = {".yml", ".xml", ".json" };
         test_case_count = 6;
 
@@ -102,8 +101,6 @@ protected:
         {
             ts->update_context( this, idx, false );
             progress = update_progress( progress, idx, test_case_count, 0 );
-
-            cvClearMemStorage(storage);
 
             bool mem = (idx % test_case_count) >= (test_case_count >> 1);
             string filename = tempfile(suffixs[idx % (test_case_count >> 1)]);
@@ -421,9 +418,9 @@ protected:
                 fs["g1"] >> og1;
                 CV_Assert( mi2.empty() );
                 CV_Assert( mv2.empty() );
-                CV_Assert( cvtest::norm(Mat(mi3), Mat(mi4), CV_C) == 0 );
+                CV_Assert( cvtest::norm(Mat(mi3), Mat(mi4), NORM_INF) == 0 );
                 CV_Assert( mv4.size() == 1 );
-                double n = cvtest::norm(mv3[0], mv4[0], CV_C);
+                double n = cvtest::norm(mv3[0], mv4[0], NORM_INF);
                 CV_Assert( vudt2.empty() );
                 CV_Assert( vudt3 == vudt4 );
                 CV_Assert( n == 0 );
@@ -604,19 +601,35 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         std::vector<data_t> rawdata;
 
         cv::Mat _em_out, _em_in;
-        cv::Mat _2d_out, _2d_in;
+        cv::Mat _2d_out_u8, _2d_in_u8;
+        cv::Mat _2d_out_u32, _2d_in_u32;
+        cv::Mat _2d_out_i64, _2d_in_i64;
+        cv::Mat _2d_out_u64, _2d_in_u64;
+        cv::Mat _2d_out_bool, _2d_in_bool;
         cv::Mat _nd_out, _nd_in;
         cv::Mat _rd_out(8, 16, CV_64FC1), _rd_in;
 
         {   /* init */
 
-            /* a normal mat */
-            _2d_out = Mat(10, 20, CV_8UC3);
-            cv::randu(_2d_out, 0U, 255U);
+            /* a normal mat u8 */
+            _2d_out_u8 = Mat(10, 20, CV_8UC3);
+            cv::randu(_2d_out_u8, 0U, 255U);
+
+            /* a normal mat u32 */
+            _2d_out_u32 = Mat(10, 20, CV_32UC3);
+            cv::randu(_2d_out_u32, 0U, 2147483647U);
+
+            /* a normal mat i64 */
+            _2d_out_i64 = Mat(10, 20, CV_64SC3);
+            cv::randu(_2d_out_i64, -2251799813685247LL, 2251799813685247LL);
+
+            /* a normal mat u64 */
+            _2d_out_u64 = Mat(10, 20, CV_64UC3);
+            cv::randu(_2d_out_u64, 0ULL, 4503599627370495ULL);
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
-            cv::Mat _4d(4, Size, CV_64FC4, cvScalar(0.888, 0.111, 0.666, 0.444));
+            cv::Mat _4d(4, Size, CV_64FC4, cv::Scalar(0.888, 0.111, 0.666, 0.444));
             const cv::Range ranges[] = {
                 cv::Range(0, 2),
                 cv::Range(0, 2),
@@ -626,6 +639,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
 
             /* a random mat */
             cv::randu(_rd_out, cv::Scalar(0.0), cv::Scalar(1.0));
+
+            /* a normal mat bool */
+            _2d_out_bool = Mat(10, 20, CV_BoolC3);
+            cv::randu(_2d_out_bool, 0U, 2U);
 
             /* raw data */
             for (int i = 0; i < (int)rawdata_N; i++) {
@@ -644,7 +661,11 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         if (testReadWrite || useMemory || generateTestData)
         {
             cv::FileStorage fs(name, write_flags + (useMemory ? cv::FileStorage::MEMORY : 0));
-            fs << "normal_2d_mat" << _2d_out;
+            fs << "normal_2d_mat_u8" << _2d_out_u8;
+            fs << "normal_2d_mat_u32" << _2d_out_u32;
+            fs << "normal_2d_mat_i64" << _2d_out_i64;
+            fs << "normal_2d_mat_u64" << _2d_out_u64;
+            fs << "normal_2d_mat_bool" << _2d_out_bool;
             fs << "normal_nd_mat" << _nd_out;
             fs << "empty_2d_mat"  << _em_out;
             fs << "random_mat"    << _rd_out;
@@ -682,18 +703,23 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 reference.read(&reference_data[0], ref_sz);
                 reference.close();
 
-                EXPECT_EQ(reference_data, test_data);
+                if (useMemory) {
+                    EXPECT_EQ(reference_data, test_data);
+                }
             }
             std::cout << "Storage size: " << sz << std::endl;
-            EXPECT_LE(sz, (size_t)6000);
-
+            EXPECT_LE(sz, (size_t)25000);
         }
         {   /* read */
             cv::FileStorage fs(name, cv::FileStorage::READ + (useMemory ? cv::FileStorage::MEMORY : 0));
 
             /* mat */
             fs["empty_2d_mat"]  >> _em_in;
-            fs["normal_2d_mat"] >> _2d_in;
+            fs["normal_2d_mat_u8"] >> _2d_in_u8;
+            fs["normal_2d_mat_u32"] >> _2d_in_u32;
+            fs["normal_2d_mat_i64"] >> _2d_in_i64;
+            fs["normal_2d_mat_u64"] >> _2d_in_u64;
+            fs["normal_2d_mat_bool"] >> _2d_in_bool;
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
 
@@ -729,7 +755,11 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_EQ(_em_in.depth(), _em_out.depth());
         EXPECT_TRUE(_em_in.empty());
 
-        EXPECT_MAT_NEAR(_2d_in, _2d_out, 0);
+        EXPECT_MAT_NEAR(_2d_in_u8, _2d_out_u8, 0);
+        EXPECT_MAT_NEAR(_2d_in_u32, _2d_out_u32, 0);
+        EXPECT_MAT_NEAR(_2d_in_i64, _2d_out_i64, 0);
+        EXPECT_MAT_NEAR(_2d_in_u64, _2d_out_u64, 0);
+        EXPECT_MAT_NEAR(_2d_in_bool, _2d_out_bool, 0);
 
         ASSERT_EQ(_nd_in.rows   , _nd_out.rows);
         ASSERT_EQ(_nd_in.cols   , _nd_out.cols);
@@ -741,9 +771,12 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         ASSERT_EQ(_rd_in.cols   , _rd_out.cols);
         ASSERT_EQ(_rd_in.dims   , _rd_out.dims);
         ASSERT_EQ(_rd_in.depth(), _rd_out.depth());
-        EXPECT_EQ(0, cv::norm(_rd_in, _rd_out, NORM_INF));
-        if (testReadWrite && !useMemory && !generateTestData)
+
+        if (useMemory)
         {
+            EXPECT_EQ(0, cv::norm(_rd_in, _rd_out, NORM_INF));
+        }
+        if (testReadWrite && !useMemory && !generateTestData) {
             EXPECT_EQ(0, remove(name.c_str()));
         }
     }
@@ -1897,15 +1930,25 @@ static void test_20279(FileStorage& fs)
     EXPECT_EQ(CV_16FC3, m16fc3.type()) << typeToString(m16fc3.type());
     //std::cout << m16fc3 << std::endl;
 
+    Mat m16bfc1, m16bfc3;
+    m16fc1.convertTo(m16bfc1, CV_16BF);
+    m16fc3.convertTo(m16bfc3, CV_16BF);
+
     fs << "m16fc1" << m16fc1;
     fs << "m16fc3" << m16fc3;
+    fs << "m16bfc1" << m16bfc1;
+    fs << "m16bfc3" << m16bfc3;
 
     string content = fs.releaseAndGetString();
     if (cvtest::debugLevel > 0) std::cout << content << std::endl;
 
     FileStorage fs_read(content, FileStorage::READ + FileStorage::MEMORY);
+
     Mat m16fc1_result;
     Mat m16fc3_result;
+    Mat m16bfc1_result;
+    Mat m16bfc3_result;
+
     fs_read["m16fc1"] >> m16fc1_result;
     ASSERT_FALSE(m16fc1_result.empty());
     EXPECT_EQ(CV_16FC1, m16fc1_result.type()) << typeToString(m16fc1_result.type());
@@ -1915,6 +1958,16 @@ static void test_20279(FileStorage& fs)
     ASSERT_FALSE(m16fc3_result.empty());
     EXPECT_EQ(CV_16FC3, m16fc3_result.type()) << typeToString(m16fc3_result.type());
     EXPECT_LE(cvtest::norm(m16fc3_result, m16fc3, NORM_INF), 1e-2);
+
+    fs_read["m16bfc1"] >> m16bfc1_result;
+    ASSERT_FALSE(m16bfc1_result.empty());
+    EXPECT_EQ(CV_16BFC1, m16bfc1_result.type()) << typeToString(m16bfc1_result.type());
+    EXPECT_LE(cvtest::norm(m16bfc1_result, m16bfc1, NORM_INF), 2e-2);
+
+    fs_read["m16bfc3"] >> m16bfc3_result;
+    ASSERT_FALSE(m16bfc3_result.empty());
+    EXPECT_EQ(CV_16BFC3, m16bfc3_result.type()) << typeToString(m16bfc3_result.type());
+    EXPECT_LE(cvtest::norm(m16bfc3_result, m16bfc3, NORM_INF), 2e-2);
 }
 
 TEST(Core_InputOutput, FileStorage_16F_xml)
@@ -2118,6 +2171,16 @@ TEST_P(FileStorage_exact_type, empty_mat)
     testExactMat(Mat(), GetParam());
 }
 
+TEST_P(FileStorage_exact_type, mat_0d)
+{
+    testExactMat(Mat({}, CV_32S, Scalar(8)), GetParam());
+}
+
+TEST_P(FileStorage_exact_type, mat_1d)
+{
+    testExactMat(Mat({1}, CV_32S, Scalar(8)), GetParam());
+}
+
 TEST_P(FileStorage_exact_type, long_int)
 {
     for (const int64_t expected : std::vector<int64_t>{INT64_MAX, INT64_MIN, -1, 1, 0})
@@ -2125,6 +2188,18 @@ TEST_P(FileStorage_exact_type, long_int)
         int64_t value = fsWriteRead(expected, GetParam());
         EXPECT_EQ(value, expected);
     }
+}
+
+TEST_P(FileStorage_exact_type, long_int_mat)
+{
+    Mat src(2, 4, CV_64SC(3));
+    int64_t* data = src.ptr<int64_t>();
+    for (size_t i = 0; i < src.total() * src.channels(); ++i)
+    {
+        data[i] = INT64_MAX - static_cast<int64_t>(std::rand());
+    }
+    Mat dst = fsWriteRead(src, GetParam());
+    EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
 }
 
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,

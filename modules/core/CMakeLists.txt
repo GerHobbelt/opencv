@@ -10,6 +10,8 @@ ocv_add_dispatched_file(has_non_zero SSE2 AVX2 LASX )
 ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX NEON_DOTPROD LASX)
 ocv_add_dispatched_file(mean SSE2 AVX2 LASX)
 ocv_add_dispatched_file(merge SSE2 AVX2 LASX)
+ocv_add_dispatched_file(minmax SSE2 SSE4_1 AVX2 VSX3 LASX)
+ocv_add_dispatched_file(nan_mask SSE2 AVX2 LASX)
 ocv_add_dispatched_file(split SSE2 AVX2 LASX)
 ocv_add_dispatched_file(sum SSE2 AVX2 LASX)
 ocv_add_dispatched_file(norm SSE2 SSE4_1 AVX AVX2 NEON_DOTPROD LASX)
@@ -176,14 +178,10 @@ ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${OPENGL_LIBRARIES}"
     "${GLX_LIBRARIES}"
-    "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
+    "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}"
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"
 )
-
-if(OPENCV_CORE_EXCLUDE_C_API)
-  ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
-endif()
 
 if(OPENCV_DISABLE_THREAD_SUPPORT)
   ocv_target_compile_definitions(${the_module} PUBLIC "OPENCV_DISABLE_THREAD_SUPPORT=1")

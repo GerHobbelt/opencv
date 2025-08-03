@@ -15,71 +15,11 @@ endif()
 
 include(cmake/OpenCVMinDepVersions.cmake)
 
-if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-  cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
-  #Required to resolve linker error issues due to incompatibility with CMake v3.0+ policies.
-  #CMake fails to find _fseeko() which leads to subsequent linker error.
-  #See details here: http://www.cmake.org/Wiki/CMake/Policies
-  cmake_policy(VERSION 2.8)
-else()
-  cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
-endif()
+cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
 
 #
 # Configure CMake policies
 #
-if(POLICY CMP0026)
-  cmake_policy(SET CMP0026 NEW)
-endif()
-
-if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 NEW)  # CMake 3.0+ (2.8.12): MacOS "@rpath" in target's install name
-endif()
-
-if(POLICY CMP0046)
-  cmake_policy(SET CMP0046 NEW)  # warn about non-existed dependencies
-endif()
-
-if(POLICY CMP0051)
-  cmake_policy(SET CMP0051 NEW)
-endif()
-
-if(POLICY CMP0054)  # CMake 3.1: Only interpret if() arguments as variables or keywords when unquoted.
-  cmake_policy(SET CMP0054 NEW)
-endif()
-
-if(POLICY CMP0056)
-  cmake_policy(SET CMP0056 NEW)  # try_compile(): link flags
-endif()
-
-if(POLICY CMP0057)
-  cmake_policy(SET CMP0057 NEW)  # CMake 3.3: if(IN_LIST) support
-endif()
-
-if(POLICY CMP0066)
-  cmake_policy(SET CMP0066 NEW)  # CMake 3.7: try_compile(): use per-config flags, like CMAKE_CXX_FLAGS_RELEASE
-endif()
-
-if(POLICY CMP0067)
-  cmake_policy(SET CMP0067 NEW)  # CMake 3.8: try_compile(): honor language standard variables (like C++11)
-endif()
-
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
-endif()
-
-if(POLICY CMP0071)
-  cmake_policy(SET CMP0071 NEW)  # CMake 3.10+: Let `AUTOMOC` and `AUTOUIC` process `GENERATED` files.
-endif()
-
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
-endif()
-
-if(POLICY CMP0077)
-  cmake_policy(SET CMP0077 NEW)  # CMake 3.13+: option() honors normal variables.
-endif()
-
 if(POLICY CMP0091)
   cmake_policy(SET CMP0091 NEW) # CMake 3.15+: leave MSVC runtime selection out of default CMAKE_<LANG>_FLAGS_<CONFIG> flags
 endif()
@@ -203,7 +143,6 @@ OCV_OPTION(BUILD_OPENJPEG           "Build OpenJPEG from source"         (WIN32 
 OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
-OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" (ANDROID OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_IPP_IW             "Build IPP IW from source"           (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD) IF (X86_64 OR X86) AND NOT WINRT )
@@ -211,6 +150,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
     (NOT MINGW OR OPENCV_FORCE_3RDPARTY_BUILD)
     IF (X86_64 OR X86 OR ARM OR AARCH64 OR PPC64 OR PPC64LE) AND NOT WINRT AND NOT APPLE_FRAMEWORK
 )
+OCV_OPTION(BUILD_CLAPACK            "Build CLapack from source"          (((WIN32 OR ANDROID) AND NOT APPLE) OR OPENCV_FORCE_3RDPARTY_BUILD) )
 
 # Optional 3rd party components
 # ===================================================
@@ -286,9 +226,6 @@ OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_IPP)
-OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_HALIDE)
 OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_VULKAN)
@@ -314,15 +251,12 @@ OCV_OPTION(WITH_JPEGXL "Include JPEG XL support" OFF
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
-OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" ((WIN32 OR ANDROID OR APPLE) OR BUILD_OPENEXR) OR NOT CMAKE_CROSSCOMPILING
+OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" (WIN32 OR ANDROID OR APPLE) OR NOT CMAKE_CROSSCOMPILING
   VISIBLE_IF NOT APPLE_FRAMEWORK AND NOT WINRT
   VERIFY HAVE_OPENEXR)
 OCV_OPTION(WITH_OPENGL "Include OpenGL support" OFF
   VISIBLE_IF NOT ANDROID AND NOT WINRT
   VERIFY HAVE_OPENGL)
-OCV_OPTION(WITH_OPENVX "Include OpenVX support" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_OPENVX)
 OCV_OPTION(WITH_OPENNI "Include OpenNI support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_OPENNI)
@@ -452,9 +386,6 @@ OCV_OPTION(WITH_IMGCODEC_PXM "Include PNM (PBM,PGM,PPM) and PAM formats support"
 OCV_OPTION(WITH_IMGCODEC_PFM "Include PFM formats support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_IMGCODEC_PFM)
-OCV_OPTION(WITH_QUIRC "Include library QR-code decoding" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_QUIRC)
 OCV_OPTION(WITH_ANDROID_MEDIANDK "Use Android Media NDK for Video I/O (Android)" (ANDROID_NATIVE_API_LEVEL GREATER 20)
   VISIBLE_IF ANDROID
   VERIFY HAVE_ANDROID_MEDIANDK)
@@ -554,6 +485,9 @@ OCV_OPTION(ENABLE_CUDA_FIRST_CLASS_LANGUAGE "Enable CUDA as a first class langua
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
+
+OCV_OPTION(WITH_UNIFONT               "Build 'uni' font (WQY MicroHei) into OpenCV"              (NOT BUILD_opencv_js)
+           VERIFY HAVE_UNIFONT)
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
@@ -817,6 +751,9 @@ include(cmake/OpenCVFindLibsGUI.cmake)
 include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
+if(WITH_LAPACK)
+  ocv_assert(HAVE_LAPACK)  # Lapack is required for OpenCV 5.0+
+endif()
 include(cmake/OpenCVFindProtobuf.cmake)
 include(cmake/OpenCVDetectFlatbuffers.cmake)
 if(WITH_TIMVX)
@@ -885,11 +822,6 @@ if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
 endif()
 
-# --- Halide ---
-if(WITH_HALIDE)
-  include(cmake/OpenCVDetectHalide.cmake)
-endif()
-
 # --- VkCom ---
 if(WITH_VULKAN)
   include(cmake/OpenCVDetectVulkan.cmake)
@@ -916,15 +848,6 @@ endif()
 
 if(WITH_VTK)
   include(cmake/OpenCVDetectVTK.cmake)
-endif()
-
-if(WITH_OPENVX)
-  include(cmake/FindOpenVX.cmake)
-endif()
-
-if(WITH_QUIRC)
-  add_subdirectory(3rdparty/quirc)
-  set(HAVE_QUIRC TRUE)
 endif()
 
 if(WITH_ONNX)
@@ -959,13 +882,6 @@ if(HAVE_IPP)
   ocv_debug_message(STATUS "Enable IPP acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";ipp;")
     set(OpenCV_HAL "ipp;${OpenCV_HAL}")
-  endif()
-endif()
-
-if(HAVE_OPENVX)
-  ocv_debug_message(STATUS "Enable OpenVX acceleration")
-  if(NOT ";${OpenCV_HAL};" MATCHES ";openvx;")
-    set(OpenCV_HAL "openvx;${OpenCV_HAL}")
   endif()
 endif()
 
@@ -1056,10 +972,6 @@ foreach(hal ${OpenCV_HAL})
     add_subdirectory(hal/ipp)
     ocv_hal_register(IPP_HAL_LIBRARIES IPP_HAL_HEADERS IPP_HAL_INCLUDE_DIRS)
     list(APPEND OpenCV_USED_HAL "ipp (ver ${IPP_HAL_VERSION})")
-  elseif(hal STREQUAL "openvx")
-    add_subdirectory(hal/openvx)
-    ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
-    list(APPEND OpenCV_USED_HAL "openvx (ver ${OPENVX_HAL_VERSION})")
   else()
     ocv_debug_message(STATUS "OpenCV HAL: ${hal} ...")
     ocv_clear_vars(OpenCV_HAL_LIBRARIES OpenCV_HAL_HEADERS OpenCV_HAL_INCLUDE_DIRS)
@@ -1112,7 +1024,7 @@ ocv_register_modules()
 add_subdirectory(doc)
 
 # various data that is used by cv libraries and/or demo applications.
-add_subdirectory(data)
+# add_subdirectory(data)
 
 # extra applications
 if(BUILD_opencv_apps)
@@ -1498,6 +1410,10 @@ if(WITH_VTK OR HAVE_VTK)
   status("    VTK support:" HAVE_VTK THEN "YES (ver ${VTK_VERSION})" ELSE NO)
 endif()
 
+if(WITH_UNIFONT OR HAVE_UNIFONT)
+  status("    Built-in Unicode font:" HAVE_UNIFONT THEN "YES" ELSE "NO")
+endif()
+
 # ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
@@ -1594,7 +1510,7 @@ endif()
 
 if(WITH_OPENEXR OR HAVE_OPENEXR)
   if(HAVE_OPENEXR)
-    status("    OpenEXR:" OPENEXR_FOUND THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+    status("    OpenEXR:" OPENEXR_FOUND THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "NO")
   else()
     status("    OpenEXR:" "NO")
   endif()
@@ -1789,11 +1705,7 @@ if(WITH_VA OR HAVE_VA)
 endif()
 
 if(WITH_LAPACK OR HAVE_LAPACK)
-  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES})" ELSE NO)
-endif()
-
-if(WITH_HALIDE OR HAVE_HALIDE)
-  status("    Halide:"     HAVE_HALIDE      THEN "YES (${HALIDE_LIBRARIES} ${HALIDE_INCLUDE_DIRS})" ELSE NO)
+  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_IMPL} ${LAPACK_LIBRARIES})" ELSE NO)
 endif()
 
 if(HAVE_OPENVINO
@@ -1862,9 +1774,6 @@ if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 endif()
 
-if(WITH_OPENVX OR HAVE_OPENVX)
-  status("    OpenVX:"     HAVE_OPENVX      THEN "YES (${OPENVX_LIBRARIES})" ELSE "NO")
-endif()
 if(WITH_FASTCV OR HAVE_FASTCV)
   status("    FastCV:"     HAVE_FASTCV      THEN "YES (${FASTCV_LIBRARY})" ELSE "NO")
 endif()
@@ -1959,19 +1868,6 @@ if(WITH_CANN)
 endif()
 
 # ========================== python ==========================
-if(BUILD_opencv_python2)
-  status("")
-  status("  Python 2:")
-  status("    Interpreter:"     PYTHON2INTERP_FOUND  THEN "${PYTHON2_EXECUTABLE} (ver ${PYTHON2_VERSION_STRING})"       ELSE NO)
-  if(PYTHON2LIBS_VERSION_STRING)
-    status("    Libraries:"   HAVE_opencv_python2  THEN  "${PYTHON2_LIBRARIES} (ver ${PYTHON2LIBS_VERSION_STRING})"   ELSE NO)
-  else()
-    status("    Libraries:"   HAVE_opencv_python2  THEN  "${PYTHON2_LIBRARIES}"                                      ELSE NO)
-  endif()
-  status("    numpy:"         PYTHON2_NUMPY_INCLUDE_DIRS THEN "${PYTHON2_NUMPY_INCLUDE_DIRS} (ver ${PYTHON2_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
-  status("    install path:"  HAVE_opencv_python2  THEN "${__INSTALL_PATH_PYTHON2}"                            ELSE "-")
-endif()
-
 if(BUILD_opencv_python3)
   status("")
   status("  Python 3:")

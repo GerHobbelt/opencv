@@ -269,12 +269,7 @@ enum InterpolationFlags{
     /** flag, fills all of the destination image pixels. If some of them correspond to outliers in the
     source image, they are set to zero */
     WARP_FILL_OUTLIERS   = 8,
-    /** flag, inverse transformation
-
-    For example, #linearPolar or #logPolar transforms:
-    - flag is __not__ set: \f$dst( \rho , \phi ) = src(x,y)\f$
-    - flag is set: \f$dst(x,y) = src( \rho , \phi )\f$
-    */
+    /** flag, inverse transformation */
     WARP_INVERSE_MAP     = 16,
     WARP_RELATIVE_MAP    = 32
 };
@@ -439,6 +434,8 @@ enum RetrievalModes {
 
 //! the contour approximation algorithm
 enum ContourApproximationModes {
+    /** TBD */
+    CHAIN_CODE            = 0,
     /** stores absolutely all the contour points. That is, any 2 subsequent points (x1,y1) and
     (x2,y2) of the contour will be either horizontal, vertical or diagonal neighbors, that is,
     max(abs(x1-x2),abs(y2-y1))==1. */
@@ -449,7 +446,9 @@ enum ContourApproximationModes {
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_L1   = 3,
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
-    CHAIN_APPROX_TC89_KCOS = 4
+    CHAIN_APPROX_TC89_KCOS = 4,
+    /** TBD */
+    LINK_RUNS              = 5
 };
 
 /** @brief Shape matching methods
@@ -722,8 +721,7 @@ enum ColorConversionCodes {
 
     COLOR_YUV2GRAY_UYVY = 123, //!< extract Y channel from YUV 4:2:2 image
     COLOR_YUV2GRAY_YUY2 = 124, //!< extract Y channel from YUV 4:2:2 image
-    //CV_YUV2GRAY_VYUY  = CV_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
-    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    //COLOR_YUV2GRAY_VYUY    = COLOR_YUV2GRAY_UYVY,
     COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
     COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
     COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
@@ -1336,10 +1334,11 @@ protected:
 
 //! @} imgproc_subdiv2d
 
+
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/cpp/lsd_lines.cpp
+/** @example samples/cpp/snippets/lsd_lines.cpp
 An example using the LineSegmentDetector
 \image html building_lsd.png "Sample output image" width=434 height=300
 */
@@ -1414,11 +1413,12 @@ to edit those, as to tailor it for their own application.
 @param n_bins Number of bins in pseudo-ordering of gradient modulus.
  */
 CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
-    int refine = LSD_REFINE_STD, double scale = 0.8,
+    LineSegmentDetectorModes refine = LSD_REFINE_STD, double scale = 0.8,
     double sigma_scale = 0.6, double quant = 2.0, double ang_th = 22.5,
     double log_eps = 0, double density_th = 0.7, int n_bins = 1024);
 
 //! @} imgproc_feature
+
 
 //! @addtogroup imgproc_filter
 //! @{
@@ -1538,7 +1538,7 @@ respectively (see #getGaussianKernel for details); to fully control the result r
 possible future modifications of all this semantics, it is recommended to specify all of ksize,
 sigmaX, and sigmaY.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modification flags. See #AlgorithmHint
 
 @sa  sepFilter2D, filter2D, blur, boxFilter, bilateralFilter, medianBlur
  */
@@ -1704,6 +1704,21 @@ CV_EXPORTS_W void filter2D( InputArray src, OutputArray dst, int ddepth,
                             InputArray kernel, Point anchor = Point(-1,-1),
                             double delta = 0, int borderType = BORDER_DEFAULT );
 
+class CV_EXPORTS_W_PARAMS Filter2DParams
+{
+public:
+    CV_PROP_RW int anchorX = -1;
+    CV_PROP_RW int anchorY = -1;
+    CV_PROP_RW int borderType = BORDER_DEFAULT;
+    CV_PROP_RW Scalar borderValue = Scalar();
+    CV_PROP_RW int ddepth = -1;
+    CV_PROP_RW double scale = 1.;
+    CV_PROP_RW double shift = 0.;
+};
+
+CV_EXPORTS_AS(filter2Dp) void filter2D( InputArray src, OutputArray dst, InputArray kernel,
+                                        const Filter2DParams& params=Filter2DParams());
+
 /** @brief Applies a separable linear filter to an image.
 
 The function applies a separable linear filter to the image. That is, first, every row of src is
@@ -1828,8 +1843,11 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
-/** @example samples/cpp/laplace.cpp
-An example using Laplace transformations for edge detection
+/** @example samples/cpp/snippets/laplace.cpp
+An example using Laplace filter for edge detection
+*/
+/** @example samples/python/snippets/laplace.py
+An example using Laplace filter for edge detection in python
 */
 
 /** @brief Calculates the Laplacian of an image.
@@ -1864,7 +1882,7 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/cpp/edge.cpp
+/** @example samples/cpp/snippets/edge.cpp
 This program demonstrates usage of the Canny edge detector
 
 Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
@@ -1949,6 +1967,10 @@ size as src .
 CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
                                 int ksize, double k,
                                 int borderType = BORDER_DEFAULT );
+
+/** @example samples/python/snippets/texture_flow.py
+An example using cornerEigenValsAndVecs in python
+*/
 
 /** @brief Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
@@ -2140,6 +2162,9 @@ CV_EXPORTS CV_WRAP_AS(goodFeaturesToTrackWithQuality) void goodFeaturesToTrack(
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
+/** @example samples/python/snippets/houghlines.py
+An example using the Hough line detector in python
+*/
 
 /** @brief Finds lines in a binary image using the standard Hough transform.
 
@@ -2231,6 +2256,9 @@ CV_EXPORTS_W void HoughLinesPointSet( InputArray point, OutputArray lines, int l
 
 /** @example samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
 An example using the Hough circle detector
+*/
+/** @example samples/python/snippets/houghcircles.py
+An example using the Hough circle detector in python
 */
 
 /** @brief Finds circles in a grayscale image using the Hough transform.
@@ -2445,6 +2473,8 @@ flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
 @param borderValue value used in case of a constant border; by default, it is 0.
+@param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+for linear calculation for faster speed. See #AlgorithmHint.
 
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
@@ -2452,9 +2482,10 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               InputArray M, Size dsize,
                               int flags = INTER_LINEAR,
                               int borderMode = BORDER_CONSTANT,
-                              const Scalar& borderValue = Scalar());
+                              const Scalar& borderValue = Scalar(),
+                              AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
-/** @example samples/cpp/warpPerspective_demo.cpp
+/** @example samples/cpp/snippets/warpPerspective_demo.cpp
 An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping
 */
 
@@ -2477,6 +2508,8 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
 @param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
 @param borderValue value used in case of a constant border; by default, it equals 0.
+@param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+for linear calculation for faster speed. See #AlgorithmHint.
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
  */
@@ -2484,7 +2517,8 @@ CV_EXPORTS_W void warpPerspective( InputArray src, OutputArray dst,
                                    InputArray M, Size dsize,
                                    int flags = INTER_LINEAR,
                                    int borderMode = BORDER_CONSTANT,
-                                   const Scalar& borderValue = Scalar());
+                                   const Scalar& borderValue = Scalar(),
+                                   AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
 /** @brief Applies a generic geometrical transformation to an image.
 
@@ -2521,13 +2555,16 @@ The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
+@param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+for linear calculation for faster speed. See #AlgorithmHint.
 @note
 Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
                          int interpolation, int borderMode = BORDER_CONSTANT,
-                         const Scalar& borderValue = Scalar());
+                         const Scalar& borderValue = Scalar(),
+                         AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
 /** @brief Converts image transformation maps from one representation to another.
 
@@ -2670,94 +2707,6 @@ source image. The center must be inside the image.
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
-/** @example samples/cpp/polar_transforms.cpp
-An example using the cv::linearPolar and cv::logPolar operations
-*/
-
-/** @brief Remaps an image to semilog-polar coordinates space.
-
-@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags+WARP_POLAR_LOG);
-
-@internal
-Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image d)"):
-\f[\begin{array}{l}
-  dst( \rho , \phi ) = src(x,y) \\
-  dst.size() \leftarrow src.size()
-\end{array}\f]
-
-where
-\f[\begin{array}{l}
-  I = (dx,dy) = (x - center.x,y - center.y) \\
-  \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
-  \phi = Kangle \cdot \texttt{angle} (I) \\
-\end{array}\f]
-
-and
-\f[\begin{array}{l}
-  M = src.cols / log_e(maxRadius) \\
-  Kangle = src.rows / 2\Pi \\
-\end{array}\f]
-
-The function emulates the human "foveal" vision and can be used for fast scale and
-rotation-invariant template matching, for object tracking and so forth.
-@param src Source image
-@param dst Destination image. It will have same size and type as src.
-@param center The transformation center; where the output precision is maximal
-@param M Magnitude scale parameter. It determines the radius of the bounding circle to transform too.
-@param flags A combination of interpolation methods, see #InterpolationFlags
-
-@note
--   The function can not operate in-place.
--   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
-
-@sa cv::linearPolar
-@endinternal
-*/
-CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
-                            Point2f center, double M, int flags );
-
-/** @brief Remaps an image to polar coordinates space.
-
-@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags)
-
-@internal
-Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image c)"):
-\f[\begin{array}{l}
-  dst( \rho , \phi ) = src(x,y) \\
-  dst.size() \leftarrow src.size()
-\end{array}\f]
-
-where
-\f[\begin{array}{l}
-  I = (dx,dy) = (x - center.x,y - center.y) \\
-  \rho = Kmag \cdot \texttt{magnitude} (I) ,\\
-  \phi = angle \cdot \texttt{angle} (I)
-\end{array}\f]
-
-and
-\f[\begin{array}{l}
-  Kx = src.cols / maxRadius \\
-  Ky = src.rows / 2\Pi
-\end{array}\f]
-
-
-@param src Source image
-@param dst Destination image. It will have same size and type as src.
-@param center The transformation center;
-@param maxRadius The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too.
-@param flags A combination of interpolation methods, see #InterpolationFlags
-
-@note
--   The function can not operate in-place.
--   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
-
-@sa cv::logPolar
-@endinternal
-*/
-CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
-                               Point2f center, double maxRadius, int flags );
-
-
 /** \brief Remaps an image to polar or semilog-polar coordinates space
 
 @anchor polar_remaps_reference_image
@@ -2826,7 +2775,7 @@ the destination image will have the given size therefore the area of the boundin
 You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
 \snippet polar_transforms.cpp InverseMap
 
-In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+In addition, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
 \snippet polar_transforms.cpp InverseCoordinate
 
 @param src Source image.
@@ -2983,6 +2932,9 @@ floating-point.
 CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
                                       double alpha, InputArray mask = noArray() );
 
+/** @example samples/cpp/snippets/phase_corr.cpp
+An example using the phaseCorrelate function
+*/
 /** @brief The function is used to detect translational shifts that occur between two images.
 
 The operation takes advantage of the Fourier shift theorem for detecting the translational shift in
@@ -3421,8 +3373,11 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 //! @addtogroup imgproc_segmentation
 //! @{
 
-/** @example samples/cpp/watershed.cpp
+/** @example samples/cpp/snippets/watershed.cpp
 An example using the watershed algorithm
+*/
+/** @example samples/python/snippets/watershed.py
+An example using the watershed algorithm using python
 */
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
@@ -3533,8 +3488,11 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @example samples/cpp/distrans.cpp
+/** @example samples/cpp/snippets/distrans.cpp
 An example on using the distance transform
+*/
+/** @example samples/python/snippets/distrans.py
+An example on using the distance transform in python
 */
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
@@ -3685,7 +3643,7 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                             int flags = 4 );
 
-/** @example samples/cpp/ffilldemo.cpp
+/** @example samples/cpp/floodfill.cpp
 An example using the FloodFill technique
 */
 
@@ -3750,7 +3708,7 @@ floating-point.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modification flags. See #AlgorithmHint
 
 @see @ref imgproc_color_conversions
  */
@@ -3773,7 +3731,7 @@ This function only supports YUV420 to RGB conversion as of now.
 - #COLOR_YUV2RGB_NV21
 - #COLOR_YUV2BGRA_NV21
 - #COLOR_YUV2RGBA_NV21
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modification flags. See #AlgorithmHint
 */
 CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
@@ -3908,6 +3866,9 @@ enum TemplateMatchModes {
 
 /** @example samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 An example using Template Matching algorithm
+*/
+/** @example samples/cpp/snippets/mask_tmpl.cpp
+An example using Template Matching algorithm with mask
 */
 
 /** @brief Compares a template against overlapped image regions.
@@ -4075,6 +4036,10 @@ CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays con
 //! @overload
 CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
 
+/** @example samples/python/snippets/squares.py
+An example using approxPolyDP function in python.
+*/
+
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
 The function cv::approxPolyDP approximates a curve or a polygon with another curve/polygon with less
@@ -4202,8 +4167,6 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
-/** @example samples/cpp/minarea.cpp
-*/
 
 /** @brief Finds a triangle of minimum area enclosing a 2D point set and returns its area.
 
@@ -4238,8 +4201,8 @@ The function compares two shapes. All three implemented methods use the Hu invar
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
 
-/** @example samples/cpp/convexhull.cpp
-An example using the convexHull functionality
+/** @example samples/cpp/geometry.cpp
+An example program illustrates the use of cv::convexHull, cv::fitEllipse, cv::minEnclosingTriangle, cv::minEnclosingCircle and cv::minAreaRect.
 */
 
 /** @brief Finds the convex hull of a point set.
@@ -4300,7 +4263,7 @@ without self-intersections. Otherwise, the function output is undefined.
  */
 CV_EXPORTS_W bool isContourConvex( InputArray contour );
 
-/** @example samples/cpp/intersectExample.cpp
+/** @example samples/cpp/snippets/intersectExample.cpp
 Examples of how intersectConvexConvex works
 */
 
@@ -4320,9 +4283,6 @@ of the other, they are not considered nested and an intersection will be found r
 CV_EXPORTS_W float intersectConvexConvex( InputArray p1, InputArray p2,
                                           OutputArray p12, bool handleNested = true );
 
-/** @example samples/cpp/fitellipse.cpp
-An example using the fitEllipse technique
-*/
 
 /** @brief Fits an ellipse around a set of 2D points.
 
@@ -4426,6 +4386,10 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
  @note @ref getClosestEllipsePoints function can be used to compute the ellipse fitting error.
  */
 CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
+
+/** @example samples/python/snippets/fitline.py
+An example for fitting line in python
+*/
 
 /** @brief Compute for each 2d point the nearest 2d point located on a given ellipse.
 
@@ -4553,7 +4517,7 @@ enum ColormapTypes
     COLORMAP_DEEPGREEN = 21  //!< ![deepgreen](pics/colormaps/colorscale_deepgreen.jpg)
 };
 
-/** @example samples/cpp/falsecolor.cpp
+/** @example samples/cpp/snippets/falsecolor.cpp
 An example using applyColorMap function
 */
 
@@ -4802,12 +4766,11 @@ CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const i
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
-/** @example samples/cpp/contours2.cpp
-An example program illustrates the use of cv::findContours and cv::drawContours
-\image html WindowsQtContoursOutput.png "Screenshot of the program"
+/** @example samples/python/snippets/contours.py
+An example program illustrates the use of findContours and drawContours in python
 */
 
-/** @example samples/cpp/segment_objects.cpp
+/** @example samples/cpp/snippets/segment_objects.cpp
 An example using drawContours to clean up a background segmentation result
 */
 
@@ -4990,6 +4953,115 @@ CV_EXPORTS_W Size getTextSize(const String& text, int fontFace,
 CV_EXPORTS_W double getFontScaleFromHeight(const int fontFace,
                                            const int pixelHeight,
                                            const int thickness = 1);
+
+/** @brief Wrapper on top of a truetype/opentype/etc font, i.e. Freetype's FT_Face.
+
+The class is used to store the loaded fonts;
+the font can then be passed to the functions
+putText and getTextSize.
+*/
+class CV_EXPORTS_W_SIMPLE FontFace
+{
+public:
+    /** @brief loads default font */
+    CV_WRAP FontFace();
+    /** @brief loads font at the specified path or with specified name.
+       @param fontPathOrName either path to the custom font or the name of embedded font: "sans", "italic" or "uni".
+          Empty fontPathOrName means the default embedded font.
+    */
+    CV_WRAP FontFace(const String& fontPathOrName);
+
+    ~FontFace();
+
+    /** @brief loads new font face */
+    CV_WRAP bool set(const String& fontPathOrName);
+    CV_WRAP String getName() const;
+
+    /** @brief sets the current variable font instance.
+        @param params The list of pairs key1, value1, key2, value2, ..., e.g.
+             `myfont.setInstance({CV_FOURCC('w','g','h','t'), 400<<16, CV_FOURCC('s','l','n','t'), -(15<<16)});`
+        Note that the parameter values are specified in 16.16 fixed-point format, that is, integer values
+        need to be shifted by 16 (or multiplied by 65536).
+    */
+    CV_WRAP bool setInstance(const std::vector<int>& params);
+    CV_WRAP bool getInstance(CV_OUT std::vector<int>& params) const;
+
+    struct Impl;
+
+    Impl* operator -> ();
+    static bool getBuiltinFontData(const String& fontName, const uchar*& data, size_t& datasize);
+
+protected:
+    Ptr<Impl> impl;
+};
+
+/** @brief Defines various put text flags */
+enum PutTextFlags
+{
+    PUT_TEXT_ALIGN_LEFT=0,  // put the text to the right from the origin
+    PUT_TEXT_ALIGN_CENTER=1,// center the text at the origin; not implemented yet
+    PUT_TEXT_ALIGN_RIGHT=2, // put the text to the left of the origin
+    PUT_TEXT_ALIGN_MASK=3,  // alignment mask
+    PUT_TEXT_ORIGIN_TL=0,
+    PUT_TEXT_ORIGIN_BL=32,  // treat the target image as having bottom-left origin
+    PUT_TEXT_WRAP=128       // wrap text to the next line if it does not fit
+};
+
+/** @brief Draws a text string using specified font.
+
+The function cv::putText renders the specified text string in the image. Symbols that cannot be rendered
+using the specified font are replaced by question marks. See #getTextSize for a text rendering code
+example. The function returns the coordinates in pixels from where the text can be continued.
+
+@param img Image.
+@param text Text string to be drawn.
+@param org Bottom-left corner of the first character of the printed text
+           (see PUT_TEXT_ALIGN_... though)
+@param color Text color.
+@param fface The font to use for the text
+@param size Font size in pixels (by default) or pts
+@param weight Font weight, 100..1000,
+       where 100 is "thin" font, 400 is "regular",
+       600 is "semibold", 800 is "bold" and beyond that is "black".
+       The parameter is ignored if the font is not a variable font or if it does not provide variation along 'wght' axis.
+       If the weight is 0, then the weight, currently set via setInstance(), is used.
+@param flags Various flags, see PUT_TEXT_...
+@param wrap The optional text wrapping range:
+       In the case of left-to-right (LTR) text if the printed character would cross wrap.end boundary,
+       the "cursor" is set to wrap.start.
+       In the case of right-to-left (RTL) text it's vice versa.
+       If the parameters is not set,
+       [org.x, img.cols] is used for LTR text and
+       [0, org.x] is for RTL one.
+*/
+CV_EXPORTS_W Point putText( InputOutputArray img, const String& text, Point org,
+                            Scalar color, FontFace& fface, int size, int weight=0,
+                            PutTextFlags flags=PUT_TEXT_ALIGN_LEFT, Range wrap=Range() );
+
+/** @brief Calculates the bounding rect for the text
+
+The function cv::getTextSize calculates and returns the size of a box that contains the specified text.
+That is, the following code renders some text, the tight box surrounding it, and the baseline: :
+
+@param imgsize Size of the target image, can be empty
+@param text Text string to be drawn.
+@param org Bottom-left corner of the first character of the printed text
+           (see PUT_TEXT_ALIGN_... though)
+@param fface The font to use for the text
+@param size Font size in pixels (by default) or pts
+@param weight Font weight, 100..1000,
+        where 100 is "thin" font, 400 is "regular",
+        600 is "semibold", 800 is "bold" and beyond that is "black".
+        The default weight means "400" for variable-weight fonts or
+        whatever "default" weight the used font provides.
+@param flags Various flags, see PUT_TEXT_...
+@param wrap The optional text wrapping range; see #putText.
+*/
+CV_EXPORTS_W Rect getTextSize( Size imgsize, const String& text, Point org,
+                               FontFace& fface, int size, int weight=0,
+                               PutTextFlags flags=PUT_TEXT_ALIGN_LEFT, Range wrap=Range() );
+
+
 
 /** @brief Class for iterating over all pixels on a raster line segment.
 

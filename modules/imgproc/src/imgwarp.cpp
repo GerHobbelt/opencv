@@ -55,11 +55,13 @@
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
+#include "warp_kernels.simd.hpp"
+#include "warp_kernels.simd_declarations.hpp"
+
 using namespace cv;
 
 namespace cv
 {
-
 
 /************** interpolation formulas and tables ***************/
 
@@ -1284,12 +1286,15 @@ private:
 static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, InputArray _map2,
                       int interpolation, int borderType, const Scalar& borderValue)
 {
-    const bool hasRelativeFlag = ((interpolation & WARP_RELATIVE_MAP) != 0);
-    interpolation &= ~WARP_RELATIVE_MAP;
+    const bool hasRelativeFlag = ((interpolation & cv::WARP_RELATIVE_MAP) != 0);
+    interpolation &= ~cv::WARP_RELATIVE_MAP;
 
     const ocl::Device & dev = ocl::Device::getDefault();
     int cn = _src.channels(), type = _src.type(), depth = _src.depth(),
             rowsPerWI = dev.isIntel() ? 4 : 1;
+
+    if(!dev.hasFP64() && depth == CV_64F)
+        return false;
 
     if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
             || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
@@ -1366,229 +1371,19 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     return k.run(2, globalThreads, NULL, false);
 }
 
-#if 0
-/**
-@deprecated with old version of cv::linearPolar
-*/
-static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
-    Point2f center, double maxRadius, int flags)
-{
-    UMat src_with_border; // don't scope this variable (it holds image data)
-
-    UMat mapx, mapy, r, cp_sp;
-    UMat src = _src.getUMat();
-    _dst.create(src.size(), src.type());
-    Size dsize = src.size();
-    r.create(Size(1, dsize.width), CV_32F);
-    cp_sp.create(Size(1, dsize.height), CV_32FC2);
-
-    mapx.create(dsize, CV_32F);
-    mapy.create(dsize, CV_32F);
-    size_t w = dsize.width;
-    size_t h = dsize.height;
-    String buildOptions;
-    unsigned mem_size = 32;
-    if (flags & cv::WARP_INVERSE_MAP)
-    {
-        buildOptions = "-D InverseMap";
-    }
-    else
-    {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
-    }
-    String retval;
-    ocl::Program p(ocl::imgproc::linearPolar_oclsrc, buildOptions, retval);
-    ocl::Kernel k("linearPolar", p);
-    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
-    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
-    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
-
-    if (!(flags & cv::WARP_INVERSE_MAP))
-    {
-
-
-
-        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
-        float PI2_height = (float) CV_2PI / dsize.height;
-        float maxRadius_width = (float) maxRadius / dsize.width;
-        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, maxRadius_width, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
-        size_t max_dim = max(h, w);
-        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
-        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
-    }
-    else
-    {
-        const int ANGLE_BORDER = 1;
-
-        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
-        src = src_with_border;
-        Size ssize = src_with_border.size();
-        ssize.height -= 2 * ANGLE_BORDER;
-        float ascale =  ssize.height / ((float)CV_2PI);
-        float pscale =  ssize.width / ((float) maxRadius);
-
-        k.args(ocl_mapx, ocl_mapy, ascale, pscale, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
-
-
-    }
-    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_size , mem_size };
-    k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
-    return true;
-}
-static bool ocl_logPolar(InputArray _src, OutputArray _dst,
-    Point2f center, double M, int flags)
-{
-    if (M <= 0)
-        CV_Error(cv::Error::StsOutOfRange, "M should be >0");
-    UMat src_with_border; // don't scope this variable (it holds image data)
-
-    UMat mapx, mapy, r, cp_sp;
-    UMat src = _src.getUMat();
-    _dst.create(src.size(), src.type());
-    Size dsize = src.size();
-    r.create(Size(1, dsize.width), CV_32F);
-    cp_sp.create(Size(1, dsize.height), CV_32FC2);
-
-    mapx.create(dsize, CV_32F);
-    mapy.create(dsize, CV_32F);
-    size_t w = dsize.width;
-    size_t h = dsize.height;
-    String buildOptions;
-    unsigned mem_size = 32;
-    if (flags & cv::WARP_INVERSE_MAP)
-    {
-        buildOptions = "-D InverseMap";
-    }
-    else
-    {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
-    }
-    String retval;
-    ocl::Program p(ocl::imgproc::logPolar_oclsrc, buildOptions, retval);
-    //ocl::Program p(ocl::imgproc::my_linearPolar_oclsrc, buildOptions, retval);
-    //printf("%s\n", retval);
-    ocl::Kernel k("logPolar", p);
-    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
-    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
-    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
-
-    if (!(flags & cv::WARP_INVERSE_MAP))
-    {
-
-
-
-        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
-        float PI2_height = (float) CV_2PI / dsize.height;
-
-        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, (float)M, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
-        size_t max_dim = max(h, w);
-        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
-        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
-    }
-    else
-    {
-        const int ANGLE_BORDER = 1;
-
-        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
-        src = src_with_border;
-        Size ssize = src_with_border.size();
-        ssize.height -= 2 * ANGLE_BORDER;
-        float ascale =  ssize.height / ((float)CV_2PI);
-
-
-        k.args(ocl_mapx, ocl_mapy, ascale, (float)M, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
-
-
-    }
-    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_size , mem_size };
-    k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
-    return true;
-}
 #endif
-
-#endif
-
-
 
 }
 
 void cv::remap( InputArray _src, OutputArray _dst,
                 InputArray _map1, InputArray _map2,
-                int interpolation, int borderType, const Scalar& borderValue )
+                int interpolation, int borderType, const Scalar& borderValue,
+                AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
 
-    const bool hasRelativeFlag = ((interpolation & WARP_RELATIVE_MAP) != 0);
-
-    static RemapNNFunc nn_tab[2][8] =
-    {
-        {
-            remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
-            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>, 0
-        },
-        {
-            remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
-            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>, 0
-        }
-    };
-
-    static RemapFunc linear_tab[2][8] =
-    {
-        {
-            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<false>, short, false>, 0,
-            remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
-            remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
-            remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
-            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
-        },
-        {
-            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
-            remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
-            remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
-            remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
-            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
-        }
-    };
-
-    static RemapFunc cubic_tab[2][8] =
-    {
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, false>,
-            remapBicubic<Cast<float, short>, float, 1, false>, 0,
-            remapBicubic<Cast<float, float>, float, 1, false>,
-            remapBicubic<Cast<double, double>, float, 1, false>, 0
-        },
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, true>,
-            remapBicubic<Cast<float, short>, float, 1, true>, 0,
-            remapBicubic<Cast<float, float>, float, 1, true>,
-            remapBicubic<Cast<double, double>, float, 1, true>, 0
-        }
-};
-
-    static RemapFunc lanczos4_tab[2][8] =
-    {
-        {
-            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
-            remapLanczos4<Cast<float, ushort>, float, 1, false>,
-            remapLanczos4<Cast<float, short>, float, 1, false>, 0,
-            remapLanczos4<Cast<float, float>, float, 1, false>,
-            remapLanczos4<Cast<double, double>, float, 1, false>, 0
-        },
-        {
-            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
-            remapLanczos4<Cast<float, ushort>, float, 1, true>,
-            remapLanczos4<Cast<float, short>, float, 1, true>, 0,
-            remapLanczos4<Cast<float, float>, float, 1, true>,
-            remapLanczos4<Cast<double, double>, float, 1, true>, 0
-        }
-};
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
@@ -1599,6 +1394,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
+
 
     CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
 
@@ -1621,17 +1417,199 @@ void cv::remap( InputArray _src, OutputArray _dst,
                  map1.ptr<short>(), map1.step, map2.ptr<ushort>(), map2.step, interpolation, borderType, borderValue.val);
     }
 
-    interpolation &= ~WARP_RELATIVE_MAP;
+    const bool hasRelativeFlag = ((interpolation & cv::WARP_RELATIVE_MAP) != 0);
+
+    interpolation &= ~cv::WARP_RELATIVE_MAP;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
+
+    if (interpolation == INTER_NEAREST && map1.depth() == CV_32F) {
+        const auto *src_data = src.ptr<const uchar>();
+        auto *dst_data = dst.ptr<uchar>();
+        size_t src_step = src.step, dst_step = dst.step,
+                map1_step = map1.step, map2_step = map2.step;
+        int src_rows = src.rows, src_cols = src.cols;
+        int dst_rows = dst.rows, dst_cols = dst.cols;
+        const float *map1_data = map1.ptr<const float>();
+        const float *map2_data = map2.ptr<const float>();
+        switch (src.type()) {
+            case CV_8UC1: {
+                CV_CPU_DISPATCH(remapNearestInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_8UC3: {
+                CV_CPU_DISPATCH(remapNearestInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_8UC4: {
+                CV_CPU_DISPATCH(remapNearestInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC1: {
+                CV_CPU_DISPATCH(remapNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC3: {
+                CV_CPU_DISPATCH(remapNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC4: {
+                CV_CPU_DISPATCH(remapNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC1: {
+                CV_CPU_DISPATCH(remapNearestInvoker_32FC1, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC3: {
+                CV_CPU_DISPATCH(remapNearestInvoker_32FC3, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC4: {
+                CV_CPU_DISPATCH(remapNearestInvoker_32FC4, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            // no default
+        }
+    }
+
+    if (interpolation == INTER_LINEAR) {
+        if (map1.depth() == CV_32F) {
+            const auto *src_data = src.ptr<const uint8_t>();
+            auto *dst_data = dst.ptr<uint8_t>();
+            size_t src_step = src.step, dst_step = dst.step,
+                   map1_step = map1.step, map2_step = map2.step;
+            int src_rows = src.rows, src_cols = src.cols;
+            int dst_rows = dst.rows, dst_cols = dst.cols;
+            const float *map1_data = map1.ptr<const float>();
+            const float *map2_data = map2.ptr<const float>();
+            switch (src.type()) {
+                case CV_8UC1: {
+                    if (hint == cv::ALGO_HINT_APPROX) {
+                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    } else {
+                        CV_CPU_DISPATCH(remapLinearInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    }
+                    break;
+                }
+                case CV_8UC3: {
+                    if (hint == cv::ALGO_HINT_APPROX) {
+                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    } else {
+                        CV_CPU_DISPATCH(remapLinearInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    }
+                    break;
+                }
+                case CV_8UC4: {
+                    if (hint == cv::ALGO_HINT_APPROX) {
+                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    } else {
+                        CV_CPU_DISPATCH(remapLinearInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    }
+                    break;
+                }
+                case CV_16UC1: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_16UC3: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_16UC4: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_32FC1: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC1, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_32FC3: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC3, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_32FC4: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC4, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                // no default
+            }
+        }
+    }
 
     RemapNNFunc nnfunc = 0;
     RemapFunc ifunc = 0;
     const void* ctab = 0;
     bool fixpt = depth == CV_8U;
     bool planar_input = false;
+
+    static RemapNNFunc nn_tab[2][CV_DEPTH_MAX] =
+    {
+        {
+            remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
+            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>, 0
+        },
+        {
+            remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
+            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>, 0
+        }
+    };
+
+    static RemapFunc linear_tab[2][CV_DEPTH_MAX] =
+    {
+        {
+            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<false>, short, false>, 0,
+            remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
+        },
+        {
+            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
+            remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
+        }
+    };
+
+    static RemapFunc cubic_tab[2][CV_DEPTH_MAX] =
+    {
+        {
+            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
+            remapBicubic<Cast<float, ushort>, float, 1, false>,
+            remapBicubic<Cast<float, short>, float, 1, false>, 0,
+            remapBicubic<Cast<float, float>, float, 1, false>,
+            remapBicubic<Cast<double, double>, float, 1, false>, 0
+        },
+        {
+            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
+            remapBicubic<Cast<float, ushort>, float, 1, true>,
+            remapBicubic<Cast<float, short>, float, 1, true>, 0,
+            remapBicubic<Cast<float, float>, float, 1, true>,
+            remapBicubic<Cast<double, double>, float, 1, true>, 0
+        }
+    };
+
+    static RemapFunc lanczos4_tab[2][8] =
+    {
+        {
+            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
+            remapLanczos4<Cast<float, ushort>, float, 1, false>,
+            remapLanczos4<Cast<float, short>, float, 1, false>, 0,
+            remapLanczos4<Cast<float, float>, float, 1, false>,
+            remapLanczos4<Cast<double, double>, float, 1, false>, 0
+        },
+        {
+            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
+            remapLanczos4<Cast<float, ushort>, float, 1, true>,
+            remapLanczos4<Cast<float, short>, float, 1, true>, 0,
+            remapLanczos4<Cast<float, float>, float, 1, true>,
+            remapLanczos4<Cast<double, double>, float, 1, true>, 0
+        }
+    };
 
     const int relativeOptionIndex = (hasRelativeFlag ? 1 : 0);
     if( interpolation == INTER_NEAREST )
@@ -2074,6 +2052,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
 
     if ( !dev.isIntel() || !(type == CV_8UC1) ||
          !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
+         (op_type == OCL_OP_PERSPECTIVE && interpolation == INTER_LINEAR && (cn == 1 || cn == 3 || cn == 4)) ||
          !(borderType == cv::BORDER_CONSTANT &&
           (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
         return false;
@@ -2166,7 +2145,9 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
 
     int scalarcn = cn == 3 ? 4 : cn;
-    bool is32f = !dev.isAMD() && (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
+    bool is32f = op_type == OCL_OP_AFFINE ?
+                 /* Affine*/ !dev.isAMD() && (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) :
+                 /* Perspective*/ interpolation == INTER_LINEAR;
     int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
     int sctype = CV_MAKETYPE(wdepth, scalarcn);
 
@@ -2181,8 +2162,7 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype), cn, rowsPerWI);
     }
-    else
-    {
+    else {
         char cvt[2][50];
         opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D SRC_DEPTH=%d"
                       " -D CONVERT_TO_WT=%s -D CONVERT_TO_T=%s%s -D CT=%s -D CN=%d -D ROWS_PER_WI=%d",
@@ -2247,15 +2227,111 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 namespace hal {
 
-void warpAffine(int src_type,
-                const uchar * src_data, size_t src_step, int src_width, int src_height,
-                uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
-                const double M[6], int interpolation, int borderType, const double borderValue[4])
+static void warpAffine(int src_type,
+                       const uchar * src_data, size_t src_step, int src_width, int src_height,
+                       uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                       const double M[6], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
 {
     CALL_HAL(warpAffine, cv_hal_warpAffine, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
 
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
+
+    if (interpolation == INTER_NEAREST) {
+        switch (src_type) {
+            case CV_8UC1: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_8UC3: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_8UC4: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC1: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC3: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC4: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC1: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC3: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC4: {
+                CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            // no default
+        }
+    }
+
+    if (interpolation == INTER_LINEAR) {
+        switch (src_type) {
+            case CV_8UC1: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+                break;
+            }
+            case CV_8UC3: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+                break;
+            }
+            case CV_8UC4: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+                break;
+            }
+            case CV_16UC1: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC3: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC4: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC1: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC3: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC4: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            // no default
+        }
+    }
 
     int x;
     AutoBuffer<int> _abdelta(dst.cols*2);
@@ -2364,9 +2440,13 @@ void warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int 
 
 void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
-                     int flags, int borderType, const Scalar& borderValue )
+                     int flags, int borderType, const Scalar& borderValue,
+                     AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     int interpolation = flags & INTER_MAX;
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
@@ -2409,7 +2489,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     }
 
     hal::warpAffine(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
-                    M, interpolation, borderType, borderValue.val);
+                    M, interpolation, borderType, borderValue.val, hint);
 }
 
 
@@ -2676,13 +2756,7 @@ public:
                            int _borderType, const Scalar &_borderValue) :
         ParallelLoopBody(), src(_src), dst(_dst), M(_M), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue)
-    {
-#if defined(_MSC_VER) && _MSC_VER == 1800 /* MSVS 2013 */ && CV_AVX
-        // details: https://github.com/opencv/opencv/issues/11026
-        borderValue.val[2] = _borderValue.val[2];
-        borderValue.val[3] = _borderValue.val[3];
-#endif
-    }
+    {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
@@ -2736,15 +2810,113 @@ private:
     Scalar borderValue;
 };
 
-
 namespace hal {
 
-void warpPerspective(int src_type,
+static void warpPerspective(int src_type,
                     const uchar * src_data, size_t src_step, int src_width, int src_height,
                     uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
-                    const double M[9], int interpolation, int borderType, const double borderValue[4])
+                    const double M[9], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
 {
     CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+
+    if (interpolation == INTER_NEAREST) {
+        switch (src_type) {
+            case CV_8UC1: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_8UC3: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_8UC4: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC1: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC3: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC4: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC1: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC3: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC4: {
+                CV_CPU_DISPATCH(warpPerspectiveNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+        }
+    }
+
+    if (interpolation == INTER_LINEAR) {
+        switch (src_type) {
+            case CV_8UC1: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                } else {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+            }
+            case CV_8UC3: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                } else {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+            }
+            case CV_8UC4: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                } else {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+            }
+            case CV_16UC1: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC3: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC4: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC1: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC3: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC4: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            // no default
+        }
+    }
+
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
 
@@ -2825,9 +2997,13 @@ void warpPerspectiveBlockline(const double *M, short* xy, short* alpha, double X
 } // cv::
 
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
-                          Size dsize, int flags, int borderType, const Scalar& borderValue )
+                          Size dsize, int flags, int borderType, const Scalar& borderValue,
+                          AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     CV_Assert( _src.total() > 0 );
 
@@ -2860,7 +3036,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         invert(matM, matM);
 
     hal::warpPerspective(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
-                        matM.ptr<double>(), interpolation, borderType, borderValue.val);
+                        matM.ptr<double>(), interpolation, borderType, borderValue.val, hint);
 }
 
 
@@ -3061,100 +3237,6 @@ cv::Mat cv::getAffineTransform(InputArray _src, InputArray _dst)
     return getAffineTransform((const Point2f*)src.data, (const Point2f*)dst.data);
 }
 
-CV_IMPL void
-cvWarpAffine( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
-              int flags, CvScalar fillval )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    cv::Mat matrix = cv::cvarrToMat(marr);
-    CV_Assert( src.type() == dst.type() );
-    cv::warpAffine( src, dst, matrix, dst.size(), flags,
-        (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
-        fillval );
-}
-
-CV_IMPL void
-cvWarpPerspective( const CvArr* srcarr, CvArr* dstarr, const CvMat* marr,
-                   int flags, CvScalar fillval )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    cv::Mat matrix = cv::cvarrToMat(marr);
-    CV_Assert( src.type() == dst.type() );
-    cv::warpPerspective( src, dst, matrix, dst.size(), flags,
-        (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
-        fillval );
-}
-
-CV_IMPL void
-cvRemap( const CvArr* srcarr, CvArr* dstarr,
-         const CvArr* _mapx, const CvArr* _mapy,
-         int flags, CvScalar fillval )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), dst0 = dst;
-    cv::Mat mapx = cv::cvarrToMat(_mapx), mapy = cv::cvarrToMat(_mapy);
-    CV_Assert( src.type() == dst.type() && dst.size() == mapx.size() );
-    cv::remap( src, dst, mapx, mapy, flags & cv::INTER_MAX,
-        (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT,
-        fillval );
-    CV_Assert( dst0.data == dst.data );
-}
-
-
-CV_IMPL CvMat*
-cv2DRotationMatrix( CvPoint2D32f center, double angle,
-                    double scale, CvMat* matrix )
-{
-    cv::Mat M0 = cv::cvarrToMat(matrix), M = cv::getRotationMatrix2D(center, angle, scale);
-    CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
-    return matrix;
-}
-
-
-CV_IMPL CvMat*
-cvGetPerspectiveTransform( const CvPoint2D32f* src,
-                          const CvPoint2D32f* dst,
-                          CvMat* matrix )
-{
-    cv::Mat M0 = cv::cvarrToMat(matrix),
-        M = cv::getPerspectiveTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
-    CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
-    return matrix;
-}
-
-
-CV_IMPL CvMat*
-cvGetAffineTransform( const CvPoint2D32f* src,
-                          const CvPoint2D32f* dst,
-                          CvMat* matrix )
-{
-    cv::Mat M0 = cv::cvarrToMat(matrix),
-        M = cv::getAffineTransform((const cv::Point2f*)src, (const cv::Point2f*)dst);
-    CV_Assert( M.size() == M0.size() );
-    M.convertTo(M0, M0.type());
-    return matrix;
-}
-
-
-CV_IMPL void
-cvConvertMaps( const CvArr* arr1, const CvArr* arr2, CvArr* dstarr1, CvArr* dstarr2 )
-{
-    cv::Mat map1 = cv::cvarrToMat(arr1), map2;
-    cv::Mat dstmap1 = cv::cvarrToMat(dstarr1), dstmap2;
-
-    if( arr2 )
-        map2 = cv::cvarrToMat(arr2);
-    if( dstarr2 )
-    {
-        dstmap2 = cv::cvarrToMat(dstarr2);
-        if( dstmap2.type() == CV_16SC1 )
-            dstmap2 = cv::Mat(dstmap2.size(), CV_16UC1, dstmap2.ptr(), dstmap2.step);
-    }
-
-    cv::convertMaps( map1, map2, dstmap1, dstmap2, dstmap1.type(), false );
-}
-
 /****************************************************************************************
 PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
 ****************************************************************************************/
@@ -3278,46 +3360,6 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
               (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
-}
-
-void cv::linearPolar( InputArray _src, OutputArray _dst,
-                      Point2f center, double maxRadius, int flags )
-{
-    warpPolar(_src, _dst, _src.size(), center, maxRadius, flags & ~WARP_POLAR_LOG);
-}
-
-void cv::logPolar( InputArray _src, OutputArray _dst,
-                   Point2f center, double maxRadius, int flags )
-{
-    Size ssize = _src.size();
-    double M = maxRadius > 0 ? std::exp(ssize.width / maxRadius) : 1;
-    warpPolar(_src, _dst, ssize, center, M, flags | WARP_POLAR_LOG);
-}
-
-CV_IMPL
-void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
-                    CvPoint2D32f center, double maxRadius, int flags )
-{
-    Mat src = cvarrToMat(srcarr);
-    Mat dst = cvarrToMat(dstarr);
-
-    CV_Assert(src.size == dst.size);
-    CV_Assert(src.type() == dst.type());
-
-    cv::linearPolar(src, dst, center, maxRadius, flags);
-}
-
-CV_IMPL
-void cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
-                 CvPoint2D32f center, double M, int flags )
-{
-    Mat src = cvarrToMat(srcarr);
-    Mat dst = cvarrToMat(dstarr);
-
-    CV_Assert(src.size == dst.size);
-    CV_Assert(src.type() == dst.type());
-
-    cv::logPolar(src, dst, center, M, flags);
 }
 
 /* End of file. */

@@ -57,22 +57,26 @@ Mat sizeCal(const Mat& w, const Mat& h)
 class TrackerDaSiamRPNImpl : public TrackerDaSiamRPN
 {
 public:
-    TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& params)
+    TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& parameters)
     {
-        siamRPN = dnn::readNet(params.model);
-        siamKernelCL1 = dnn::readNet(params.kernel_cls1);
-        siamKernelR1 = dnn::readNet(params.kernel_r1);
+        // the tracker uses DNN models in quite sophisticated way,
+        // so it's not supported yet by the new engine.
+        // BUG: https://github.com/opencv/opencv/issues/26201
+        dnn::EngineType engine = dnn::ENGINE_CLASSIC;
+        siamRPN = dnn::readNet(parameters.model, "", "", engine);
+        siamKernelCL1 = dnn::readNet(parameters.kernel_cls1, "", "", engine);
+        siamKernelR1 = dnn::readNet(parameters.kernel_r1, "", "", engine);
 
         CV_Assert(!siamRPN.empty());
         CV_Assert(!siamKernelCL1.empty());
         CV_Assert(!siamKernelR1.empty());
 
-        siamRPN.setPreferableBackend(params.backend);
-        siamRPN.setPreferableTarget(params.target);
-        siamKernelR1.setPreferableBackend(params.backend);
-        siamKernelR1.setPreferableTarget(params.target);
-        siamKernelCL1.setPreferableBackend(params.backend);
-        siamKernelCL1.setPreferableTarget(params.target);
+        siamRPN.setPreferableBackend(parameters.backend);
+        siamRPN.setPreferableTarget(parameters.target);
+        siamKernelR1.setPreferableBackend(parameters.backend);
+        siamKernelR1.setPreferableTarget(parameters.target);
+        siamKernelCL1.setPreferableBackend(parameters.backend);
+        siamKernelCL1.setPreferableTarget(parameters.target);
     }
 
     TrackerDaSiamRPNImpl(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1)

@@ -116,133 +116,69 @@ CASE(test_and_bcast4v3d)
 CASE(test_and_bcast4v4d)
     // no filter
 CASE(test_argmax_default_axis_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_default_axis_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmax_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_default_axis_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_example)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_random)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_argmin_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_asin)
     // no filter
 CASE(test_asin_example)
@@ -614,6 +550,20 @@ CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
     SKIP;
+CASE(test_hardmax_axis_0)
+    SKIP;
+CASE(test_hardmax_axis_1)
+    SKIP;
+CASE(test_hardmax_axis_2)
+    SKIP;
+CASE(test_hardmax_default_axis)
+    SKIP;
+CASE(test_hardmax_example)
+    SKIP;
+CASE(test_hardmax_negative_axis)
+    SKIP;
+CASE(test_hardmax_one_hot)
+    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)
@@ -645,9 +595,9 @@ CASE(test_exp)
 CASE(test_exp_example)
     // no filter
 CASE(test_expand_dim_changed)
-    // no filter
+    SKIP;
 CASE(test_expand_dim_unchanged)
-    // no filter
+    SKIP;
 CASE(test_eyelike_populate_off_main_diagonal)
     // no filter
 CASE(test_eyelike_with_dtype)
@@ -727,27 +677,27 @@ CASE(test_gelu_tanh_2)
 CASE(test_gelu_tanh_2_expanded)
     // no filter
 CASE(test_gemm_all_attributes)
-    // no filter
+    SKIP;
 CASE(test_gemm_alpha)
-    // no filter
+    SKIP;
 CASE(test_gemm_beta)
-    // no filter
+    SKIP;
 CASE(test_gemm_default_matrix_bias)
-    // no filter
+    SKIP; // https://github.com/opencv/opencv/issues/25472
 CASE(test_gemm_default_no_bias)
-    // no filter
+    SKIP;
 CASE(test_gemm_default_scalar_bias)
-    // no filter
+    SKIP;
 CASE(test_gemm_default_single_elem_vector_bias)
-    // no filter
+    SKIP;
 CASE(test_gemm_default_vector_bias)
-    // no filter
+    SKIP;
 CASE(test_gemm_default_zero_bias)
-    // no filter
+    SKIP;
 CASE(test_gemm_transposeA)
-    // no filter
+    SKIP;
 CASE(test_gemm_transposeB)
-    // no filter
+    SKIP;
 CASE(test_globalaveragepool)
     // no filter
 CASE(test_globalaveragepool_precomputed)
@@ -831,7 +781,7 @@ CASE(test_identity_opt)
 CASE(test_identity_sequence)
     // no filter
 CASE(test_if)
-    // no filter
+    SKIP;
 CASE(test_if_opt)
     // no filter
 CASE(test_if_seq)
@@ -989,7 +939,7 @@ CASE(test_max_int16)
 CASE(test_max_int32)
     // no filter
 CASE(test_max_int64)
-    // no filter
+    SKIP;
 CASE(test_max_int8)
     // no filter
 CASE(test_max_one_input)
@@ -1057,9 +1007,7 @@ CASE(test_maxpool_3d_default)
     SKIP_NON_CPU;
 #endif
 CASE(test_maxpool_with_argmax_2d_precomputed_pads)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_maxpool_with_argmax_2d_precomputed_strides)
 #if SKIP_SET_1
     SKIP;
@@ -1091,7 +1039,7 @@ CASE(test_min_int16)
 CASE(test_min_int32)
     // no filter
 CASE(test_min_int64)
-    // no filter
+    SKIP;
 CASE(test_min_int8)
     // no filter
 CASE(test_min_one_input)
@@ -1168,9 +1116,7 @@ CASE(test_mul_bcast)
 CASE(test_mul_example)
     // no filter
 CASE(test_mul_uint8)
-#if SKIP_SET_1
     SKIP;
-#endif
 CASE(test_mvn)
     // no filter
 CASE(test_mvn_expanded)
@@ -1338,7 +1284,7 @@ CASE(test_pow_types_int32_int32)
 CASE(test_pow_types_int64_float32)
     // no filter
 CASE(test_pow_types_int64_int64)
-    // no filter
+    SKIP;
 CASE(test_prelu_broadcast)
     // no filter
 CASE(test_prelu_example)
@@ -1356,11 +1302,11 @@ CASE(test_quantizelinear_axis)
 CASE(test_quantizelinear_blocked)
     SKIP;
 CASE(test_range_float_type_positive_delta)
-    // no filter
+    SKIP;
 CASE(test_range_float_type_positive_delta_expanded)
     // no filter
 CASE(test_range_int32_type_negative_delta)
-    // no filter
+    SKIP;
 CASE(test_range_int32_type_negative_delta_expanded)
     // no filter
 CASE(test_reciprocal)
@@ -1620,23 +1566,23 @@ CASE(test_relu)
 CASE(test_reshape_allowzero_reordered)
     // no filter
 CASE(test_reshape_extended_dims)
-    // no filter
+    SKIP;
 CASE(test_reshape_negative_dim)
-    // no filter
+    SKIP;
 CASE(test_reshape_negative_extended_dims)
-    // no filter
+    SKIP;
 CASE(test_reshape_one_dim)
-    // no filter
+    SKIP;
 CASE(test_reshape_reduced_dims)
-    // no filter
+    SKIP;
 CASE(test_reshape_reordered_all_dims)
-    // no filter
+    SKIP;
 CASE(test_reshape_reordered_last_dims)
-    // no filter
+    SKIP;
 CASE(test_reshape_zero_and_negative_dim)
-    // no filter
+    SKIP;
 CASE(test_reshape_zero_dim)
-    // no filter
+    SKIP;
 CASE(test_resize_downsample_scales_cubic)
     // no filter
 CASE(test_resize_downsample_scales_cubic_A_n0p5_exclude_outside)
@@ -1878,25 +1824,25 @@ CASE(test_sequence_insert_at_back)
 CASE(test_sequence_insert_at_front)
     // no filter
 CASE(test_shape)
-    // no filter
+    SKIP;
 CASE(test_shape_clip_end)
-    // no filter
+    SKIP;
 CASE(test_shape_clip_start)
-    // no filter
+    SKIP;
 CASE(test_shape_end_1)
-    // no filter
+    SKIP;
 CASE(test_shape_end_negative_1)
-    // no filter
+    SKIP;
 CASE(test_shape_example)
-    // no filter
+    SKIP;
 CASE(test_shape_start_1)
-    // no filter
+    SKIP;
 CASE(test_shape_start_1_end_2)
-    // no filter
+    SKIP;
 CASE(test_shape_start_1_end_negative_1)
-    // no filter
+    SKIP;
 CASE(test_shape_start_negative_1)
-    // no filter
+    SKIP;
 CASE(test_shrink_hard)
     // no filter
 CASE(test_shrink_soft)
@@ -1926,19 +1872,19 @@ CASE(test_size)
 CASE(test_size_example)
     // no filter
 CASE(test_slice)
-    // no filter
+    SKIP;
 CASE(test_slice_default_axes)
-    // no filter
+    SKIP;
 CASE(test_slice_default_steps)
-    // no filter
+    SKIP;
 CASE(test_slice_end_out_of_bounds)
-    // no filter
+    SKIP;
 CASE(test_slice_neg)
-    // no filter
+    SKIP;
 CASE(test_slice_neg_steps)
-    // no filter
+    SKIP;
 CASE(test_slice_negative_axes)
-    // no filter
+    SKIP;
 CASE(test_slice_start_out_of_bounds)
     // no filter
 CASE(test_softmax_axis_0)
@@ -1996,17 +1942,17 @@ CASE(test_spacetodepth)
 CASE(test_spacetodepth_example)
     // no filter
 CASE(test_split_equal_parts_1d)
-    // no filter
+    SKIP;
 CASE(test_split_equal_parts_2d)
-    // no filter
+    SKIP;
 CASE(test_split_equal_parts_default_axis)
-    // no filter
+    SKIP;
 CASE(test_split_variable_parts_1d)
-    // no filter
+    SKIP;
 CASE(test_split_variable_parts_2d)
-    // no filter
+    SKIP;
 CASE(test_split_variable_parts_default_axis)
-    // no filter
+    SKIP;
 CASE(test_split_zero_size_splits)
     // no filter
 CASE(test_sqrt)
@@ -2014,9 +1960,9 @@ CASE(test_sqrt)
 CASE(test_sqrt_example)
     // no filter
 CASE(test_squeeze)
-    // no filter
+    SKIP;
 CASE(test_squeeze_negative_axes)
-    // no filter
+    SKIP;
 CASE(test_strnormalizer_export_monday_casesensintive_lower)
     // no filter
 CASE(test_strnormalizer_export_monday_casesensintive_nochangecase)
@@ -2076,15 +2022,15 @@ CASE(test_thresholdedrelu_default)
 CASE(test_thresholdedrelu_example)
     // no filter
 CASE(test_tile)
-    // no filter
+    SKIP;
 CASE(test_tile_precomputed)
-    // no filter
+    SKIP;
 CASE(test_top_k)
-    // no filter
+    SKIP;
 CASE(test_top_k_negative_axis)
-    // no filter
+    SKIP;
 CASE(test_top_k_smallest)
-    // no filter
+    SKIP;
 CASE(test_training_dropout)
     // no filter
 CASE(test_training_dropout_default)
@@ -2158,21 +2104,21 @@ CASE(test_unique_sorted_with_negative_axis)
 CASE(test_unique_sorted_without_axis)
     // no filter
 CASE(test_unsqueeze_axis_0)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_axis_1)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_axis_2)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_axis_3)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_negative_axes)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_three_axes)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_two_axes)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_unsorted_axes)
-    // no filter
+    SKIP;
 CASE(test_upsample_nearest)
 #if SKIP_SET_1
     SKIP;

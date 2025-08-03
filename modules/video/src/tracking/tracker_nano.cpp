@@ -88,8 +88,12 @@ class TrackerNanoImpl : public TrackerNano
 public:
     TrackerNanoImpl(const TrackerNano::Params& parameters)
     {
-        backbone = dnn::readNet(parameters.backbone);
-        neckhead = dnn::readNet(parameters.neckhead);
+        dnn::EngineType engine = dnn::ENGINE_AUTO;
+        if (parameters.backend != 0 || parameters.target != 0){
+            engine = dnn::ENGINE_CLASSIC;
+        }
+        backbone = dnn::readNet(parameters.backbone, "", "", engine);
+        neckhead = dnn::readNet(parameters.neckhead, "", "", engine);
 
         CV_Assert(!backbone.empty());
         CV_Assert(!neckhead.empty());

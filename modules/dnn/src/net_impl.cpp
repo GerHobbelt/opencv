@@ -59,11 +59,35 @@ Net::Impl::Impl()
     preferableTarget = DNN_TARGET_CPU;
     hasDynamicShapes = false;
     useWinograd = true;
+
+    ////////////// extra initialization for the new engine /////////////////
+
+    modelFormat = DNN_MODEL_GENERIC;
+    originalLayout = DATA_LAYOUT_NCHW;
+    onnx_opset = 0;
+
+    accuracy = CV_32F;
+    enableFP16 = haveFP16 = false;
+    // FP16 is not ready yet in the new DNN engine
+    // Ticket: https://github.com/opencv/opencv/issues/26196
+    /*if (checkHardwareSupport(CV_CPU_FP16)) {
+        enableFP16 = haveFP16 = true;
+    }*/
+
+    tracingMode = DNN_TRACE_NONE;
+    profilingMode = DNN_PROFILE_NONE;
+
+    dump_strm = &std::cout;
+    dump_indent = 3;
+
+    clear();
 }
 
 
 bool Net::Impl::empty() const
 {
+    if (mainGraph)
+        return false;
     return layers.size() <= 1;  // first layer is default Data layer
 }
 
@@ -92,6 +116,34 @@ void Net::Impl::clear()
     }
     netWasAllocated = false;
     layersTimings.clear();
+
+    /////////////// for the new inference engine //////////////////
+
+    modelFormat = DNN_MODEL_GENERIC;
+
+    dimnames = NamesHash();
+    dimnames_vec = std::vector<std::string>();
+
+    args = std::vector<ArgData>();
+    argnames = NamesHash();
+
+    __tensors__ = std::vector<Mat>();
+    bufidxs = std::vector<int>();
+    buffers = std::vector<Mat>();
+
+    mainGraph = Ptr<Graph>();
+
+    ArgData adata;
+    adata.name = "";
+    adata.kind = DNN_ARG_CONST;
+
+    args.push_back(adata);
+    argnames.insert(std::make_pair(std::string(""), 0));
+    __tensors__.push_back(Mat());
+    bufidxs.push_back(-1);
+
+    prepared = false;
+    finalizeLayers = true;
 }
 
 
@@ -104,9 +156,6 @@ void Net::Impl::validateBackendAndTarget()
               preferableTarget == DNN_TARGET_CPU_FP16 ||
               preferableTarget == DNN_TARGET_OPENCL ||
               preferableTarget == DNN_TARGET_OPENCL_FP16);
-    CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
-              preferableTarget == DNN_TARGET_CPU ||
-              preferableTarget == DNN_TARGET_OPENCL);
 #ifdef HAVE_WEBNN
     if (preferableBackend == DNN_BACKEND_WEBNN)
     {
@@ -189,11 +238,6 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 
         clear();
 
-        if (hasDynamicShapes)
-        {
-            updateLayersShapes();
-        }
-
         this->blobsToKeep = blobsToKeep_;
 
         allocateLayers(blobsToKeep_);
@@ -203,16 +247,6 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
         it->second.skip = netInputLayer->skip;
 
         initBackend(blobsToKeep_);
-
-        if (!netWasAllocated)
-        {
-#ifdef HAVE_HALIDE
-            if (preferableBackend == DNN_BACKEND_HALIDE)
-                compileHalide();
-#else
-            CV_Assert(preferableBackend != DNN_BACKEND_HALIDE);
-#endif
-        }
 
         netWasAllocated = true;
 
@@ -226,8 +260,22 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 
 Ptr<Layer> Net::Impl::getLayer(int layerId) const
 {
-    LayerData& ld = getLayerData(layerId);
-    return getLayerInstance(ld);
+    if (mainGraph) {
+        CV_Assert(0 <= layerId && layerId < totalLayers);
+        int graph_ofs = 0;
+        for (const Ptr<Graph>& graph : allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = graph->prog();
+            int nops = (int)prog.size();
+            CV_Assert(layerId >= graph_ofs);
+            if (layerId < graph_ofs + nops)
+                return prog[layerId - graph_ofs];
+            graph_ofs += nops;
+        }
+        CV_Error_(Error::StsObjectNotFound, ("layer #%d is not found", layerId));
+    } else {
+        LayerData& ld = getLayerData(layerId);
+        return getLayerInstance(ld);
+    }
 }
 
 
@@ -369,7 +417,7 @@ int Net::Impl::addLayer(const String& name, const String& type, const int& dtype
     {
         if (!DNN_DIAGNOSTICS_RUN || type != "NotImplemented")
         {
-            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
+            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" has been already added into net");
             return -1;
         }
         else
@@ -487,8 +535,8 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     for (std::set<int>::const_iterator i = ld.inputLayersId.begin(); i != ld.inputLayersId.end(); i++)
         allocateLayer(*i, layersShapes);
 
-    // bind inputs
-    if (ld.id == 0)  // DataLayer
+    // bind inputs for DataLayer
+    if (ld.id == 0 && netInputLayer->supportBackend(preferableBackend))
     {
         ninputs = netInputLayer->inputsData.size();
         ld.inputBlobsWrappers.resize(ninputs);
@@ -513,7 +561,8 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
 
     CV_Assert(layerShapesIt != layersShapes.end());
 
-    if (preferableBackend == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL_FP16 && ld.dtype == CV_32F)
+    if (preferableBackend == DNN_BACKEND_OPENCV && ld.dtype == CV_32F
+        && preferableTarget == DNN_TARGET_OPENCL_FP16)
         ld.dtype = CV_16F;
 
     std::vector<LayerPin> pinsForInternalBlobs;
@@ -535,7 +584,6 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
             inps[i] = *ld.inputBlobs[i];
         }
         layerPtr->finalize(inps, ld.outputBlobs);
-        layerPtr->preferableTarget = preferableTarget;
 #if 0
         std::cout << "\toutputs:";
         size_t noutputs = ld.outputBlobs.size();
@@ -564,20 +612,36 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
 
     CV_Assert(!layers[0].outputBlobs.empty());
     ShapesVec inputShapes;
+    TypesVec inputTypes;
     for (int i = 0; i < layers[0].outputBlobs.size(); i++)
     {
         Mat& inp = layers[0].outputBlobs[i];
         CV_Assert(inp.total());
-        if (preferableBackend == DNN_BACKEND_OPENCV &&
-            preferableTarget == DNN_TARGET_OPENCL_FP16 &&
-            layers[0].dtype == CV_32F)
+        int type = inp.type();
+        if (type == CV_32F)
         {
-            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
+            type = CV_32F;
+            if (preferableBackend == DNN_BACKEND_OPENCV &&
+                preferableTarget == DNN_TARGET_OPENCL_FP16)
+            {
+                type = CV_16F;
+                if (layers[0].dtype == CV_32F)
+                    layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
+            }
         }
         inputShapes.push_back(shape(inp));
+        inputTypes.push_back(type);
     }
+
+    for (auto& layer : layers)
+    {
+        auto& ld = layer.second;
+        Ptr<Layer> layerPtr = getLayerInstance(ld);
+        layerPtr->preferableTarget = preferableTarget;
+    }
+
     LayersShapesMap layersShapes;
-    getLayersShapes(inputShapes, layersShapes);
+    getLayersShapes(inputShapes, inputTypes, layersShapes);
 
     blobManager.reset();
     backendWrappers.clear();
@@ -615,11 +679,22 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
 }
 
 
+#define TRACE_INFERENCE 0
+
 void Net::Impl::forwardLayer(LayerData& ld)
 {
     CV_TRACE_FUNCTION();
 
     Ptr<Layer> layer = ld.layerInstance;
+
+#if TRACE_INFERENCE
+    if (layer) {
+        printf("------------------------------------------------\n");
+        printf("Running layer '%s' (%s)\n",
+               layer->name.c_str(),
+               layer->type.c_str());
+    }
+#endif
 
     if (!ld.skip)
     {
@@ -808,10 +883,6 @@ void Net::Impl::forwardLayer(LayerData& ld)
                 }
 #endif
             }
-            else if (preferableBackend == DNN_BACKEND_HALIDE)
-            {
-                forwardHalide(ld.outputBlobsWrappers, node);
-            }
             else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             {
                 CV_Assert(preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && "Inheritance internal error");
@@ -848,6 +919,29 @@ void Net::Impl::forwardLayer(LayerData& ld)
         tm.stop();
         int64 t = tm.getTimeTicks();
         layersTimings[ld.id] = (t > 0) ? t : t + 1;  // zero for skipped layers only
+#if TRACE_INFERENCE
+        size_t noutputs = ld.outputBlobs.size();
+        for (size_t i = 0; i < noutputs; i++) {
+            const Mat& out = ld.outputBlobs[i];
+            printf("Output %zu.\n", i);
+            printf("  Type: %s\n", typeToString(out.type()).c_str());
+            printf("  Shape: ");
+            if (out.empty()) {
+                printf("<empty>\n");
+            } else if (out.dims == 0) {
+                printf("<scalar>\n");
+            } else {
+                for (int j = 0; j < out.dims; j++) {
+                    printf("%s%d", (j == 0 ? "[" : " x "), out.size[j]);
+                }
+                printf("]\n");
+            }
+            //fflush(stdout);
+            //pprint(std::cout, out, 0, 3, 100, '[');
+            //std::cout.flush();
+            //printf("\n");
+        }
+#endif
     }
     else
     {
@@ -896,6 +990,12 @@ Mat Net::Impl::forward(const String& outputName)
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
+    if (mainGraph) {
+        if (!outputName.empty())
+            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
+        return forwardWithSingleOutput(outputName);
+    }
+
     String layerName = outputName;
 
     if (layerName.empty())
@@ -917,6 +1017,9 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
 {
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    if (mainGraph)
+        CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support the async inference. If you want to run the sync inference, please call forward() instead of forwardAsync(). If you want to run the async inference, please use the old dnn engine");
 
     String layerName = outputName;
 
@@ -945,6 +1048,13 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
 {
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    if (mainGraph) {
+        if (!outputName.empty())
+            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
+        forwardWithMultipleOutputs(outputBlobs, {});
+        return;
+    }
 
     String layerName = outputName;
 
@@ -986,7 +1096,12 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
-                ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
+            {
+                if (ld.outputBlobs[i].depth() == CV_32S || ld.outputBlobs[i].depth() == CV_64S)
+                    outputvec[i] = ld.outputBlobs[i];
+                else
+                    ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
+            }
         }
         else
         {
@@ -1031,6 +1146,11 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs,
         CV_Error(Error::StsBadArg, "in Net::forward(), outBlobNames cannot be empty");
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
+    if (mainGraph) {
+        forwardWithMultipleOutputs(outputBlobs, outBlobNames);
+        return;
+    }
+
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
     {
@@ -1061,6 +1181,9 @@ void Net::Impl::forward(std::vector<std::vector<Mat>>& outputBlobs,
     if (outBlobNames.empty())
         CV_Error(Error::StsBadArg, "in Net::forward(), outBlobNames cannot be empty");
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    if (mainGraph)
+        CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
@@ -1100,13 +1223,16 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
         if (!layerData.outputBlobs.empty())
         {
             ShapesVec shapes;
+            TypesVec types;
             for (int i = 0; i < layerData.outputBlobs.size(); i++)
             {
                 Mat& inp = layerData.outputBlobs[i];
                 CV_Assert(!inp.empty());
                 shapes.push_back(shape(inp));
+                types.push_back(inp.type());
             }
             layerShapes.in = shapes;
+            layerShapes.inTypes = types;
         }
         else
         {
@@ -1123,11 +1249,13 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
             if (none)
             {
                 layerShapes.out.clear();
+                layerShapes.outTypes.clear();
                 return;
             }
             else
             {
                 layerShapes.in = inputShapes;
+                layerShapes.inTypes.assign(inputShapes.size(), layerData.dtype);
             }
         }
     }
@@ -1147,7 +1275,9 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
             const int out_port = inputLayerIds[i].oid;
             CV_CheckLT(out_port, (int)it->second.out.size(), "");
             const MatShape& shape = it->second.out[out_port];
+            const MatType& type = it->second.outTypes[out_port];
             layerShapes.in.push_back(shape);
+            layerShapes.inTypes.push_back(type);
         }
     }
     const ShapesVec& is = layerShapes.in;
@@ -1159,7 +1289,11 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     bool layerSupportInPlace = false;
     try
     {
+        l->updateMemoryShapes(layerShapes.in);
         layerSupportInPlace = l->getMemoryShapes(is, requiredOutputs, os, ints);
+        l->getTypes(layerShapes.inTypes, os.size(), ints.size(), layerShapes.outTypes, layerShapes.internalTypes);
+        CV_CheckEQ(layerShapes.out.size(), layerShapes.outTypes.size(), "Number of shapes and types should be equal");
+        CV_CheckEQ(layerShapes.internal.size(), layerShapes.internalTypes.size(), "Number of shapes and types should be equal");
     }
     catch (const cv::Exception& e)
     {
@@ -1218,6 +1352,7 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
 
 void Net::Impl::getLayersShapes(
         const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         std::vector<int>& layersIds,
         std::vector<ShapesVec>& inLayersShapes,
         std::vector<ShapesVec>& outLayersShapes) /*const*/
@@ -1227,7 +1362,7 @@ void Net::Impl::getLayersShapes(
     outLayersShapes.clear();
 
     Impl::LayersShapesMap inOutShapes;
-    getLayersShapes(netInputShapes, inOutShapes);
+    getLayersShapes(netInputShapes, netInputTypes, inOutShapes);
 
     for (Impl::LayersShapesMap::const_iterator it = inOutShapes.begin();
             it != inOutShapes.end(); it++)
@@ -1240,11 +1375,13 @@ void Net::Impl::getLayersShapes(
 
 
 void Net::Impl::getLayersShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         LayersShapesMap& inOutShapes)
 {
     inOutShapes.clear();
 
     inOutShapes[0].in = netInputShapes;  // insert shape for first input layer
+    inOutShapes[0].inTypes = netInputTypes;
     for (MapIdToLayerData::const_iterator it = layers.begin();
             it != layers.end(); it++)
     {
@@ -1253,13 +1390,22 @@ void Net::Impl::getLayersShapes(const ShapesVec& netInputShapes,
 }
 
 void Net::Impl::getLayerShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         const int layerId,
         LayerShapes& shapes)
 {
-    LayersShapesMap inOutShapes;
-    inOutShapes[0].in = netInputShapes;  // insert shape for first input layer
-    getLayerShapesRecursively(layerId, inOutShapes);
-    shapes = inOutShapes[layerId];
+    if (mainGraph) {
+        std::vector<MatShape> shapeCache;
+        std::vector<int> typeCache;
+        CV_Assert(layerId == 0);
+        tryInferShapes(netInputShapes, netInputTypes, shapes, shapeCache, typeCache);
+    } else {
+        LayersShapesMap inOutShapes;
+        inOutShapes[0].in = netInputShapes;  // insert shape for first input layer
+        inOutShapes[0].inTypes = netInputTypes;
+        getLayerShapesRecursively(layerId, inOutShapes);
+        shapes = inOutShapes[layerId];
+    }
 }
 
 void Net::Impl::updateLayersShapes()
@@ -1271,6 +1417,7 @@ void Net::Impl::updateLayersShapes()
     CV_Assert(inputLayerData.layerInstance.get() == &inputLayer);
     CV_Assert(!inputLayerData.outputBlobs.empty());
     ShapesVec inputShapes;
+    TypesVec inputTypes;
     for (int i = 0; i < inputLayerData.outputBlobs.size(); i++)
     {
         Mat& inp = inputLayerData.outputBlobs[i];
@@ -1282,10 +1429,12 @@ void Net::Impl::updateLayersShapes()
             inp.create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
+        inputTypes.push_back(inp.type());
     }
     CV_LOG_DEBUG(NULL, toString(inputShapes, "Network input shapes"));
     LayersShapesMap layersShapes;
     layersShapes[0].in = inputShapes;
+    layersShapes[0].inTypes = inputTypes;
     for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); it++)
     {
         int layerId = it->first;
@@ -1306,7 +1455,9 @@ void Net::Impl::updateLayersShapes()
                     getLayerShapesRecursively(inputLayerId, layersShapes);
                 }
                 const MatShape& shape = layersShapes[inputLayerId].out[inputPin.oid];
+                const MatType& type = layersShapes[inputLayerId].outTypes[inputPin.oid];
                 layerShapes.in.push_back(shape);
+                layerShapes.inTypes.push_back(type);
             }
             getLayerInstance(layerData)->updateMemoryShapes(layerShapes.in);
         }
@@ -1398,6 +1549,13 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 {
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
+    if (mainGraph) {
+        CV_Assert(scalefactor == 1);
+        CV_Assert(mean.val[0] == 0 && mean.val[1] == 0 && mean.val[2] == 0 && mean.val[3] == 0);
+        setMainGraphInput(blob, name);
+        return;
+    }
+
     LayerPin pin;
     pin.lid = 0;
     pin.oid = resolvePinOutputName(getLayerData(pin.lid), name);
@@ -1451,6 +1609,7 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
     {
         ld.outputBlobsWrappers[pin.oid]->setHostDirty();
     }
+
     netInputLayer->scaleFactors[pin.oid] = scalefactor;
     netInputLayer->means[pin.oid] = mean;
     netWasAllocated = netWasAllocated && oldShape;
@@ -1569,7 +1728,6 @@ string Net::Impl::dump(bool forceAllocation) const
     switch (prefBackend)
     {
     case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
-    case DNN_BACKEND_HALIDE: backend = "HALIDE/"; break;
     case DNN_BACKEND_INFERENCE_ENGINE:  // fallthru
     case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019:  // fallthru
     case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "OpenVINO/"; break;
@@ -1852,7 +2010,6 @@ static void dumpTensorToString(std::ostringstream &out, const Mat &m, const int 
 #if CV_VERSION_MAJOR > 4
         case CV_64S: type = 7; break;
         // STRING: 8
-        case CV_BOOL: type = 9; break;
 #endif
         case CV_16F: type = 10; break;
         case CV_64F: type = 11; break;
@@ -2142,13 +2299,23 @@ std::vector<Ptr<Layer>> Net::Impl::getLayerInputs(int layerId) const
 std::vector<String> Net::Impl::getLayerNames() const
 {
     std::vector<String> res;
-    res.reserve(layers.size());
 
-    Impl::MapIdToLayerData::const_iterator it;
-    for (it = layers.begin(); it != layers.end(); it++)
-    {
-        if (it->second.id)  // skip Data layer
-            res.push_back(it->second.name);
+    if (mainGraph) {
+        res.reserve(totalLayers);
+        for (const Ptr<Graph>& graph: allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = graph->prog();
+            for (const Ptr<Layer>& layer: prog)
+                res.push_back(layer->name);
+        }
+    } else {
+        res.reserve(layers.size());
+
+        Impl::MapIdToLayerData::const_iterator it;
+        for (it = layers.begin(); it != layers.end(); it++)
+        {
+            if (it->second.id)  // skip Data layer
+                res.push_back(it->second.name);
+        }
     }
 
     return res;
@@ -2187,6 +2354,15 @@ std::vector<int> Net::Impl::getUnconnectedOutLayers() const
 // FIXIT drop "unconnected" API
 std::vector<String> Net::Impl::getUnconnectedOutLayersNames() /*const*/
 {
+    if (mainGraph) {
+        std::vector<std::string> outnames;
+        const std::vector<Arg>& outargs = mainGraph->outputs();
+        for (auto out: outargs) {
+            const ArgData& adata = args.at(out.idx);
+            outnames.push_back(adata.name);
+        }
+        return outnames;
+    }
     std::vector<int> ids = getUnconnectedOutLayers();
     const size_t n = ids.size();
     std::vector<String> names(n);
@@ -2198,12 +2374,13 @@ std::vector<String> Net::Impl::getUnconnectedOutLayersNames() /*const*/
 }
 
 
-int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
+int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes,
+                          const std::vector<MatType>& netInputTypes) /*const*/
 {
     int64 flops = 0;
     std::vector<int> ids;
     std::vector<std::vector<MatShape>> inShapes, outShapes;
-    getLayersShapes(netInputShapes, ids, inShapes, outShapes);
+    getLayersShapes(netInputShapes, netInputTypes, ids, inShapes, outShapes);
     CV_Assert(inShapes.size() == outShapes.size());
     CV_Assert(inShapes.size() == ids.size());
 
@@ -2218,13 +2395,14 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
 
 int64 Net::Impl::getFLOPS(
         const int layerId,
-        const std::vector<MatShape>& netInputShapes) /*const*/
+        const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes) /*const*/
 {
     Impl::MapIdToLayerData::const_iterator layer = layers.find(layerId);
     CV_Assert(layer != layers.end());
 
     LayerShapes shapes;
-    getLayerShapes(netInputShapes, layerId, shapes);
+    getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
 
     return getLayerInstance(const_cast<LayerData&>(layer->second))->getFLOPS(shapes.in, shapes.out);
 }
@@ -2233,6 +2411,7 @@ int64 Net::Impl::getFLOPS(
 void Net::Impl::getMemoryConsumption(
         const int layerId,
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) /*const*/
 {
     Impl::MapIdToLayerData::const_iterator layer = layers.find(layerId);
@@ -2247,25 +2426,22 @@ void Net::Impl::getMemoryConsumption(
     }
 
     LayerShapes shapes;
-    getLayerShapes(netInputShapes, layerId, shapes);
+    getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
     const ShapesVec& outLayerShapes = shapes.out;
 
-    // FIXIT netWasQuantized check is not enough - per layer check should be done
-    size_t elemSize = netWasQuantized ? sizeof(char) : sizeof(float);
     for (int i = 0; i < outLayerShapes.size(); i++)
-    {
-        blobs += total(outLayerShapes[i]) * elemSize;
-    }
+        blobs += total(outLayerShapes[i]) * CV_ELEM_SIZE(shapes.outTypes[i]);
 }
 
 
 void Net::Impl::getMemoryConsumption(
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         size_t& weights, size_t& blobs) /*const*/
 {
     std::vector<int> layerIds;
     std::vector<size_t> w, b;
-    getMemoryConsumption(netInputShapes, layerIds, w, b);
+    getMemoryConsumption(netInputShapes, netInputTypes, layerIds, w, b);
 
     weights = blobs = 0;
     for (int i = 0; i < layerIds.size(); i++)
@@ -2285,6 +2461,7 @@ int64 Net::Impl::getPerfProfile(std::vector<double>& timings) const
 
 void Net::Impl::getMemoryConsumption(
         const std::vector<MatShape>& netInputShapes,
+        const std::vector<MatType>& netInputTypes,
         std::vector<int>& layerIds, std::vector<size_t>& weights,
         std::vector<size_t>& blobs) /*const*/
 {
@@ -2294,7 +2471,7 @@ void Net::Impl::getMemoryConsumption(
 
     std::vector<std::vector<MatShape>> inLayerShapes, outLayerShapes;
 
-    getLayersShapes(netInputShapes, layerIds, inLayerShapes, outLayerShapes);
+    getLayersShapes(netInputShapes, netInputTypes, layerIds, inLayerShapes, outLayerShapes);
     // FIXIT netWasQuantized check is not enough - per layer check should be done
     size_t elemSize = netWasQuantized ? sizeof(char) : sizeof(float);
     for (int i = 0; i < layerIds.size(); i++)
@@ -2355,6 +2532,20 @@ void Net::Impl::enableWinograd(bool useWinograd_)
 void Net::Impl::getLayerTypes(std::vector<String>& layersTypes) const
 {
     layersTypes.clear();
+    if (mainGraph) {
+        std::set<std::string> layersTypesSet;
+        for (const Ptr<Graph>& g: allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = g->prog();
+            for (const Ptr<Layer>& layer: prog) {
+                if (!layer)
+                    continue;
+                layersTypesSet.insert(layer->type);
+            }
+        }
+        for (auto it = layersTypesSet.begin(); it != layersTypesSet.end(); ++it)
+            layersTypes.push_back(*it);
+        return;
+    }
 
     std::map<String, int> layers_type_map;
     for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)

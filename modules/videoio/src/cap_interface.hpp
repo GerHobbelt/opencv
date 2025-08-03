@@ -6,32 +6,8 @@
 #define CAP_INTERFACE_HPP
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/videoio.hpp"
-#include "opencv2/videoio/videoio_c.h"
 #include "opencv2/videoio/utils.private.hpp"
-
-//===================================================
-
-// Legacy structs
-
-struct CvCapture
-{
-    virtual ~CvCapture() {}
-    virtual double getProperty(int) const { return 0; }
-    virtual bool setProperty(int, double) { return 0; }
-    virtual bool grabFrame() { return true; }
-    virtual IplImage* retrieveFrame(int) { return 0; }
-    virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
-};
-
-struct CvVideoWriter
-{
-    virtual ~CvVideoWriter() {}
-    virtual bool writeFrame(const IplImage*) { return false; }
-    virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
-    virtual double getProperty(int) const { return 0; }
-};
 
 //===================================================
 

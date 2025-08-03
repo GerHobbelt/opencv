@@ -50,7 +50,22 @@ static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, 
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
+static void LUT8u_32u( const uchar* src, const uint* lut, uint* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
 static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_64u( const uchar* src, const uint64_t* lut, uint64_t* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
+static void LUT8u_64s( const uchar* src, const int64_t* lut, int64_t* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
@@ -75,7 +90,10 @@ typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len
 static LUTFunc lutTab[CV_DEPTH_MAX] =
 {
     (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
-    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, (LUTFunc)LUT8u_16f
+    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, (LUTFunc)LUT8u_16f,
+    // new data types in 5.x
+    /*bf16*/ (LUTFunc)LUT8u_16f, /*bool*/(LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_64u,
+    (LUTFunc)LUT8u_64s, (LUTFunc)LUT8u_32u
 };
 
 #ifdef HAVE_OPENCL
@@ -85,7 +103,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     int lcn = _lut.channels(), dcn = _src.channels(), ddepth = _lut.depth();
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
-    _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
+    _dst.createSameSize(src, CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
     int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_src, _dst)) : dcn;
 
@@ -164,7 +182,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
                ocl_LUT(_src, _lut, _dst))
 
     Mat src = _src.getMat(), lut = _lut.getMat();
-    _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
+    _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
     CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,

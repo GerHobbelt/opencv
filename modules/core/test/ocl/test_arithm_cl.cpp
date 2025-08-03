@@ -1483,7 +1483,7 @@ typedef ArithmTestBase Normalize;
 
 OCL_TEST_P(Normalize, Mat)
 {
-    static int modes[] = { CV_MINMAX, CV_L2, CV_L1, CV_C };
+    static int modes[] = { NORM_MINMAX, NORM_L2, NORM_L1, NORM_INF };
 
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -1694,9 +1694,9 @@ OCL_TEST_P(ConvertFp16, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         generateTestData();
-
-        OCL_OFF(cv::convertFp16(src_roi, dst_roi));
-        OCL_ON(cv::convertFp16(usrc_roi, udst_roi));
+        int cvt_code = src_roi.depth() == CV_32F ? CV_16F : CV_32F;
+        OCL_OFF(src_roi.convertTo(dst_roi, cvt_code));
+        OCL_ON(usrc_roi.convertTo(udst_roi, cvt_code));
 
         Near(1);
     }
@@ -1721,8 +1721,36 @@ OCL_TEST_P(ScaleAdd, Mat)
 
 //////////////////////////////// PatchNans ////////////////////////////////////////////////
 
-PARAM_TEST_CASE(PatchNaNs, Channels, bool)
+template<typename _Tp>
+_Tp randomNan(RNG& rng);
+
+template<>
+float randomNan(RNG& rng)
 {
+    uint32_t r = rng.next();
+    Cv32suf v;
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
+    return v.f;
+}
+
+template<>
+double randomNan(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
+    return v.f;
+}
+
+
+PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
+{
+    int ftype;
     int cn;
     bool use_roi;
     double value;
@@ -1731,13 +1759,14 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
 
     virtual void SetUp()
     {
-        cn = GET_PARAM(0);
-        use_roi = GET_PARAM(1);
+        ftype = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
     }
 
     void generateTestData()
     {
-        const int type = CV_MAKE_TYPE(CV_32F, cn);
+        const int type = CV_MAKE_TYPE(ftype, cn);
 
         Size roiSize = randomSize(1, 10);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
@@ -1747,9 +1776,19 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
         roiSize.width *= cn;
         for (int y = 0; y < roiSize.height; ++y)
         {
-            float * const ptr = src_roi.ptr<float>(y);
+            float  *const ptrf = src_roi.ptr<float >(y);
+            double *const ptrd = src_roi.ptr<double>(y);
             for (int x = 0; x < roiSize.width; ++x)
-                ptr[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptr[x];
+            {
+                if (ftype == CV_32F)
+                {
+                    ptrf[x] = randomInt(-1, 1) == 0 ? randomNan<float >(rng) : ptrf[x];
+                }
+                else if (ftype == CV_64F)
+                {
+                    ptrd[x] = randomInt(-1, 1) == 0 ? randomNan<double>(rng) : ptrd[x];
+                }
+            }
         }
 
         value = randomDouble(-100, 100);
@@ -1775,6 +1814,84 @@ OCL_TEST_P(PatchNaNs, Mat)
         Near();
     }
 }
+
+//////////////////////////////// finiteMask /////////////////////////////////////////////
+
+
+PARAM_TEST_CASE(FiniteMask, MatDepth, Channels, bool)
+{
+    int ftype;
+    int cn;
+    bool use_roi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(mask);
+
+    virtual void SetUp()
+    {
+        ftype = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+    }
+
+    void generateTestData()
+    {
+        const int type = CV_MAKE_TYPE(ftype, cn);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -40, 40);
+
+        randomSubMat(mask, mask_roi, roiSize, srcBorder, CV_8UC1, 5, 16);
+
+        // generating NaNs
+        const softfloat  fpinf = softfloat ::inf();
+        const softfloat  fninf = softfloat ::inf().setSign(true);
+        const softdouble dpinf = softdouble::inf();
+        const softdouble dninf = softdouble::inf().setSign(true);
+        for (int y = 0; y < roiSize.height; ++y)
+        {
+            float  *const ptrf = src_roi.ptr<float >(y);
+            double *const ptrd = src_roi.ptr<double>(y);
+            for (int x = 0; x < roiSize.width * cn; ++x)
+            {
+                int rem = randomInt(0, 10);
+                if (ftype == CV_32F)
+                {
+                    ptrf[x] = rem <  4 ? randomNan<float >(rng) :
+                              rem == 5 ? (float )((x + y)%2 ? fpinf : fninf) : ptrf[x];
+                }
+                else if (ftype == CV_64F)
+                {
+                    ptrd[x] = rem <  4 ? randomNan<double>(rng) :
+                              rem == 5 ? (double)((x + y)%2 ? dpinf : dninf) : ptrd[x];
+                }
+            }
+        }
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(mask);
+    }
+
+    void Near()
+    {
+        OCL_EXPECT_MATS_NEAR(mask, 0);
+    }
+};
+
+OCL_TEST_P(FiniteMask, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::finiteMask(src_roi, mask_roi));
+        OCL_ON(cv::finiteMask(usrc_roi, umask_roi));
+
+        Near();
+    }
+}
+
 
 //////////////////////////////// Psnr ////////////////////////////////////////////////
 
@@ -1943,14 +2060,15 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F,
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx_Mask, Combine(OCL_ALL_DEPTHS, ::testing::Values(Channels(1)), Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ALL_DEPTHS_16F, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ABSOLUTELY_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Normalize, Combine(OCL_ALL_DEPTHS, Values(Channels(1)), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertFp16, Combine(OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, FiniteMask, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, UMatDot, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 

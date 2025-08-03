@@ -209,7 +209,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     // Test input layer size
     std::vector<MatShape> inLayerShapes;
     std::vector<MatShape> outLayerShapes;
-    net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
     ASSERT_FALSE(inLayerShapes.empty());
     ASSERT_EQ(inLayerShapes[0].size(), 4);
     ASSERT_EQ(inLayerShapes[0][0], 1);
@@ -230,7 +230,14 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     ASSERT_TRUE(!sample.empty());
 
     net.setInput(blobFromImage(sample, 1.0f, Size(227, 227), Scalar(), false), "data");
-    Mat out = net.forward("prob");
+
+    Mat out;
+    // BUG: https://github.com/opencv/opencv/issues/26349
+    if (net.getMainGraph())
+        out = net.forward();
+    else
+        out = net.forward("prob");
+
     Mat ref = blobFromNPY(_tf("caffe_alexnet_prob.npy"));
     normAssert(ref, out, "", l1, lInf);
 }
@@ -256,10 +263,16 @@ TEST(Reproducibility_FCN, Accuracy)
 
     std::vector<int> layerIds;
     std::vector<size_t> weights, blobs;
-    net.getMemoryConsumption(shape(1,3,227,227), layerIds, weights, blobs);
+    net.getMemoryConsumption(shape(1,3,227,227), CV_32F, layerIds, weights, blobs);
 
     net.setInput(blobFromImage(sample, 1.0f, Size(500, 500), Scalar(), false), "data");
-    Mat out = net.forward("score");
+
+    Mat out;
+    // BUG: https://github.com/opencv/opencv/issues/26349
+    if (net.getMainGraph())
+        out = net.forward();
+    else
+        out = net.forward("score");
 
     Mat refData = imread(_tf("caffe_fcn8s_prob.png"), IMREAD_ANYDEPTH);
     int shape[] = {1, 21, 500, 500};
@@ -292,7 +305,13 @@ TEST(Reproducibility_SSD, Accuracy)
 
     Mat in_blob = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     net.setInput(in_blob, "data");
-    Mat out = net.forward("detection_out");
+
+    // BUG: https://github.com/opencv/opencv/issues/26349
+    Mat out;
+    if(net.getMainGraph())
+        out = net.forward();
+    else
+        out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
     normAssertDetections(ref, out, "", 0.06);
@@ -495,7 +514,13 @@ TEST(Reproducibility_GoogLeNet_fp16, Accuracy)
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
     net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
-    Mat out = net.forward("prob");
+
+    // BUG: https://github.com/opencv/opencv/issues/26349
+    Mat out;
+    if(net.getMainGraph())
+        out = net.forward();
+    else
+        out = net.forward("prob");
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
     normAssert(out, ref, "", l1, lInf);

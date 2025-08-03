@@ -415,7 +415,15 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
     try
     {
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
+        if (instance->setProperty(prop, val))
+        {
+            return CV_ERROR_OK;
+        }
+        else
+        {
+            CV_LOG_INFO(NULL, "FFmpeg: Unsupported property or value: prop=" << prop << " val=" << val);
+            return CV_ERROR_FAIL;
+        }
     }
     catch (const std::exception& e)
     {
@@ -567,8 +575,14 @@ CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT 
         *val = instance->getProperty(prop);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -581,13 +595,26 @@ CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter handle, int prop, double 
     try
     {
         CvVideoWriter_FFMPEG_proxy* instance = (CvVideoWriter_FFMPEG_proxy*)handle;
-        return (instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL);
+        if (instance->setProperty(prop, val))
+        {
+            return CV_ERROR_OK;
+        }
+        else
+        {
+            CV_LOG_INFO(NULL, "FFmpeg: Unsupported property or value: prop=" << prop << " val=" << val);
+            return CV_ERROR_FAIL;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
     }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
-    return CV_ERROR_FAIL;
 }
 
 static

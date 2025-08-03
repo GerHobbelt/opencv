@@ -55,9 +55,9 @@ CV__DNN_INLINE_NS_BEGIN
 
   Classes listed here, in fact, provides C++ API for creating instances of built-in layers.
   In addition to this way of layers instantiation, there is a more common factory API (see @ref dnnLayerFactory), it allows to create layers dynamically (by name) and register new ones.
-  You can use both API, but factory API is less convenient for native C++ programming and basically designed for use inside importers (see @ref readNetFromCaffe(), @ref readNetFromTorch(), @ref readNetFromTensorflow()).
+  You can use both API, but factory API is less convenient for native C++ programming and basically designed for use inside importers (see @ref readNetFromCaffe(), @ref readNetFromTensorflow()).
 
-  Built-in layers partially reproduce functionality of corresponding Caffe and Torch7 layers.
+  Built-in layers partially reproduce functionality of corresponding ONNX, TensorFlow and Caffe layers.
   In particular, the following layers and Caffe importer were tested to reproduce <a href="http://caffe.berkeleyvision.org/tutorial/layers.html">Caffe</a> functionality:
   - Convolution
   - Deconvolution
@@ -84,6 +84,15 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Layer> create(const LayerParams &params);
+    };
+
+    /**
+     * Constant layer produces the same data blob at an every forward pass.
+     */
+    class CV_EXPORTS ConstantOfShapeLayer : public Layer
+    {
+    public:
+        static Ptr<ConstantOfShapeLayer> create(const LayerParams &params);
     };
 
     //! LSTM recurrent layer
@@ -163,6 +172,13 @@ CV__DNN_INLINE_NS_BEGIN
 
         int inputNameToIndex(String inputName) CV_OVERRIDE;
         int outputNameToIndex(const String& outputName) CV_OVERRIDE;
+    };
+
+    class CV_EXPORTS LSTM2Layer : public Layer
+    {
+    public:
+        /** Creates instance of LSTM layer */
+        static Ptr<LSTM2Layer> create(const LayerParams& params);
     };
 
     /** @brief GRU recurrent one-layer
@@ -274,6 +290,23 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<EinsumLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS HardmaxLayer : public Layer
+    {
+    public:
+        static Ptr<HardmaxLayer> create(const LayerParams& params);
+    };
+
+    /** @brief GatherND layer
+     *
+     * GatherND takes two inputs data and indices of rank r >= 1 and q >= 1 respectively,
+     * and an optional attribute batch_dims. It gathers slices from data into an output tensor.
+     */
+    class CV_EXPORTS GatherNDLayer : public Layer
+    {
+    public:
+        static Ptr<GatherNDLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
@@ -341,6 +374,15 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<GatherLayer> create(const LayerParams& params);
+    };
+
+    // ONNX-compliant implementation of Gather
+    class CV_EXPORTS Gather2Layer : public Layer
+    {
+    public:
+        int axis;
+
+        static Ptr<Gather2Layer> create(const LayerParams& params);
     };
 
     /** @brief GatherElements layer
@@ -445,6 +487,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MVNLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ShapeLayer : public Layer
+    {
+    public:
+        int start, end;
+
+        static Ptr<ShapeLayer> create(const LayerParams& params);
+    };
+
     /* Reshaping */
 
     class CV_EXPORTS ReshapeLayer : public Layer
@@ -456,10 +506,40 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ReshapeLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS Reshape2Layer : public Layer
+    {
+    public:
+        MatShape newShapeDesc;
+
+        static Ptr<Reshape2Layer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:
         static Ptr<FlattenLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SqueezeLayer : public Layer
+    {
+    public:
+        std::vector<int> axes;
+
+        static Ptr<SqueezeLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS UnsqueezeLayer : public Layer
+    {
+    public:
+        std::vector<int> axes;
+
+        static Ptr<UnsqueezeLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS RangeLayer : public Layer
+    {
+    public:
+        static Ptr<RangeLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS QuantizeLayer : public Layer
@@ -470,6 +550,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<QuantizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS QuantizeLinearLayer : public Layer
+    {
+    public:
+        int axis;
+        int block_size;
+        int output_dtype;
+        bool saturate;
+
+        static Ptr<QuantizeLinearLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS DequantizeLayer : public Layer
     {
     public:
@@ -478,11 +569,32 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DequantizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS DequantizeLinearLayer : public Layer
+    {
+    public:
+        int axis;
+        int block_size;
+
+        static Ptr<DequantizeLinearLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS RequantizeLayer : public Layer
     {
     public:
         float scale, shift;
         static Ptr<RequantizeLayer> create(const LayerParams &params);
+    };
+
+    // Forward declaration for computational Graph used by IfLayer
+    class Graph;
+
+    class CV_EXPORTS IfLayer : public Layer
+    {
+    public:
+        virtual int branch(InputArray arr) const = 0;
+
+        /** Factory: creates an IfLayer implementation. */
+        static Ptr<IfLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS ConcatLayer : public Layer
@@ -501,12 +613,30 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ConcatLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS Concat2Layer : public Layer
+    {
+    public:
+        int axis;
+
+        static Ptr<Concat2Layer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS SplitLayer : public Layer
     {
     public:
         int outputsCount; //!< Number of copies that will be produced (is ignored when negative).
 
         static Ptr<SplitLayer> create(const LayerParams &params);
+    };
+
+    // ONNX-compliant version of Split
+    class CV_EXPORTS Split2Layer : public Layer
+    {
+    public:
+        int axis;
+        std::vector<int> split;
+
+        static Ptr<Split2Layer> create(const LayerParams& params);
     };
 
     /**
@@ -550,10 +680,29 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SliceLayer> create(const LayerParams &params);
     };
 
+    // ONNX-compliant version of Slice
+    class CV_EXPORTS Slice2Layer : public Layer
+    {
+    public:
+        std::vector<int> starts, ends, axes;
+
+        static Ptr<Slice2Layer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS PermuteLayer : public Layer
     {
     public:
         static Ptr<PermuteLayer> create(const LayerParams& params);
+    };
+
+    // ONNX-compliant version of Transpose
+    // (previously implemented in PermuteLayer)
+    class CV_EXPORTS TransposeLayer : public Layer
+    {
+    public:
+        std::vector<int> perm;
+
+        static Ptr<TransposeLayer> create(const LayerParams& params);
     };
 
     /**
@@ -597,6 +746,12 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<PaddingLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS Pad2Layer : public Layer
+    {
+    public:
+        static Ptr<Pad2Layer> create(const LayerParams& params);
     };
 
     /* Activations */
@@ -723,7 +878,7 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SqrtLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS NotLayer : public ActivationLayer
+    class CV_EXPORTS NotLayer : public Layer
     {
     public:
         static Ptr<NotLayer> create(const LayerParams &params);
@@ -1140,6 +1295,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<TileLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS Tile2Layer : public Layer
+    {
+    public:
+        static Ptr<Tile2Layer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS LayerNormLayer : public Layer
     {
     public:
@@ -1171,6 +1332,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ExpandLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS Expand2Layer : public Layer
+    {
+    public:
+        static Ptr<Expand2Layer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS InstanceNormLayer : public Layer {
     public:
         float epsilon;
@@ -1188,6 +1355,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GroupNormLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CastLayer : public Layer {
+    public:
+        static Ptr<CastLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS DepthToSpaceLayer : public Layer {
     public:
         static Ptr<DepthToSpaceLayer> create(const LayerParams &params);
@@ -1202,6 +1374,18 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<TopKLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS TriluLayer : public Layer
+    {
+    public:
+        static Ptr<TriluLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS TopK2Layer : public Layer
+    {
+    public:
+        static Ptr<TopK2Layer> create(const LayerParams &params);
     };
 
 //! @}

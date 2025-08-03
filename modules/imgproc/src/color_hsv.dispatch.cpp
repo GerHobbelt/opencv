@@ -21,26 +21,26 @@ namespace cv {
 #if NEED_IPP
 
 #if !IPP_DISABLE_RGB_HSV
-static ippiGeneralFunc ippiRGB2HSVTab[] =
+static ippiGeneralFunc ippiRGB2HSVTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToHSV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHSV_16u_C3R, 0,
     0, 0, 0, 0
 };
 #endif
 
-static ippiGeneralFunc ippiHSV2RGBTab[] =
+static ippiGeneralFunc ippiHSV2RGBTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiHSVToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiHSVToRGB_16u_C3R, 0,
     0, 0, 0, 0
 };
 
-static ippiGeneralFunc ippiRGB2HLSTab[] =
+static ippiGeneralFunc ippiRGB2HLSTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiRGBToHLS_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHLS_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiRGBToHLS_32f_C3R, 0, 0
 };
 
-static ippiGeneralFunc ippiHLS2RGBTab[] =
+static ippiGeneralFunc ippiHLS2RGBTab[CV_DEPTH_MAX] =
 {
     (ippiGeneralFunc)ippiHLSToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiHLSToRGB_16u_C3R, 0,
     0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0
@@ -260,7 +260,8 @@ bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full 
 
 static UMat init_sdiv_table()
 {
-    std::vector<int> sdiv(256);
+    cv::Mat sdiv_mat(1, 256, CV_32SC1);
+    int* sdiv = sdiv_mat.ptr<int>();
 
     const int hsv_shift = 12;
     const int v = 255 << hsv_shift;
@@ -269,12 +270,15 @@ static UMat init_sdiv_table()
     for(int i = 1; i < 256; i++ )
         sdiv[i] = saturate_cast<int>(v/(1.*i));
 
-    return UMat(sdiv, true);
+    cv::UMat result;
+    sdiv_mat.copyTo(result);
+    return result;
 }
 
 static UMat init_hdiv_table(int hrange)
 {
-    std::vector<int> hdiv(256);
+    cv::Mat hdiv_mat(1, 256, CV_32SC1);
+    int* hdiv = hdiv_mat.ptr<int>();
 
     const int hsv_shift = 12;
     const int v = hrange << hsv_shift;
@@ -283,7 +287,10 @@ static UMat init_hdiv_table(int hrange)
     for (int i = 1; i < 256; i++ )
         hdiv[i] = saturate_cast<int>(v/(6.*i));
 
-    return UMat(hdiv, true);
+    cv::UMat result;
+    hdiv_mat.copyTo(result);
+    return result;
+
 }
 
 bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full )

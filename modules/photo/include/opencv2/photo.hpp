@@ -45,6 +45,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/photo/ccm.hpp"
 
 /**
 @defgroup photo Computational Photography
@@ -762,6 +763,9 @@ enum SeamlessCloneFlags
 
 /** @example samples/cpp/tutorial_code/photo/seamless_cloning/cloning_demo.cpp
 An example using seamlessClone function
+*/
+/** @example samples/cpp/snippets/cloning_demo.cpp
+An example using illuminationChange, colorChange, seamlessClone, textureFlattening functions
 */
 /** @brief Performs seamless cloning to blend a region from a source image into a destination image.
 This function is designed for local image editing, allowing changes restricted to a region

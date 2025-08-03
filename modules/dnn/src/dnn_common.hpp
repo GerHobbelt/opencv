@@ -46,10 +46,12 @@ bool getParam_DNN_CHECK_NAN_INF_RAISE_ERROR();
 inline namespace detail {
 
 typedef std::vector<MatShape> ShapesVec;
+typedef std::vector<MatType> TypesVec;
 
 struct LayerShapes
 {
     ShapesVec in, out, internal;
+    TypesVec inTypes, outTypes, internalTypes;
     // No guarantees that layer which support in-place computations
     // will be computed in-place (input.data_ptr == output.data_ptr).
     // If layer said that it could work in-place and layers after it
@@ -170,6 +172,11 @@ static inline Scalar_<double> broadcastRealScalar(const Scalar_<double>& _scale)
     return scale;
 }
 
+static inline void prindent(std::ostream& strm, int indent)
+{
+    for (int i = 0; i < indent; i++)
+        strm << ' ';
+}
 
 CV__DNN_INLINE_NS_END
 

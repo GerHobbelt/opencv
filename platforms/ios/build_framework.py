@@ -44,7 +44,7 @@ else:
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
 from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting, get_xcode_version, get_cmake_version
 
-IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
+IPHONEOS_DEPLOYMENT_TARGET='11.0'  # default, can be changed via command line options or environment variable
 
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 
@@ -543,8 +543,8 @@ if __name__ == "__main__":
     parser.add_argument('--embed_bitcode', default=False, dest='embed_bitcode', action='store_true', help='disable bitcode (enabled by default)')
     parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')
     parser.add_argument('--build_only_specified_archs', default=False, action='store_true', help='if enabled, only directly specified archs are built and defaults are ignored')
-    parser.add_argument('--iphoneos_archs', default=None, help='select iPhoneOS target ARCHS. Default is "armv7,armv7s,arm64"')
-    parser.add_argument('--iphonesimulator_archs', default=None, help='select iPhoneSimulator target ARCHS. Default is "i386,x86_64"')
+    parser.add_argument('--iphoneos_archs', default=None, help='select iPhoneOS target ARCHS. Default is "arm64"')
+    parser.add_argument('--iphonesimulator_archs', default=None, help='select iPhoneSimulator target ARCHS. Default is "x86_64"')
     parser.add_argument('--enable_nonfree', default=False, dest='enablenonfree', action='store_true', help='enable non-free modules (disabled by default)')
     parser.add_argument('--debug', default=False, dest='debug', action='store_true', help='Build "Debug" binaries (disabled by default)')
     parser.add_argument('--debug_info', default=False, dest='debug_info', action='store_true', help='Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)')
@@ -566,7 +566,7 @@ if __name__ == "__main__":
         iphoneos_archs = args.iphoneos_archs.split(',')
     elif not args.build_only_specified_archs:
         # Supply defaults
-        iphoneos_archs = ["armv7", "armv7s", "arm64"]
+        iphoneos_archs = ["arm64"]
     print('Using iPhoneOS ARCHS=' + str(iphoneos_archs))
 
     iphonesimulator_archs = None
@@ -574,7 +574,7 @@ if __name__ == "__main__":
         iphonesimulator_archs = args.iphonesimulator_archs.split(',')
     elif not args.build_only_specified_archs:
         # Supply defaults
-        iphonesimulator_archs = ["i386", "x86_64"]
+        iphonesimulator_archs = ["x86_64"]
     print('Using iPhoneSimulator ARCHS=' + str(iphonesimulator_archs))
 
     # Prevent the build from happening if the same architecture is specified for multiple platforms.
