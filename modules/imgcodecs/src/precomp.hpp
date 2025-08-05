@@ -54,6 +54,7 @@
 #include <ctype.h>
 
 #if defined _WIN32 || defined WINCE
+    #include <winsock2.h>  // [GHo] fixes issues elsewhere, e.g. OpenImageIO, when this header file is loaded before another, which loads winsock2.h: you'll get clashes in preprocessor defines in ws2def.h vs. winsock2.h  :-((
     #include <windows.h>
     #undef small
     #undef min
