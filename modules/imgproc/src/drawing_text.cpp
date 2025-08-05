@@ -7,7 +7,7 @@
 #include <list>
 #include <tuple>
 #include <unordered_map>
-#include "zlib.h"
+#include "zlib-ng.h"
 #include "stb_truetype.hpp"
 
 namespace cv

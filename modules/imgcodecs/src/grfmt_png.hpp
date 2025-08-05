@@ -224,8 +224,8 @@ private:
     AutoBuffer<unsigned char> up_row;
     AutoBuffer<unsigned char> avg_row;
     AutoBuffer<unsigned char> paeth_row;
-    z_stream       op_zstream1;
-    z_stream       op_zstream2;
+    zng_stream       op_zstream1;
+    zng_stream       op_zstream2;
     OP             op[6];
     rgb            palette[256];
     unsigned char  trns[256];

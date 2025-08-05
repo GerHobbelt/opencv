@@ -1146,25 +1146,25 @@ size_t PngEncoder::writeToStreamOrBuffer(void const* buffer, size_t num_bytes, F
 void PngEncoder::writeChunk(FILE* f, const char* name, unsigned char* data, uint32_t length)
 {
     unsigned char buf[4];
-    uint32_t crc = crc32(0, Z_NULL, 0);
+    uint32_t crc = zng_crc32(0, Z_NULL, 0);
 
     png_save_uint_32(buf, length);
     writeToStreamOrBuffer(buf, 4, f);
     writeToStreamOrBuffer(name, 4, f);
-    crc = crc32(crc, (const Bytef*)name, 4);
+    crc = zng_crc32(crc, (const Bytef*)name, 4);
 
     if (memcmp(name, "fdAT", 4) == 0)
     {
         png_save_uint_32(buf, next_seq_num++);
         writeToStreamOrBuffer(buf, 4, f);
-        crc = crc32(crc, buf, 4);
+        crc = zng_crc32(crc, buf, 4);
         length -= 4;
     }
 
     if (data != NULL && length > 0)
     {
         writeToStreamOrBuffer(data, length, f);
-        crc = crc32(crc, data, length);
+        crc = zng_crc32(crc, data, length);
     }
 
     png_save_uint_32(buf, crc);
@@ -1325,11 +1325,11 @@ void PngEncoder::processRect(unsigned char* row, int rowbytes, int bpp, int stri
             // deflate_rect_op()
             op_zstream1.next_in = row_buf.data();
             op_zstream1.avail_in = rowbytes + 1;
-            deflate(&op_zstream1, Z_NO_FLUSH);
+            zng_deflate(&op_zstream1, Z_NO_FLUSH);
 
             op_zstream2.next_in = best_row;
             op_zstream2.avail_in = rowbytes + 1;
-            deflate(&op_zstream2, Z_NO_FLUSH);
+            zng_deflate(&op_zstream2, Z_NO_FLUSH);
         }
         else
         {
@@ -1358,8 +1358,8 @@ void PngEncoder::deflateRectOp(unsigned char* pdata, int x, int y, int w, int h,
 
     processRect(row, rowbytes, bpp, stride, h, NULL);
 
-    deflate(&op_zstream1, Z_FINISH);
-    deflate(&op_zstream2, Z_FINISH);
+    zng_deflate(&op_zstream1, Z_FINISH);
+    zng_deflate(&op_zstream2, Z_FINISH);
     op[n].p = pdata;
 
     if (op_zstream1.total_out < op_zstream2.total_out)
@@ -1377,8 +1377,8 @@ void PngEncoder::deflateRectOp(unsigned char* pdata, int x, int y, int w, int h,
     op[n].w = w;
     op[n].h = h;
     op[n].valid = 1;
-    deflateReset(&op_zstream1);
-    deflateReset(&op_zstream2);
+    zng_deflateReset(&op_zstream1);
+    zng_deflateReset(&op_zstream2);
 }
 
 bool PngEncoder::getRect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n)
@@ -1563,20 +1563,20 @@ void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, i
     else
         processRect(row, rowbytes, bpp, stride, op[n].h, rows);
 
-    z_stream fin_zstream;
+    zng_stream fin_zstream;
     fin_zstream.data_type = Z_BINARY;
     fin_zstream.zalloc = Z_NULL;
     fin_zstream.zfree = Z_NULL;
     fin_zstream.opaque = Z_NULL;
-    deflateInit2(&fin_zstream, m_compression_level, 8, 15, 8, op[n].filters ? Z_FILTERED : m_compression_strategy);
+    zng_deflateInit2(&fin_zstream, m_compression_level, 8, 15, 8, op[n].filters ? Z_FILTERED : m_compression_strategy);
 
     fin_zstream.next_out = zbuf;
     fin_zstream.avail_out = zbuf_size;
     fin_zstream.next_in = rows;
     fin_zstream.avail_in = op[n].h * (rowbytes + 1);
-    deflate(&fin_zstream, Z_FINISH);
+    zng_deflate(&fin_zstream, Z_FINISH);
     *zsize = fin_zstream.total_out;
-    deflateEnd(&fin_zstream);
+    zng_deflateEnd(&fin_zstream);
 }
 
 bool PngEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
@@ -1720,13 +1720,13 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         op_zstream1.zalloc = Z_NULL;
         op_zstream1.zfree = Z_NULL;
         op_zstream1.opaque = Z_NULL;
-        deflateInit2(&op_zstream1, m_compression_level, 8, 15, 8, m_compression_strategy);
+        zng_deflateInit2(&op_zstream1, m_compression_level, 8, 15, 8, m_compression_strategy);
 
         op_zstream2.data_type = Z_BINARY;
         op_zstream2.zalloc = Z_NULL;
         op_zstream2.zfree = Z_NULL;
         op_zstream2.opaque = Z_NULL;
-        deflateInit2(&op_zstream2, m_compression_level, 8, 15, 8, Z_FILTERED);
+        zng_deflateInit2(&op_zstream2, m_compression_level, 8, 15, 8, Z_FILTERED);
 
         idat_size = (rowbytes + 1) * height;
         zbuf_size = idat_size + ((idat_size + 7) >> 3) + ((idat_size + 63) >> 6) + 11;
@@ -1883,8 +1883,8 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (m_f)
             fclose(m_f);
 
-        deflateEnd(&op_zstream1);
-        deflateEnd(&op_zstream2);
+        zng_deflateEnd(&op_zstream1);
+        zng_deflateEnd(&op_zstream2);
     }
 
     return true;
