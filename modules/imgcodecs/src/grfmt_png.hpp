@@ -48,7 +48,7 @@
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
 #include <png.h>
-#include <zlib.h>
+#include <zlib-ng.h>
 #include <vector>
 
 namespace cv
