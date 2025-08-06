@@ -10,13 +10,19 @@
 #include "zlib-ng.h"
 #include "stb_truetype.hpp"
 
+#if !defined(BUILD_MONOLITHIC)
+#define HAVE_BUILTIN_FONTS
+#endif
+
 namespace cv
 {
 
+#ifdef HAVE_BUILTIN_FONTS
 #include "builtin_font_sans.h"
 #include "builtin_font_italic.h"
 #ifdef HAVE_UNIFONT
 #include "builtin_font_uni.h"
+#endif
 #endif
 
 typedef stbtt_fontinfo font_t;
@@ -94,18 +100,23 @@ typedef struct BuiltinFontData
 
 enum
 {
-    BUILTIN_FONTS_NUM = 2
+    BUILTIN_FONTS_NUM = 0
+#ifdef HAVE_BUILTIN_FONTS
+        +2
 #ifdef HAVE_UNIFONT
         +1
+#endif
 #endif
 };
 
 static BuiltinFontData builtinFontData[BUILTIN_FONTS_NUM+1] =
 {
+#ifdef HAVE_BUILTIN_FONTS
     {OcvBuiltinFontSans, sizeof(OcvBuiltinFontSans), "sans", 1.0, false},
     {OcvBuiltinFontItalic, sizeof(OcvBuiltinFontItalic), "italic", 1.0, true},
 #ifdef HAVE_UNIFONT
     {OcvBuiltinFontUni, sizeof(OcvBuiltinFontUni), "uni", 1.0, true},
+#endif
 #endif
     {0, 0, 0, 0.0, false}
 };
@@ -116,17 +127,17 @@ static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
     std::swap(dst, newdst); // make sure we deallocated all the unused space that would be wasted otherwise
     for(int attempts = 0; attempts < 5; attempts++)
     {
-        z_stream strm = {};
+        zng_stream strm = {};
         strm.total_in = strm.avail_in  = (uInt)srclen;
         strm.total_out = strm.avail_out = (uInt)dst.size();
         strm.next_in = (Bytef*)src;
         strm.next_out = (Bytef*)&dst[0];
 
-        int err = inflateInit2(&strm, (15 + 32)); //15 window bits, and the +32 tells zlib to to detect if using gzip or zlib
+        int err = zng_inflateInit2(&strm, (15 + 32)); //15 window bits, and the +32 tells zlib to to detect if using gzip or zlib
         if (err == Z_OK)
         {
-            err = inflate(&strm, Z_FINISH);
-            inflateEnd(&strm);
+            err = zng_inflate(&strm, Z_FINISH);
+            zng_inflateEnd(&strm);
             if (err == Z_STREAM_END)
             {
                 dst.resize((size_t)strm.total_out);
@@ -137,7 +148,7 @@ static bool inflate(const void* src, size_t srclen, std::vector<uchar>& dst)
         }
         else
         {
-            inflateEnd(&strm);
+            zng_inflateEnd(&strm);
             return false;
         }
     }
@@ -402,8 +413,10 @@ public:
     ~FontRenderEngine()
     {
         hb_buffer_destroy(hb_buf);
+#ifdef HAVE_BUILTIN_FONTS
         for(int i = 0; i < BUILTIN_FONTS_NUM; i++)
             builtin_ffaces[i] = FontFace();
+#endif
         if (glyph_buf)
             free(glyph_buf);
         glyph_buf = 0;
@@ -437,8 +450,12 @@ public:
     FontFace& getStdFontFace(int i)
     {
         CV_Assert(i >= 0 && i < BUILTIN_FONTS_NUM);
+#ifdef HAVE_BUILTIN_FONTS
         builtin_ffaces[i]->setStd(builtinFontData[i]);
         return builtin_ffaces[i];
+#else
+        throw std::runtime_error("assert should already have fired!");
+#endif
     }
 
     Point putText_( Mat& img, Size imgsize, const String& str_, Point org,
@@ -447,8 +464,10 @@ public:
                     Rect* bbox );
 
 protected:
+#ifdef HAVE_BUILTIN_FONTS
     FontFace builtin_ffaces[BUILTIN_FONTS_NUM];
     bool builtin_ffaces_initialized;
+#endif
 
     hb_unicode_funcs_t* hb_uni_funcs;
 
@@ -929,6 +948,7 @@ Point FontRenderEngine::putText_(
     saved_weights[BUILTIN_FONTS_NUM] = stbtt_GetWeight(fontface->ttface);
     fontface->setParams(size, weight);
 
+#ifdef HAVE_BUILTIN_FONTS
     for(j = 0; j < BUILTIN_FONTS_NUM; j++)
     {
         FontFace& fface = builtin_ffaces[j];
@@ -941,6 +961,7 @@ Point FontRenderEngine::putText_(
         }
     }
     builtin_ffaces_initialized = true;
+#endif
 
     if(alignment == PUT_TEXT_ALIGN_RIGHT)
         std::swap(x0, x1);
@@ -1091,7 +1112,11 @@ Point FontRenderEngine::putText_(
             font_t* ttface = 0;
             for(j = -1; j < BUILTIN_FONTS_NUM; j++)
             {
+#ifdef HAVE_BUILTIN_FONTS
                 ttface = j < 0 ? ttface0 : builtin_ffaces[j]->ttface;
+#else
+                ttface = ttface0;
+#endif
                 glyph_index = stbtt_FindGlyphIndex(ttface, c);
                 if(glyph_index != 0)
                     break;
@@ -1206,7 +1231,11 @@ Point FontRenderEngine::putText_(
         {
             const TextSegment& seg = segments[j];
             int fontidx = seg.fontidx;
+#ifdef HAVE_BUILTIN_FONTS
             FontFace& fface = fontidx < 0 ? fontface : builtin_ffaces[fontidx];
+#else
+            FontFace& fface = fontface;
+#endif
             font_t* ttface = fface->ttface;
             hb_font_t* hb_font = fface->hb_font;
             hb_buffer_reset(hb_buf);
@@ -1236,11 +1265,16 @@ Point FontRenderEngine::putText_(
             int q_glyph_index = stbtt_FindGlyphIndex(ttface0, '?');
             for(j = -1; j < BUILTIN_FONTS_NUM; j++)
             {
+#ifdef HAVE_BUILTIN_FONTS
                 if (j >= 0)
                 {
                     ttface = builtin_ffaces[j]->ttface;
                     scale = builtin_ffaces[j]->scale;
                 }
+#else
+                ttface = ttface0;
+                scale = scale0;
+#endif
                 int glyph_index = ttface ? stbtt_FindGlyphIndex(ttface, c) : 0;
                 if(glyph_index == 0)
                 {
@@ -1404,7 +1438,11 @@ Point FontRenderEngine::putText_(
     if (weight != 0)
         for(j = 0; j <= BUILTIN_FONTS_NUM; j++)
         {
+#ifdef HAVE_BUILTIN_FONTS
             font_t* ttface = (j < BUILTIN_FONTS_NUM ? builtin_ffaces[j] : fontface)->ttface;
+#else
+            font_t* ttface = fontface->ttface;
+#endif
             if (!ttface || stbtt_GetWeight(ttface) == saved_weights[j])
                 continue;
             int params[] = {STBTT_FOURCC('w', 'g', 'h', 't'), saved_weights[j]};
