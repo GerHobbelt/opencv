@@ -1606,36 +1606,6 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     switch(uMsg)
     {
-#if 0 // debugging...
-    case WM_NCCREATE:
-    {
-        WCHAR szMsg[128];
-        LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
-        swprintf_s(szMsg, L"In WM_NCCREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
-        OutputDebugStringW(szMsg);
-        return TRUE;
-    }
-    break;
-
-    case WM_CREATE:
-    {
-        WCHAR szMsg[128];
-        LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
-        swprintf_s(szMsg, L"In WM_CREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
-        OutputDebugStringW(szMsg);
-    }
-    break;
-
-    case WM_SETTEXT:
-    {
-        WCHAR szMsg[256];
-        LPCWSTR lpcs = (LPCWSTR)lParam;
-        swprintf_s(szMsg, L"In WM_SETTEXT: text = '%s'\n", lpcs);
-        OutputDebugStringW(szMsg);
-    }
-    break;
-#endif
-
     case WM_COPY:
         ::SendMessage(window.hwnd, uMsg, wParam, lParam);
         break;
@@ -1820,37 +1790,7 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     // Process the message
     switch(uMsg)
     {
-#if 0 // debugging...
-        case WM_NCCREATE:
-        {
-            WCHAR szMsg[128];
-            LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
-            swprintf_s(szMsg, L"In WM_NCCREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
-            OutputDebugStringW(szMsg);
-            return TRUE;
-        }
-        break;
-
-        case WM_CREATE:
-        {
-            WCHAR szMsg[128];
-            LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
-            swprintf_s(szMsg, L"In WM_CREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
-            OutputDebugStringW(szMsg);
-        }
-        break;
-
-        case WM_SETTEXT:
-        {
-            WCHAR szMsg[256];
-            LPCWSTR lpcs = (LPCWSTR)lParam;
-            swprintf_s(szMsg, L"In WM_SETTEXT: text = '%s'\n", lpcs);
-            OutputDebugStringW(szMsg);
-        }
-        break;
-#endif
-
-        case WM_COPY:
+    case WM_COPY:
         {
             if (!::OpenClipboard(hwnd))
                 break;
