@@ -65,6 +65,7 @@ using namespace cv;
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <variant>
 
 #ifdef HAVE_OPENGL
 #include <memory>
@@ -118,6 +119,107 @@ static inline void mingw_strcat_s(char *dest, size_t destsz, const char *src){
 #define strcpy_s mingw_strcpy_s
 #define strcat_s mingw_strcat_s
 #endif
+
+// assistant class to ease compiling this in both classic ANSI mode and modern UNICODE builds.
+//
+// the moral of the story for this entire source file: ditch the Win32 A (ANSI) API calls' hack, and
+// use what they (MS) hand you as-is (W or A, depending on your compile settings) and transform any
+// strings to the type that's needed: ANSI/UTF8 or UCS2/UTF16.
+//
+// root cause: see also https://stackoverflow.com/questions/33358546/chinese-characters-in-title-bar
+// which was someone else with what turned out to be the same exhibit (this code also has
+// DefWindowProc calls in the window handlers making the whole thing b0rk if you're not extra-special
+// careful in coding this sort of thing.
+// Bottom line: as soon as you're using DefWindowProc in *any* way, stick with what Microsoft
+// system header files give you as the 'default' Win32 API and deal!    TCHAR, TEXT(), etc.
+// + Win32UIString class and our personal T() macro for the non-static strings.
+class Win32UIString {
+    std::variant<std::string, std::wstring> s_;
+
+    std::wstring UTF8ToWide(const std::string& utf8) {
+        if (utf8.length() == 0) {
+            return std::wstring();
+        }
+
+        // compute the length of the buffer we'll need
+        int charcount = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+
+        if (charcount == 0) {
+            return std::wstring();
+        }
+
+        // convert
+        wchar_t* buf = new wchar_t[charcount];
+        MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, buf, charcount);
+        std::wstring result(buf);
+        delete[] buf;
+        return result;
+    }
+
+    std::string WideToUTF8(const std::wstring& wide) {
+        if (wide.length() == 0) {
+            return std::string();
+        }
+
+        // compute the length of the buffer we'll need
+        int charcount = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        if (charcount == 0) {
+            return std::string();
+        }
+
+        // convert
+        char* buf = new char[charcount];
+        WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, buf, charcount, nullptr, nullptr);
+
+        std::string result(buf);
+        delete[] buf;
+        return result;
+    }
+
+public:
+    Win32UIString() = delete;
+    Win32UIString(const char* str) : s_(str) {}
+    Win32UIString(const std::string& str) : s_(str) {}
+    Win32UIString(const wchar_t* str) : s_(str) {}
+    Win32UIString(const std::wstring& str) : s_(str) {}
+
+#ifdef  UNICODE                     // r_winnt
+    LPCWSTR operator()() {
+        return LPCWSTR();
+    }
+#else
+    LPCSTR operator()() {
+        return LPCSTR();
+    }
+#endif
+    LPCWSTR LPCWSTR() {
+        std::wstring* rv = std::get_if<std::wstring>(&s_);
+        if (rv != nullptr)
+            return rv->c_str();
+        std::wstring r2 = UTF8ToWide(std::get<std::string>(s_));
+        // can't use the *local* instance, so we push it into the class member first:
+        s_ = r2;
+        rv = std::get_if<std::wstring>(&s_);
+        return rv->c_str();
+    }
+    LPCSTR LPCSTR() {
+        std::string* rv = std::get_if<std::string>(&s_);
+        if (rv != nullptr)
+            return rv->c_str();
+        std::string r2 = WideToUTF8(std::get<std::wstring>(s_));
+        // can't use the *local* instance, so we push it into the class member first:
+        s_ = r2;
+        rv = std::get_if<std::string>(&s_);
+        return rv->c_str();
+    }
+    const char *c_str() {
+        return LPCSTR();
+    }
+};
+
+
+#define T(s)                Win32UIString(s)()
+
 
 static void FillBitmapInfo(BITMAPINFO* bmi, int width, int height, int bpp, int origin)
 {
@@ -304,14 +406,14 @@ typedef int (CV_CDECL * CvWin32WindowCallback)(HWND, UINT, WPARAM, LPARAM, int*)
 static CvWin32WindowCallback hg_on_preprocess = 0, hg_on_postprocess = 0;
 static HINSTANCE hg_hinstance = 0;
 
-static const char* const highGUIclassName = "HighGUI class";
-static const char* const mainHighGUIclassName = "Main HighGUI class";
+#define highGUIclassName TEXT("HighGUI class")
+#define mainHighGUIclassName TEXT("Main HighGUI class")
 
-static void icvCleanupHighgui()
+static void icvCleanupHighgui(void)
 {
     destroyAllWindowsImpl();
-    UnregisterClassA(highGUIclassName, hg_hinstance);
-    UnregisterClassA(mainHighGUIclassName, hg_hinstance);
+    UnregisterClass(highGUIclassName, hg_hinstance);
+    UnregisterClass(mainHighGUIclassName, hg_hinstance);
 }
 
 static int win32_InitSystem(int, char**)
@@ -325,7 +427,7 @@ static int win32_InitSystem(int, char**)
         (void)getWindowsList();  // Initialize the storage
 
         // Register the class
-        WNDCLASSA wndc;
+        WNDCLASS wndc;
         wndc.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW | CS_DBLCLKS;
         wndc.lpfnWndProc = WindowProc;
         wndc.cbClsExtra = 0;
@@ -334,17 +436,17 @@ static int win32_InitSystem(int, char**)
         wndc.lpszClassName = highGUIclassName;
         wndc.lpszMenuName = highGUIclassName;
         wndc.hIcon = LoadIcon(0, IDI_APPLICATION);
-        wndc.hCursor = (HCURSOR)LoadCursorA(0, (LPSTR)(size_t)IDC_CROSS);
+        wndc.hCursor = (HCURSOR)LoadCursor(0, (LPCTSTR)(size_t)IDC_CROSS);
         wndc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
 
-        RegisterClassA(&wndc);
+        RegisterClass(&wndc);
 
         wndc.lpszClassName = mainHighGUIclassName;
         wndc.lpszMenuName = mainHighGUIclassName;
         wndc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
         wndc.lpfnWndProc = MainWindowProc;
 
-        RegisterClassA(&wndc);
+        RegisterClass(&wndc);
         atexit(icvCleanupHighgui);
 
         wasInitialized = 1;
@@ -405,16 +507,16 @@ icvLoadWindowPos(const char* name, Rect& rect)
     rect.x = rect.y = CW_USEDEFAULT;
     rect.width = rect.height = 320;
 
-    if (RegOpenKeyExA(HKEY_CURRENT_USER,szKey,0,KEY_QUERY_VALUE,&hkey) == ERROR_SUCCESS)
+    if (RegOpenKeyEx(HKEY_CURRENT_USER,T(szKey),0,KEY_QUERY_VALUE,&hkey) == ERROR_SUCCESS)
     {
         // Yes we are installed.
         DWORD dwType = 0;
         DWORD dwSize = sizeof(int);
 
-        RegQueryValueExA(hkey, "Left", NULL, &dwType, (BYTE*)&rect.x, &dwSize);
-        RegQueryValueExA(hkey, "Top", NULL, &dwType, (BYTE*)&rect.y, &dwSize);
-        RegQueryValueExA(hkey, "Width", NULL, &dwType, (BYTE*)&rect.width, &dwSize);
-        RegQueryValueExA(hkey, "Height", NULL, &dwType, (BYTE*)&rect.height, &dwSize);
+        RegQueryValueEx(hkey, TEXT("Left"), NULL, &dwType, (BYTE*)&rect.x, &dwSize);
+        RegQueryValueEx(hkey, TEXT("Top"), NULL, &dwType, (BYTE*)&rect.y, &dwSize);
+        RegQueryValueEx(hkey, TEXT("Width"), NULL, &dwType, (BYTE*)&rect.width, &dwSize);
+        RegQueryValueEx(hkey, TEXT("Height"), NULL, &dwType, (BYTE*)&rect.height, &dwSize);
 
         // Snap rect into closest monitor in case it falls outside it. // Adi Shavit
         // set WIN32 RECT to be the loaded size
@@ -463,25 +565,25 @@ icvSaveWindowPos(const char* name, Rect rect)
     strcpy_s(szKey, 1024, icvWindowPosRootKey);
     strcat_s(szKey, 1024, name);
 
-    if (RegOpenKeyExA(HKEY_CURRENT_USER,szKey,0,KEY_READ,&hkey) != ERROR_SUCCESS)
+    if (RegOpenKeyEx(HKEY_CURRENT_USER,T(szKey),0,KEY_READ,&hkey) != ERROR_SUCCESS)
     {
         HKEY hroot;
         DWORD count = 0;
         FILETIME oldestTime = { UINT_MAX, UINT_MAX };
         char oldestKey[1024];
-        char currentKey[1024];
+        TCHAR currentKey[1024];
 
         strcpy_s(rootKey, 1024, icvWindowPosRootKey);
         rootKey[strlen(rootKey)-1] = '\0';
-        if (RegCreateKeyExA(HKEY_CURRENT_USER, rootKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS)
-            //RegOpenKeyExA(HKEY_CURRENT_USER,rootKey,0,KEY_READ,&hroot) != ERROR_SUCCESS)
+        if (RegCreateKeyEx(HKEY_CURRENT_USER, T(rootKey), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ+KEY_WRITE, 0, &hroot, NULL) != ERROR_SUCCESS)
+            //RegOpenKeyEx(HKEY_CURRENT_USER,T(rootKey),0,KEY_READ,&hroot) != ERROR_SUCCESS)
             return;
 
         for(;;)
         {
             DWORD csize = sizeof(currentKey);
             FILETIME accesstime = { 0, 0 };
-            LONG code = RegEnumKeyExA(hroot, count, currentKey, &csize, NULL, NULL, NULL, &accesstime);
+            LONG code = RegEnumKeyEx(hroot, count, currentKey, &csize, NULL, NULL, NULL, &accesstime);
             if (code != ERROR_SUCCESS && code != ERROR_MORE_DATA)
                 break;
             count++;
@@ -490,28 +592,28 @@ icvSaveWindowPos(const char* name, Rect rect)
                 oldestTime.dwLowDateTime > accesstime.dwLowDateTime))
             {
                 oldestTime = accesstime;
-                strcpy_s(oldestKey, 1024, currentKey);
+                strcpy_s(oldestKey, 1024, Win32UIString(currentKey).c_str());
             }
         }
 
         if (count >= MAX_RECORD_COUNT)
-            RegDeleteKeyA(hroot, oldestKey);
+            RegDeleteKey(hroot, T(oldestKey));
         RegCloseKey(hroot);
 
-        if (RegCreateKeyExA(HKEY_CURRENT_USER,szKey,0,NULL,REG_OPTION_NON_VOLATILE, KEY_WRITE, 0, &hkey, NULL) != ERROR_SUCCESS)
+        if (RegCreateKeyEx(HKEY_CURRENT_USER,T(szKey),0,NULL,REG_OPTION_NON_VOLATILE, KEY_WRITE, 0, &hkey, NULL) != ERROR_SUCCESS)
             return;
     }
     else
     {
         RegCloseKey(hkey);
-        if (RegOpenKeyExA(HKEY_CURRENT_USER,szKey,0,KEY_WRITE,&hkey) != ERROR_SUCCESS)
+        if (RegOpenKeyEx(HKEY_CURRENT_USER,T(szKey),0,KEY_WRITE,&hkey) != ERROR_SUCCESS)
             return;
     }
 
-    RegSetValueExA(hkey, "Left", 0, REG_DWORD, (BYTE*)&rect.x, sizeof(rect.x));
-    RegSetValueExA(hkey, "Top", 0, REG_DWORD, (BYTE*)&rect.y, sizeof(rect.y));
-    RegSetValueExA(hkey, "Width", 0, REG_DWORD, (BYTE*)&rect.width, sizeof(rect.width));
-    RegSetValueExA(hkey, "Height", 0, REG_DWORD, (BYTE*)&rect.height, sizeof(rect.height));
+    RegSetValueEx(hkey, TEXT("Left"), 0, REG_DWORD, (BYTE*)&rect.x, sizeof(rect.x));
+    RegSetValueEx(hkey, TEXT("Top"), 0, REG_DWORD, (BYTE*)&rect.y, sizeof(rect.y));
+    RegSetValueEx(hkey, TEXT("Width"), 0, REG_DWORD, (BYTE*)&rect.width, sizeof(rect.width));
+    RegSetValueEx(hkey, TEXT("Height"), 0, REG_DWORD, (BYTE*)&rect.height, sizeof(rect.height));
     RegCloseKey(hkey);
 }
 
@@ -643,11 +745,11 @@ double cvGetPropTopmost_W32(const char* name)
 
 static double getPropTopmost_(CvWindow& window)
 {
-    LONG style = GetWindowLongA(window.frame, GWL_EXSTYLE); // -20
+    LONG style = GetWindowLong(window.frame, GWL_EXSTYLE); // -20
     if (!style)
     {
         std::ostringstream errorMsg;
-        errorMsg << "window(" << window.name << "): failed to retrieve extended window style using GetWindowLongA(); error code: " << GetLastError();
+        errorMsg << "window(" << window.name << "): failed to retrieve extended window style using GetWindowLong(); error code: " << GetLastError();
         CV_Error(Error::StsError, errorMsg.str());
     }
 
@@ -806,7 +908,7 @@ void setWindowTitle_W32(const std::string& name, const std::string& title)
     if (!window)
         CV_Error(Error::StsNullPtr, "NULL window");
 
-    if (!SetWindowTextA(window->frame, title.c_str()))
+    if (!SetWindowText(window->frame, T(title)))
         CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", name.c_str(), title.c_str()));
 }
 
@@ -1034,15 +1136,22 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         defStyle |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 #endif
 
-    mainhWnd = CreateWindowExA(0, mainHighGUIclassName, name.c_str(), defStyle | WS_OVERLAPPED,
-                             rect.x, rect.y, rect.width, rect.height, 0, 0, hg_hinstance, 0);
+    auto window = std::make_shared<CvWindow>(name);
+
+    mainhWnd = CreateWindowEx(0, mainHighGUIclassName, T(window->name), defStyle | WS_OVERLAPPEDWINDOW,
+                             rect.x, rect.y, rect.width, rect.height, HWND_DESKTOP, nullptr, hg_hinstance, nullptr);
     if (!mainhWnd)
         CV_Error_(Error::StsError, ("Main frame window can not be created: '%s'; Win32 error: %u(0x%08x)", name.c_str(), (int)GetLastError(), (int)GetLastError()));
 
     ShowWindow(mainhWnd, SW_SHOW);
 
+#if 0 // tests showcasing the new 'default Win32 APIs only + WinUIString/T approach *works*
+    SetWindowText(mainhWnd, L"BUGGER");
+    SetWindowTextA(mainhWnd, "TOTAL CRAP");
+#endif
+
     //YV- remove one border by changing the style
-    hWnd = CreateWindowExA(0, highGUIclassName, "CHILD", (defStyle & ~WS_SIZEBOX) | WS_CHILD, CW_USEDEFAULT, CW_USEDEFAULT, rect.width, rect.height, mainhWnd, 0, hg_hinstance, 0);
+    hWnd = CreateWindowEx(0, highGUIclassName, TEXT("CHILD"), (defStyle & ~WS_SIZEBOX) | WS_CHILD, CW_USEDEFAULT, CW_USEDEFAULT, rect.width, rect.height, mainhWnd, 0, hg_hinstance, 0);
     if (!hWnd) {
         CV_Error_(Error::StsError, ("Child frame window can not be created; Win32 error: %u(0x%08x)", (int)GetLastError(), (int)GetLastError()));
     }
@@ -1060,8 +1169,6 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 #endif
 
     ShowWindow(hWnd, SW_SHOW);
-
-    auto window = std::make_shared<CvWindow>(name);
 
     window->hwnd = hWnd;
     window->frame = mainhWnd;
@@ -1499,12 +1606,41 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     switch(uMsg)
     {
+#if 0 // debugging...
+    case WM_NCCREATE:
+    {
+        WCHAR szMsg[128];
+        LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
+        swprintf_s(szMsg, L"In WM_NCCREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
+        OutputDebugStringW(szMsg);
+        return TRUE;
+    }
+    break;
+
+    case WM_CREATE:
+    {
+        WCHAR szMsg[128];
+        LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
+        swprintf_s(szMsg, L"In WM_CREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
+        OutputDebugStringW(szMsg);
+    }
+    break;
+
+    case WM_SETTEXT:
+    {
+        WCHAR szMsg[256];
+        LPCWSTR lpcs = (LPCWSTR)lParam;
+        swprintf_s(szMsg, L"In WM_SETTEXT: text = '%s'\n", lpcs);
+        OutputDebugStringW(szMsg);
+    }
+    break;
+#endif
+
     case WM_COPY:
         ::SendMessage(window.hwnd, uMsg, wParam, lParam);
         break;
 
     case WM_DESTROY:
-
         icvRemoveWindow(window_);
         // Do nothing!!!
         //PostQuitMessage(0);
@@ -1684,7 +1820,37 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     // Process the message
     switch(uMsg)
     {
-    case WM_COPY:
+#if 0 // debugging...
+        case WM_NCCREATE:
+        {
+            WCHAR szMsg[128];
+            LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
+            swprintf_s(szMsg, L"In WM_NCCREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
+            OutputDebugStringW(szMsg);
+            return TRUE;
+        }
+        break;
+
+        case WM_CREATE:
+        {
+            WCHAR szMsg[128];
+            LPCREATESTRUCTW lpcs = (LPCREATESTRUCTW)lParam;
+            swprintf_s(szMsg, L"In WM_CREATE, Window Class: %s, Window Title: %s\n", lpcs->lpszClass, lpcs->lpszName);
+            OutputDebugStringW(szMsg);
+        }
+        break;
+
+        case WM_SETTEXT:
+        {
+            WCHAR szMsg[256];
+            LPCWSTR lpcs = (LPCWSTR)lParam;
+            swprintf_s(szMsg, L"In WM_SETTEXT: text = '%s'\n", lpcs);
+            OutputDebugStringW(szMsg);
+        }
+        break;
+#endif
+
+        case WM_COPY:
         {
             if (!::OpenClipboard(hwnd))
                 break;
@@ -1749,7 +1915,13 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
                 // Finally, set bitmap to clipboard
                 ::SetClipboardData(CF_BITMAP, memBM);
-            } while (0,0); // (0,0) instead of (0) to avoid MSVC compiler warning C4127: "conditional expression is constant"
+#if defined(_MSC_VER)
+#pragma warning(disable: 4127 4548)
+#endif
+            } while (0);   // while(0,0) instead of while(0) to avoid MSVC compiler warning C4127: "conditional expression is constant"
+                           // but now gives us this instead:
+                           // warning C4548 : expression before comma has no effect; expected expression with side-effect
+
 
             //////////////////////////////////////////////////////////////////////////
             // if handle is allocated (i.e. != 0) then clean-up.
@@ -1994,7 +2166,7 @@ static void icvUpdateTrackbar(CvTrackbar& trackbar, int pos)
         }
 
         snprintf(pos_text + strlen(pos_text), sizeof(pos_text) - strlen(pos_text), "%s: %d\n", suffix, pos);
-        SetWindowTextA(trackbar.buddy, pos_text);
+        SetWindowText(trackbar.buddy, T(pos_text));
     }
 }
 
@@ -2099,11 +2271,11 @@ static void showSaveDialog(CvWindow& window)
     if (!icvGetBitmapData(window, sz, channels, data))
         return; // nothing to save
 
-    char szFileName[MAX_PATH] = "";
+    TCHAR szFileName[MAX_PATH] = TEXT("");
     // try to use window title as file name
-    GetWindowTextA(window.frame, szFileName, MAX_PATH);
+    GetWindowText(window.frame, szFileName, MAX_PATH);
 
-    OPENFILENAMEA ofn;
+    OPENFILENAME ofn;
     ZeroMemory(&ofn, sizeof(ofn));
 #ifdef OPENFILENAME_SIZE_VERSION_400
     // we are not going to use new fields any way
@@ -2112,7 +2284,8 @@ static void showSaveDialog(CvWindow& window)
     ofn.lStructSize = sizeof(ofn);
 #endif
     ofn.hwndOwner = window.hwnd;
-    ofn.lpstrFilter =
+	// this Win32UIString instance MUST stay alive just past the GetSaveFileName call below; C++ scope cleanup automatically takes care of that: this instance will be destroyed at the end.
+    auto extlist = Win32UIString(
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
                       "Portable Network Graphics files (*.png)\0*.png\0"
 #endif
@@ -2144,21 +2317,23 @@ static void showSaveDialog(CvWindow& window)
 #endif
                       "Radiance HDR (*.hdr;*.pic)\0*.hdr;*.pic\0"
                       "Sun raster files (*.sr;*.ras)\0*.sr;*.ras\0"
-                      "All Files (*.*)\0*.*\0";
+                      "All Files (*.*)\0*.*\0"
+        );
+    ofn.lpstrFilter = extlist();
     ofn.lpstrFile = szFileName;
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN | OFN_NOCHANGEDIR;
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
-    ofn.lpstrDefExt = "png";
+    ofn.lpstrDefExt = TEXT("png");
 #else
-    ofn.lpstrDefExt = "bmp";
+    ofn.lpstrDefExt = TEXT("bmp");
 #endif
 
-    if (GetSaveFileNameA(&ofn))
+    if (GetSaveFileName(&ofn))
     {
         cv::Mat tmp;
         cv::flip(cv::Mat(sz.cy, sz.cx, CV_8UC(channels), data, (sz.cx * channels + 3) & -4), tmp, 0);
-        cv::imwrite(szFileName, tmp);
+        cv::imwrite(Win32UIString(szFileName).c_str(), tmp);
     }
 #else
     CV_UNUSED(window);
@@ -2433,7 +2608,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     window.toolbar.trackbars.push_back(trackbar);
 
     auto slider_name = cv::format("Trackbar%p", trackbar.get());
-    trackbar->hwnd = CreateWindowExA(0, TRACKBAR_CLASSA, slider_name.c_str(),
+    trackbar->hwnd = CreateWindowEx(0, TRACKBAR_CLASS, T(slider_name),
                         WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS |
                         TBS_FIXEDLENGTH | TBS_HORZ | TBS_BOTTOM,
                         rect.left + HG_BUDDY_WIDTH, rect.top,
@@ -2442,7 +2617,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
                         (HMENU)(size_t)bcount, hg_hinstance, 0);
 
     slider_name = cv::format("Buddy%p", trackbar.get());
-    trackbar->buddy = CreateWindowExA(0, "STATIC", slider_name.c_str(),
+    trackbar->buddy = CreateWindowEx(0, TEXT("STATIC"), T(slider_name),
                         WS_CHILD | SS_RIGHT,
                         rect.left, rect.top,
                         HG_BUDDY_WIDTH, rect.bottom - rect.top,
@@ -2755,7 +2930,7 @@ public:
         auto window_ptr = window_.lock();
         CV_Assert(window_ptr);
         CvWindow& window = *window_ptr;
-        if (!SetWindowTextA(window.frame, title.c_str()))
+        if (!SetWindowText(window.frame, T(title)))
             CV_Error_(Error::StsError, ("Failed to set \"%s\" window title to \"%s\"", window.name.c_str(), title.c_str()));
     }
 
