@@ -131,6 +131,12 @@ if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 
+include("cmake/HunterGate.cmake")
+HunterGate(
+    URL "https://github.com/cpp-pm/hunter/archive/v0.26.4.tar.gz"
+    SHA1 "cbce5a86d4b2295c48552ccf60544158bf8e577f"
+)
+
 project(OpenCV CXX C)
 
 if(OPENCV_WORKAROUND_CMAKE_20989)
