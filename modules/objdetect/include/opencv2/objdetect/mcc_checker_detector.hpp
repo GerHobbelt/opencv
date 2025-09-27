@@ -273,7 +273,7 @@ public:
 
     CV_WRAP virtual Mat getRefColors() = 0;
 
-    /** @brief Sets the detection paramaters for mcc.
+    /** @brief Sets the detection parameters for mcc.
         * @param params DetectorParametersMCC structure containing detection configuration parameters.
     */
 
