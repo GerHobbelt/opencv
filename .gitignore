@@ -25,3 +25,8 @@ build
 node_modules
 CMakeSettings.json
 xcuserdata/
+
+bazel-*
+Session.vim
+.tasks.json
+compile_commands.json
