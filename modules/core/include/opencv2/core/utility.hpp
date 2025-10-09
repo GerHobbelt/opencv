@@ -646,7 +646,7 @@ static inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); 
 class CV_EXPORTS ParallelLoopBody
 {
 public:
-    virtual ~ParallelLoopBody();
+protected: ~ParallelLoopBody() = default; public: // MB patch
     virtual void operator() (const Range& range) const = 0;
 };
 

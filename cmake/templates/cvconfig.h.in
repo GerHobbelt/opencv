@@ -118,6 +118,9 @@
 /* parallel_for with pthreads */
 #cmakedefine HAVE_PTHREADS_PF
 
+/* parallel for with MB sweater */
+#cmakedefine HAVE_SWEATER
+
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB
 
