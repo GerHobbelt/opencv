@@ -602,14 +602,18 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
         new_u->originalUMatData = u;
     }
     bool allocated = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         allocated = UMat::getStdAllocator()->allocate(new_u, accessFlags, usageFlags);
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         fprintf(stderr, "Exception: %s\n", e.what());
     }
+#endif
     if (!allocated)
     {
         allocated = getDefaultAllocator()->allocate(new_u, accessFlags, usageFlags);
@@ -626,7 +630,9 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
         CV_XADD(&(u->refcount), 1);
         CV_XADD(&(u->urefcount), 1);
     }
+#ifdef __cpp_exceptions
     try
+#endif
     {
         hdr.flags = flags;
         hdr.usageFlags = usageFlags;
@@ -637,6 +643,7 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
         hdr.addref();
         return hdr;
     }
+#ifdef __cpp_exceptions
     catch(...)
     {
         if (u != NULL)
@@ -647,6 +654,7 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
         new_u->currAllocator->deallocate(new_u);
         throw;
     }
+#endif
 
 }
 
@@ -698,17 +706,21 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
             a = a0;
             a0 = Mat::getDefaultAllocator();
         }
+#ifdef __cpp_exceptions
         try
+#endif
         {
             u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
+#ifdef __cpp_exceptions
         catch(...)
         {
             if(a != a0)
                 u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
+#endif
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
     }
 
@@ -1075,7 +1087,9 @@ Mat UMat::getMat(AccessFlag accessFlags) const
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
+#ifdef __cpp_exceptions
     try
+#endif
     {
         if(CV_XADD(&u->refcount, 1) == 0)
             u->currAllocator->map(u, accessFlags);
@@ -1090,11 +1104,13 @@ Mat UMat::getMat(AccessFlag accessFlags) const
             return hdr;
         }
     }
+#ifdef __cpp_exceptions
     catch(...)
     {
         CV_XADD(&u->refcount, -1);
         throw;
     }
+#endif
     CV_XADD(&u->refcount, -1);
     CV_Assert(u->data != 0 && "Error mapping of UMat to host memory.");
     return Mat();

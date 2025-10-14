@@ -33,7 +33,7 @@
 
 #include "opencv2/core/version.hpp"
 
-#if CV_VERSION_MAJOR <= 4
+#if CV_VERSION_MAJOR <= 4 && defined( __cpp_exceptions )
 
 //! @cond IGNORED
 

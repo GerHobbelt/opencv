@@ -22,7 +22,10 @@ String dumpInputArray(InputArray argument)
         return "InputArray: noArray()";
     std::ostringstream ss;
     ss << "InputArray:";
-    try {
+#ifdef __cpp_exceptions
+    try
+#endif
+    {
         do {
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
@@ -56,6 +59,7 @@ String dumpInputArray(InputArray argument)
             ss << " type(-1)=" << cv::typeToString(argument.type(-1));
         } while (0);
     }
+#ifdef __cpp_exceptions
     catch (const std::exception& e)
     {
         ss << " ERROR: exception occurred: " << e.what();
@@ -64,6 +68,7 @@ String dumpInputArray(InputArray argument)
     {
         ss << " ERROR: unknown exception occurred, dump is non-complete";
     }
+#endif
     return ss.str();
 }
 
@@ -73,7 +78,10 @@ CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
         return "InputArrayOfArrays: noArray()";
     std::ostringstream ss;
     ss << "InputArrayOfArrays:";
-    try {
+#ifdef __cpp_exceptions
+    try
+#endif
+    {
         do {
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
@@ -113,6 +121,7 @@ CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
             }
         } while (0);
     }
+#ifdef __cpp_exceptions
     catch (const std::exception& e)
     {
         ss << " ERROR: exception occurred: " << e.what();
@@ -121,6 +130,7 @@ CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
     {
         ss << " ERROR: unknown exception occurred, dump is non-complete";
     }
+#endif
     return ss.str();
 }
 
@@ -130,7 +140,10 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
         return "InputOutputArray: noArray()";
     std::ostringstream ss;
     ss << "InputOutputArray:";
-    try {
+#ifdef __cpp_exceptions
+    try
+#endif
+    {
         do {
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
@@ -164,6 +177,7 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
             ss << " type(-1)=" << cv::typeToString(argument.type(-1));
         } while (0);
     }
+#ifdef __cpp_exceptions
     catch (const std::exception& e)
     {
         ss << " ERROR: exception occurred: " << e.what();
@@ -172,6 +186,7 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
     {
         ss << " ERROR: unknown exception occurred, dump is non-complete";
     }
+#endif
     return ss.str();
 }
 
@@ -181,7 +196,10 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
         return "InputOutputArrayOfArrays: noArray()";
     std::ostringstream ss;
     ss << "InputOutputArrayOfArrays:";
-    try {
+#ifdef __cpp_exceptions
+    try
+#endif
+    {
         do {
             ss << (argument.empty() ? " empty()=true" : " empty()=false");
             ss << cv::format(" kind=0x%08llx", (long long int)argument.kind());
@@ -221,6 +239,7 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
             }
         } while (0);
     }
+#ifdef __cpp_exceptions
     catch (const std::exception& e)
     {
         ss << " ERROR: exception occurred: " << e.what();
@@ -229,6 +248,7 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
     {
         ss << " ERROR: unknown exception occurred, dump is non-complete";
     }
+#endif
     return ss.str();
 }
 

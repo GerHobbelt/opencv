@@ -332,7 +332,9 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     opoints_inliers.resize(npoints1);
     ipoints_inliers.resize(npoints1);
+#ifdef __cpp_exceptions
     try
+#endif
     {
        if (flags == SOLVEPNP_ITERATIVE && !useExtrinsicGuess)
        {
@@ -344,6 +346,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                           distCoeffs, rvec, tvec, useExtrinsicGuess,
                           (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         if (flags == SOLVEPNP_ITERATIVE &&
@@ -364,6 +367,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
             throw;
         }
     }
+#endif
 
     if (result <= 0)
     {
@@ -918,7 +922,9 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         IPPE::PoseSolver poseSolver;
         Mat rvec1, tvec1, rvec2, tvec2;
         float reprojErr1, reprojErr2;
+#ifdef __cpp_exceptions
         try
+#endif
         {
             poseSolver.solveGeneric(opoints, undistortedPoints, rvec1, tvec1, reprojErr1, rvec2, tvec2, reprojErr2);
 
@@ -939,7 +945,9 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
                 vec_tvecs.push_back(tvec1);
             }
         }
+#ifdef __cpp_exceptions
         catch (...) { }
+#endif
     }
     else if (flags == SOLVEPNP_IPPE_SQUARE)
     {
@@ -991,7 +999,9 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         IPPE::PoseSolver poseSolver;
         Mat rvec1, tvec1, rvec2, tvec2;
         float reprojErr1, reprojErr2;
+#ifdef __cpp_exceptions
         try
+#endif
         {
             poseSolver.solveSquare(opoints, undistortedPoints, rvec1, tvec1, reprojErr1, rvec2, tvec2, reprojErr2);
 
@@ -1011,7 +1021,10 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
                 vec_rvecs.push_back(rvec1);
                 vec_tvecs.push_back(tvec1);
             }
-        } catch (...) { }
+        }
+#ifdef __cpp_exceptions
+        catch (...) { }
+#endif
     }
     else if (flags == SOLVEPNP_SQPNP)
     {

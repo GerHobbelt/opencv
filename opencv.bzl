@@ -554,8 +554,5 @@ def opencv_module(
         local_defines = local_defines,
         target_compatible_with = compatible_with,
         strip_include_prefix = prefix + "/include",
-        features = [
-            "exceptions", # enable exceptions for opencv modules
-        ],
         visibility = ["//visibility:public"],
     )

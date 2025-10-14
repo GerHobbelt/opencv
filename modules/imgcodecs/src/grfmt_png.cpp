@@ -1029,7 +1029,13 @@ size_t PngEncoder::writeToStreamOrBuffer(void const* buffer, size_t num_bytes, F
 
     size_t cursz = m_buf->size();
     if (cursz + num_bytes > m_buf->max_size())
+    {
+#ifdef __cpp_exceptions
         throw std::runtime_error("Buffer size exceeds maximum capacity");
+#else
+        CV_Error(Error::StsNoMem, "Buffer size exceeds maximum capacity");
+#endif
+    }
 
     m_buf->resize(cursz + num_bytes);
     memcpy(&(*m_buf)[cursz], buffer, num_bytes);

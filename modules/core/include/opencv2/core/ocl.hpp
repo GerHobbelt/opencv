@@ -311,6 +311,7 @@ public:
     public:
         virtual ~UserContext();
     };
+#ifdef __cpp_rtti
     template <typename T>
     inline void setUserContext(const std::shared_ptr<T>& userContext) {
         setUserContext(typeid(T), userContext);
@@ -319,6 +320,7 @@ public:
     inline std::shared_ptr<T> getUserContext() {
         return std::dynamic_pointer_cast<T>(getUserContext(typeid(T)));
     }
+#endif
     void setUserContext(std::type_index typeId, const std::shared_ptr<UserContext>& userContext);
     std::shared_ptr<UserContext> getUserContext(std::type_index typeId);
 

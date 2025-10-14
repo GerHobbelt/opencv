@@ -536,12 +536,15 @@ imread_( const String& filename, int flags, OutputArray mat,
     /// set the filename in the driver
     decoder->setSource( filename );
 
+#ifdef __cpp_exceptions
     try
+#endif
     {
         // read the header to make sure it succeeds
         if( !decoder->readHeader() )
             return 0;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read header: " << e.what());
@@ -552,6 +555,7 @@ imread_( const String& filename, int flags, OutputArray mat,
         CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read header: unknown exception");
         return 0;
     }
+#endif
 
 
     // established the required input image size
@@ -576,7 +580,9 @@ imread_( const String& filename, int flags, OutputArray mat,
     const void * original_ptr = real_mat.data;
     bool success = false;
     decoder->resetFrameCount(); // this is needed for PngDecoder. it should be called before decoder->readData()
+#ifdef __cpp_exceptions
     try
+#endif
     {
         if (decoder->readData(real_mat))
         {
@@ -586,6 +592,7 @@ imread_( const String& filename, int flags, OutputArray mat,
 
         readMetadata(decoder, metadata_types, metadata);
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: " << e.what());
@@ -594,6 +601,7 @@ imread_( const String& filename, int flags, OutputArray mat,
     {
         CV_LOG_ERROR(NULL, "imread_('" << filename << "'): can't read data: unknown exception");
     }
+#endif
     if (!success)
     {
         mat.release();
@@ -650,12 +658,15 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     decoder->setSource(filename);
 
     // read the header to make sure it succeeds
+#ifdef __cpp_exceptions
     try
+#endif
     {
         // read the header to make sure it succeeds
         if (!decoder->readHeader())
             return 0;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: " << e.what());
@@ -666,6 +677,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: unknown exception");
         return 0;
     }
+#endif
 
     int current = start;
 
@@ -689,11 +701,14 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         // read the image data
         Mat mat(size.height, size.width, type);
         bool success = false;
+#ifdef __cpp_exceptions
         try
+#endif
         {
             if (decoder->readData(mat))
                 success = true;
         }
+#ifdef __cpp_exceptions
         catch (const cv::Exception& e)
         {
             CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: " << e.what());
@@ -702,6 +717,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         {
             CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: unknown exception");
         }
+#endif
         if (!success)
             break;
 
@@ -818,12 +834,15 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
     /// set the filename in the driver
     decoder->setSource(filename);
     // read the header to make sure it succeeds
+#ifdef __cpp_exceptions
     try
+#endif
     {
         // read the header to make sure it succeeds
         if (!decoder->readHeader())
             return false;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read header: " << e.what());
@@ -834,6 +853,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read header: unknown exception");
         return false;
     }
+#endif
 
     int current = 0;
     int frame_count = (int)decoder->getFrameCount();
@@ -857,11 +877,14 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         // read the image data
         Mat mat(size.height, size.width, type);
         success = false;
+#ifdef __cpp_exceptions
         try
+#endif
         {
             if (decoder->readData(mat))
                 success = true;
         }
+#ifdef __cpp_exceptions
         catch (const cv::Exception& e)
         {
             CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read data: " << e.what());
@@ -870,6 +893,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         {
             CV_LOG_ERROR(NULL, "imreadanimation_('" << filename << "'): can't read data: unknown exception");
         }
+#endif
         if (!success)
             break;
 
@@ -929,12 +953,15 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
     /// set the filename in the driver
     decoder->setSource(buf.getMat());
     // read the header to make sure it succeeds
+#ifdef __cpp_exceptions
     try
+#endif
     {
         // read the header to make sure it succeeds
         if (!decoder->readHeader())
             return false;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imdecodeanimation_(): can't read header: " << e.what());
@@ -945,6 +972,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         CV_LOG_ERROR(NULL, "imdecodeanimation_(): can't read header: unknown exception");
         return false;
     }
+#endif
 
     int current = 0;
     int frame_count = (int)decoder->getFrameCount();
@@ -968,11 +996,14 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         // read the image data
         Mat mat(size.height, size.width, type);
         success = false;
+#ifdef __cpp_exceptions
         try
+#endif
         {
             if (decoder->readData(mat))
                 success = true;
         }
+#ifdef __cpp_exceptions
         catch (const cv::Exception& e)
         {
             CV_LOG_ERROR(NULL, "imreadanimation_: can't read data: " << e.what());
@@ -981,6 +1012,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         {
             CV_LOG_ERROR(NULL, "imreadanimation_: can't read data: unknown exception");
         }
+#endif
         if (!success)
             break;
 
@@ -1020,13 +1052,17 @@ bool imdecodeanimation(InputArray buf, Animation& animation, int start, int coun
 static
 size_t imcount_(const String& filename, int flags)
 {
+#ifdef __cpp_exceptions
     try{
+#endif
         ImageCollection collection(filename, flags);
         return collection.size();
+#ifdef __cpp_exceptions
     } catch(cv::Exception const& e) {
         // Reading header or finding decoder for the filename is failed
         CV_LOG_ERROR(NULL, "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what());
     }
+#endif
     return 0;
 }
 
@@ -1100,7 +1136,9 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
     bool code = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         if (!isMultiImg)
             code = encoder->write( write_vec[0], params );
@@ -1124,6 +1162,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
             }
         }
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: " << e.what());
@@ -1134,6 +1173,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: unknown exception");
         code = false;
     }
+#endif
 
     return code;
 }
@@ -1183,7 +1223,9 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
     encoder->setDestination(filename);
 
     bool code = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         code = encoder->writeanimation(animation, params);
 
@@ -1204,6 +1246,7 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
             }
         }
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imwriteanimation_('" << filename << "'): can't write data: " << e.what());
@@ -1212,6 +1255,7 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
     {
         CV_LOG_ERROR(NULL, "imwriteanimation_('" << filename << "'): can't write data: unknown exception");
     }
+#endif
 
     return code;
 }
@@ -1232,10 +1276,13 @@ static bool imencodeanimation_(const String& ext, const Animation& animation, st
     encoder->setDestination(buf);
 
     bool code = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         code = encoder->writeanimation(animation, params);
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imencodeanimation_('" << ext << "'): can't write data: " << e.what());
@@ -1244,6 +1291,7 @@ static bool imencodeanimation_(const String& ext, const Animation& animation, st
     {
         CV_LOG_ERROR(NULL, "imencodeanimation_('" << ext << "'): can't write data: unknown exception");
     }
+#endif
 
     return code;
 }
@@ -1314,11 +1362,14 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
     }
 
     bool success = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         if (decoder->readHeader())
             success = true;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read header: " << e.what());
@@ -1327,6 +1378,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
     {
         CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read header: unknown exception");
     }
+#endif
     if (!success)
     {
         decoder.release();
@@ -1348,12 +1400,15 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
     mat.create( size.height, size.width, type );
 
     success = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         if (decoder->readData(mat))
             success = true;
         readMetadata(decoder, metadata_types, metadata);
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read data: " << e.what());
@@ -1362,6 +1417,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
     {
         CV_LOG_ERROR(NULL, "imdecode_('" << filename << "'): can't read data: unknown exception");
     }
+#endif
 
     if (!filename.empty())
     {
@@ -1471,12 +1527,15 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
 
     // read the header to make sure it succeeds
     bool success = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         // read the header to make sure it succeeds
         if (decoder->readHeader())
             success = true;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: " << e.what());
@@ -1485,6 +1544,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     {
         CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read header: unknown exception");
     }
+#endif
 
     int current = start;
     while (success && current > 0)
@@ -1521,11 +1581,14 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         // read the image data
         Mat mat(size.height, size.width, type);
         success = false;
+#ifdef __cpp_exceptions
         try
+#endif
         {
             if (decoder->readData(mat))
                 success = true;
         }
+#ifdef __cpp_exceptions
         catch (const cv::Exception& e)
         {
             CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: " << e.what());
@@ -1534,6 +1597,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         {
             CV_LOG_ERROR(NULL, "imreadmulti_('" << filename << "'): can't read data: unknown exception");
         }
+#endif
         if (!success)
             break;
 
@@ -1655,7 +1719,10 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
     }
     addMetadata(encoder, metadata_types, metadata);
 
-    try {
+#ifdef __cpp_exceptions
+    try
+#endif
+    {
         if (!isMultiImg)
             code = encoder->write(write_vec[0], params);
         else
@@ -1664,6 +1731,7 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
         encoder->throwOnError();
         CV_Assert( code );
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imencode(): can't encode data: " << e.what());
@@ -1674,6 +1742,7 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
         CV_LOG_ERROR(NULL, "imencode(): can't encode data: unknown exception");
         code = false;
     }
+#endif
 
     if( !filename.empty() && code )
     {
@@ -1807,16 +1876,21 @@ Mat ImageCollection::Impl::readData() {
 
     Mat mat(size.height, size.width, type);
     bool success = false;
-    try {
+#ifdef __cpp_exceptions
+    try
+#endif
+    {
         if (m_decoder->readData(mat))
             success = true;
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception &e) {
         CV_LOG_ERROR(NULL, "ImageCollection class: can't read data: " << e.what());
     }
     catch (...) {
         CV_LOG_ERROR(NULL, "ImageCollection class:: can't read data: unknown exception");
     }
+#endif
     if (!success)
         return cv::Mat();
 

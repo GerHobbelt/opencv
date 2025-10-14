@@ -1760,7 +1760,9 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
     }
     else
     {
+#ifdef __cpp_exceptions
         try
+#endif
         {
             scanner = cvStartFindContours_Impl( img, storage, cntHeaderSize, mode, method, offset,
                                             needFillBorder);
@@ -1772,12 +1774,14 @@ cvFindContours_Impl( void*  img,  CvMemStorage*  storage,
             }
             while( contour != 0 );
         }
+#ifdef __cpp_exceptions
         catch(...)
         {
             if( scanner )
                 cvEndFindContours(&scanner);
             throw;
         }
+#endif
 
         *firstContour = cvEndFindContours( &scanner );
     }

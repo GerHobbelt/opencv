@@ -508,14 +508,18 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
                     && !utils::fs::isDirectory(default_cache_path))
                 {
                     std::vector<cv::String> existedCacheDirs;
+#ifdef __cpp_exceptions
                     try
+#endif
                     {
                         utils::fs::glob_relative(default_cache_path_base, "*", existedCacheDirs, false, true);
                     }
+#ifdef __cpp_exceptions
                     catch (...)
                     {
                         // ignore
                     }
+#endif
                     if (!existedCacheDirs.empty())
                     {
                         CV_LOG_WARNING(NULL, "Creating new OpenCV cache directory: " << default_cache_path);

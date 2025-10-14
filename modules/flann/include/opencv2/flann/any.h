@@ -46,10 +46,17 @@ private:
 };
 
 #ifndef CV_THROW_IF_TYPE_MISMATCH
+
+#ifdef __cpp_exceptions
 #define CV_THROW_IF_TYPE_MISMATCH(src_type_info, dst_type_info) \
     if ((src_type_info) != (dst_type_info)) \
         throw cvflann::anyimpl::bad_any_cast((src_type_info).name(), \
                                              (dst_type_info).name())
+#else
+#define CV_THROW_IF_TYPE_MISMATCH(src_type_info, dst_type_info) \
+    if ((src_type_info) != (dst_type_info)) \
+        std::terminate()
+#endif
 #endif
 
 struct empty_any

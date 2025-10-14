@@ -120,7 +120,10 @@ bool ExifReader::parseExif(unsigned char* data, const size_t size)
         return false;
     }
 
-    try {
+#ifdef __cpp_exceptions
+    try
+#endif
+    {
         parseExif();
         if( !m_exif.empty() )
         {
@@ -128,9 +131,11 @@ bool ExifReader::parseExif(unsigned char* data, const size_t size)
         }
         return false;
     }
+#ifdef __cpp_exceptions
     catch( ExifParsingError& ) {
         return false;
     }
+#endif
 }
 
 /**
@@ -337,7 +342,11 @@ std::string ExifReader::getString(const size_t offset) const
         dataOffset = getU32( offset + 8 );
     }
     if (dataOffset > m_data.size() || dataOffset + size > m_data.size()) {
+#ifdef __cpp_exceptions
         throw ExifParsingError();
+#else
+        CV_Error( cv::Error::StsError, "Exif data offset is out of range" );
+#endif
     }
     std::vector<uint8_t>::const_iterator it = m_data.begin() + dataOffset;
     std::string result( it, it + size ); //copy vector content into result
@@ -354,7 +363,11 @@ std::string ExifReader::getString(const size_t offset) const
 uint16_t ExifReader::getU16(const size_t offset) const
 {
     if (offset + 1 >= m_data.size())
+#ifdef __cpp_exceptions
         throw ExifParsingError();
+#else
+        CV_Error( cv::Error::StsError, "Exif data offset is out of range" );
+#endif
 
     if( m_format == INTEL )
     {
@@ -372,7 +385,11 @@ uint16_t ExifReader::getU16(const size_t offset) const
 uint32_t ExifReader::getU32(const size_t offset) const
 {
     if (offset + 3 >= m_data.size())
+#ifdef __cpp_exceptions
         throw ExifParsingError();
+#else
+        CV_Error( cv::Error::StsError, "Exif data offset is out of range" );
+#endif
 
     if( m_format == INTEL )
     {

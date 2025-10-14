@@ -201,11 +201,13 @@ void generateVectorOfMat(size_t len, int rows, int cols, int dtype, CV_OUT std::
     }
 }
 
+#ifdef __cpp_exceptions
 CV_WRAP static inline
 void testRaiseGeneralException()
 {
     throw std::runtime_error("exception text");
 }
+#endif
 
 CV_WRAP static inline
 AsyncArray testAsyncArray(InputArray argument)
@@ -215,6 +217,7 @@ AsyncArray testAsyncArray(InputArray argument)
     return p.getArrayResult();
 }
 
+#ifdef __cpp_exceptions
 CV_WRAP static inline
 AsyncArray testAsyncException()
 {
@@ -229,6 +232,7 @@ AsyncArray testAsyncException()
     }
     return p.getArrayResult();
 }
+#endif
 
 CV_WRAP static inline
 String dumpVec2i(const cv::Vec2i value = cv::Vec2i(42, 24)) {

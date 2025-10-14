@@ -243,7 +243,9 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
     if ((dir = opendir (directory.c_str())) != 0)
     {
         /* find all the files and directories within directory */
+#ifdef __cpp_exceptions
         try
+#endif
         {
             struct dirent *ent;
             while ((ent = readdir (dir)) != 0)
@@ -267,11 +269,13 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
                     result.push_back(entry);
             }
         }
+#ifdef __cpp_exceptions
         catch (...)
         {
             closedir(dir);
             throw;
         }
+#endif
         closedir(dir);
     }
     else

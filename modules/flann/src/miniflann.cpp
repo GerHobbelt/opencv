@@ -104,7 +104,9 @@ void IndexParams::getAll(std::vector<String>& names,
     for( ; it != it_end; ++it )
     {
         names.push_back(it->first);
+#ifdef __cpp_exceptions
         try
+#endif
         {
             String val = it->second.cast<String>();
             types.push_back(FLANN_INDEX_TYPE_STRING);
@@ -112,82 +114,104 @@ void IndexParams::getAll(std::vector<String>& names,
             numValues.push_back(-1);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
+#endif
 
         strValues.push_back(it->second.type().name());
 
+#ifdef __cpp_exceptions
         try
+#endif
         {
             double val = it->second.cast<double>();
             types.push_back(FLANN_INDEX_TYPE_64F);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             float val = it->second.cast<float>();
             types.push_back(FLANN_INDEX_TYPE_32F);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             int val = it->second.cast<int>();
             types.push_back(FLANN_INDEX_TYPE_32S);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             short val = it->second.cast<short>();
             types.push_back(FLANN_INDEX_TYPE_16S);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             ushort val = it->second.cast<ushort>();
             types.push_back(FLANN_INDEX_TYPE_16U);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             char val = it->second.cast<char>();
             types.push_back(FLANN_INDEX_TYPE_8S);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             uchar val = it->second.cast<uchar>();
             types.push_back(FLANN_INDEX_TYPE_8U);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             bool val = it->second.cast<bool>();
             types.push_back(FLANN_INDEX_TYPE_BOOL);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
         try
+#endif
         {
             cvflann::flann_algorithm_t val = it->second.cast<cvflann::flann_algorithm_t>();
             types.push_back(FLANN_INDEX_TYPE_ALGORITHM);
             numValues.push_back(val);
         continue;
         }
+#ifdef __cpp_exceptions
         catch (...) {}
+#endif
 
 
         types.push_back((FlannIndexType)-1); // unknown type
@@ -340,10 +364,13 @@ buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Dist
     ::cvflann::Matrix<ElementType> dataset((ElementType*)data.data, data.rows, data.cols);
     IndexType* _index = new IndexType(dataset, get_params(params), dist);
 
+#ifdef __cpp_exceptions
     try
+#endif
     {
         _index->buildIndex();
     }
+#ifdef __cpp_exceptions
     catch (...)
     {
         delete _index;
@@ -351,6 +378,7 @@ buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Dist
 
         throw;
     }
+#endif
 
     index = _index;
 }

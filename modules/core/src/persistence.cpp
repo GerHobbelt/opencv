@@ -758,7 +758,10 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
         strbufpos = bufOffset;
         bufofs = 0;
 
-        try {
+#ifdef __cpp_exceptions
+        try
+#endif
+        {
             char *ptr = bufferStart();
             ptr[0] = ptr[1] = ptr[2] = '\0';
             FileNode root_nodes(fs_ext, 0, 0);
@@ -799,6 +802,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
                 }
             }
         }
+#ifdef __cpp_exceptions
         catch (...)
         {
             // FIXIT log error message
@@ -806,6 +810,7 @@ bool FileStorage::Impl::open(const char *filename_or_buf, int _flags, const char
             release();
             throw;
         }
+#endif
 
         // release resources that we do not need anymore
         closeFile();
@@ -1943,18 +1948,22 @@ FileStorage::~FileStorage()
 
 bool FileStorage::open(const String& filename, int flags, const String& encoding)
 {
+#ifdef __cpp_exceptions
     try
+#endif
     {
         bool ok = p->open(filename.c_str(), flags, encoding.c_str());
         if(ok)
             state = FileStorage::NAME_EXPECTED + FileStorage::INSIDE_MAP;
         return ok;
     }
+#ifdef __cpp_exceptions
     catch (...)
     {
         release();
         throw;  // re-throw
     }
+#endif
 }
 
 bool FileStorage::isOpened() const { return p->is_opened; }

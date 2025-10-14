@@ -2239,7 +2239,9 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
     {
         centers.clear();
         CirclesGridFinder boxFinder(patternSize, points, parameters);
+#ifdef __cpp_exceptions
         try
+#endif
         {
             bool isFound = boxFinder.findHoles();
             if (isFound)
@@ -2260,12 +2262,14 @@ bool findCirclesGrid( InputArray _image, Size patternSize,
                 break;  // done, return result
             }
         }
+#ifdef __cpp_exceptions
         catch (const cv::Exception& e)
         {
             CV_UNUSED(e);
             CV_LOG_DEBUG(NULL, "findCirclesGrid2: attempt=" << i << ": " << e.what());
             // nothing, next attempt
         }
+#endif
 
         boxFinder.getHoles(centers);
         if (i != attempts - 1)

@@ -117,6 +117,7 @@ static void from_str(const String& str, Param type, void* dst)
     }
 }
 
+#ifdef __cpp_exceptions
 void CommandLineParser::getByName(const String& name, bool space_delete, Param type, void* dst) const
 {
     try
@@ -186,6 +187,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, Param type, voi
 
     CV_Error_(Error::StsBadArg, ("undeclared position %d requested", index));
 }
+#endif
 
 static bool cmp_params(const CommandLineParserParams & p1, const CommandLineParserParams & p2)
 {
@@ -451,6 +453,7 @@ void CommandLineParser::printMessage() const
     }
 }
 
+#ifdef __cpp_exceptions
 std::vector<String> CommandLineParser::Impl::split_range_string(const String& _str, char fs, char ss) const
 {
     String str = _str;
@@ -522,6 +525,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
 
     return vec;
 }
+#endif
 
 std::vector<String> CommandLineParser::Impl::split_string(const String& _str, char symbol, bool create_empty_item) const
 {

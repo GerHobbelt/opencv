@@ -1272,12 +1272,16 @@ void error( const Exception& exc )
         *p = 0;
     }
 
+#ifdef __cpp_exceptions
     throw exc;
+#endif
 #ifdef __GNUC__
 # if !defined __clang__ && !defined __APPLE__
     // this suppresses this warning: "noreturn" function does return [enabled by default]
     __builtin_trap();
     // or use infinite loop: for (;;) {}
+# else
+    std::terminate();
 # endif
 #endif
 }
@@ -2080,15 +2084,19 @@ void* TLSDataContainer::getData() const
     {
         // Create new data instance and save it to TLS storage
         pData = createDataInstance();
+#ifdef __cpp_exceptions
         try
+#endif
         {
             getTlsStorage().setData(key_, pData);
         }
+#ifdef __cpp_exceptions
         catch (...)
         {
             deleteDataInstance(pData);
             throw;
         }
+#endif
     }
     return pData;
 }
@@ -2192,7 +2200,12 @@ inline bool parseOption(const std::string & value)
     {
         return false;
     }
+#ifdef __cpp_exceptions
     throw ParseError(value);
+#else
+    CV_Error( cv::Error::StsBadArg, "Failed to parse bool option" );
+    return false;
+#endif
 }
 
 template<>
@@ -2213,7 +2226,12 @@ inline size_t parseOption(const std::string &value)
         return v * 1024 * 1024;
     else if (suffixStr == "KB" || suffixStr == "Kb" || suffixStr == "kb")
         return v * 1024;
+#ifdef __cpp_exceptions
     throw ParseError(value);
+#else
+    CV_Error( cv::Error::StsBadArg, "Failed to parse size_t option" );
+    return 0;
+#endif
 }
 
 template<>
@@ -2256,16 +2274,20 @@ static inline const char * envRead(const char * name)
 template<typename T>
 inline T read(const std::string & k, const T & defaultValue)
 {
+#ifdef __cpp_exceptions
     try
+#endif
     {
         const char * res = envRead(k.c_str());
         if (res)
             return parseOption<T>(std::string(res));
     }
+#ifdef __cpp_exceptions
     catch (const ParseError &err)
     {
         CV_Error(cv::Error::StsBadArg, err.toString(k));
     }
+#endif
     return defaultValue;
 }
 

@@ -136,7 +136,14 @@ struct Ptr : public std::shared_ptr<T>
     Ptr<Y> constCast() const CV_NOEXCEPT { return std::const_pointer_cast<Y>(*this); }
 
     template<typename Y> inline
-    Ptr<Y> dynamicCast() const CV_NOEXCEPT { return std::dynamic_pointer_cast<Y>(*this); }
+    Ptr<Y> dynamicCast() const CV_NOEXCEPT
+    {
+#ifdef __cpp_rtti
+        return std::dynamic_pointer_cast<Y>(*this);
+#else
+        return staticCast<Y>();
+#endif
+    }
 };
 
 template<typename _Tp, typename ... A1> static inline

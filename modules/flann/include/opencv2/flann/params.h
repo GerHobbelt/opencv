@@ -76,12 +76,16 @@ T get_param(const IndexParams& params, const cv::String& name, const T& default_
 {
     IndexParams::const_iterator it = params.find(name);
     if (it != params.end()) {
+#ifdef __cpp_exceptions
         try {
+#endif
             return it->second.cast<T>();
+#ifdef __cpp_exceptions
         } catch (const std::exception& e) {
             CV_Error_(cv::Error::StsBadArg,
                       ("FLANN '%s' param type mismatch: %s", name.c_str(), e.what()));
         }
+#endif
     }
     else {
         return default_value;
@@ -93,12 +97,16 @@ T get_param(const IndexParams& params, const cv::String& name)
 {
     IndexParams::const_iterator it = params.find(name);
     if (it != params.end()) {
+#ifdef __cpp_exceptions
         try {
+#endif
             return it->second.cast<T>();
+#ifdef __cpp_exceptions
         } catch (const std::exception& e) {
             CV_Error_(cv::Error::StsBadArg,
                       ("FLANN '%s' param type mismatch: %s", name.c_str(), e.what()));
         }
+#endif
     }
     else {
         FLANN_THROW(cv::Error::StsBadArg, cv::String("Missing parameter '")+name+cv::String("' in the parameters given"));

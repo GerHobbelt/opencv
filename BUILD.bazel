@@ -378,7 +378,9 @@ opencv_module(
         ],
         "//conditions:default": [],
     }),
-    copts = select({
+    copts = [
+        "-fno-exceptions",
+    ] + select({
         ":ubsan_enabled": [
             "-fno-sanitize=function", # call to function cv::hal::sub32f via pointer of incorrect type
         ],
@@ -400,6 +402,7 @@ opencv_module(
     copts = [
         "-Wno-deprecated-enum-float-conversion",
         "-Wno-deprecated-volatile",
+        "-fno-exceptions",
     ],
     dispatched_files = {
         "accum": [
@@ -465,6 +468,7 @@ opencv_module(
     copts = [
         "-Wno-deprecated-enum-float-conversion",
         "-Wno-deprecated-volatile",
+        "-fno-exceptions",
     ],
     dispatched_files = {
         "sift": [
@@ -482,12 +486,16 @@ opencv_module(
 opencv_module(
     name = "flann",
     deps = [":core"],
+    copts = [
+        "-fno-exceptions",
+    ],
 )
 
 opencv_module(
     name = "calib3d",
     copts = [
         "-Wno-deprecated-enum-float-conversion",
+        "-fno-exceptions",
     ],
     dispatched_files = {
         "undistort": [
@@ -504,6 +512,9 @@ opencv_module(
 
 opencv_module(
     name = "imgcodecs",
+    copts = [
+        "-fno-exceptions",
+    ],
     deps = [
         ":imgproc",
         "@libjpeg_turbo//:jpeg",
@@ -513,6 +524,9 @@ opencv_module(
 
 opencv_module(
     name = "objdetect",
+    copts = [
+        "-fno-exceptions",
+    ],
     deps = [
         ":calib3d",
         ":imgproc",

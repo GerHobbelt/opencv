@@ -694,12 +694,15 @@ void Mat::create(int d, const int* _sizes, int _type)
         MatAllocator *a = allocator, *a0 = getDefaultAllocator();
         if(!a)
             a = a0;
+#ifdef __cpp_exceptions
         try
+#endif
         {
             u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
             allocator = a;
         }
+#ifdef __cpp_exceptions
         catch (...)
         {
             if (a == a0)
@@ -708,6 +711,7 @@ void Mat::create(int d, const int* _sizes, int _type)
             CV_Assert(u != 0);
             allocator = a0;
         }
+#endif
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
     }
 
@@ -757,7 +761,9 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     }
 
     *this = m;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         if( _rowRange != Range::all() && _rowRange != Range(0,rows) )
         {
@@ -777,11 +783,13 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
             flags |= SUBMATRIX_FLAG;
         }
     }
+#ifdef __cpp_exceptions
     catch(...)
     {
         release();
         throw;
     }
+#endif
 
     updateContinuityFlag();
 
