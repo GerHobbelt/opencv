@@ -7,6 +7,7 @@ OPENCV_COPTS = [
     "-D__STDC_CONSTANT_MACROS",
     "-D__STDC_FORMAT_MACROS",
     "-D__STDC_LIMIT_MACROS",
+    "-w", # suppress all warnings
 ]
 
 OPENCV_OPTIMIZATION_COPTS = select({
