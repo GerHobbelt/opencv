@@ -131,7 +131,7 @@ public:
     ImageDecoder newDecoder() const CV_OVERRIDE;
 
 private:
-    static void readDataFromBuf(void* png_ptr, uchar* dst, size_t size);
+    static void readDataFromBuf(png_structp png_ptr, uchar* dst, size_t size);
     static void info_fn(png_structp png_ptr, png_infop info_ptr);
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
     CV_NODISCARD_STD bool processing_start(void* frame_ptr, const Mat& img);
