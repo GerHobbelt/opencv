@@ -234,9 +234,8 @@ ImageDecoder PngDecoder::newDecoder() const
     return makePtr<PngDecoder>();
 }
 
-void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t size )
+void  PngDecoder::readDataFromBuf( png_structp png_ptr, unsigned char* dst, size_t size )
 {
-    png_structp png_ptr = (png_structp)_png_ptr;
     PngDecoder* decoder = (PngDecoder*)(png_get_io_ptr(png_ptr));
     CV_Assert( decoder );
     const Mat& buf = decoder->m_buf;
