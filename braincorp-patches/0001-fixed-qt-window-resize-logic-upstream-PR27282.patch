@@ -1,0 +1,36 @@
+From 7d66431f8e8349d2fc95e8cded021219a9b92fb7 Mon Sep 17 00:00:00 2001
+From: Alexander Smorkalov <alexander.smorkalov@opencv.ai>
+Date: Mon, 5 May 2025 14:52:15 +0300
+Subject: [PATCH] Fixed QT window resize logic.
+
+---
+ modules/highgui/src/window_QT.cpp | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/modules/highgui/src/window_QT.cpp b/modules/highgui/src/window_QT.cpp
+index f7cd08bc8868..fa8c5d780114 100644
+--- a/modules/highgui/src/window_QT.cpp
++++ b/modules/highgui/src/window_QT.cpp
+@@ -1723,16 +1723,18 @@ CvWindow::CvWindow(QString name, int arg2)
+         createStatusBar();
+     }
+ 
++    myView->getWidget()->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
++
+     //Now attach everything
+     if (myToolBar)
+-        myGlobalLayout->addWidget(myToolBar, 0, Qt::AlignLeft);
++        myGlobalLayout->addWidget(myToolBar);
+ 
+-    myGlobalLayout->addWidget(myView->getWidget(), 0, Qt::AlignCenter);
++    myGlobalLayout->addWidget(myView->getWidget());
+ 
+     myGlobalLayout->addLayout(myBarLayout);
+ 
+     if (myStatusBar)
+-        myGlobalLayout->addWidget(myStatusBar, 0, Qt::AlignLeft);
++        myGlobalLayout->addWidget(myStatusBar);
+ 
+     setLayout(myGlobalLayout);
+     show();
+
