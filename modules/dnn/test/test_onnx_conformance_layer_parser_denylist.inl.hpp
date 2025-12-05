@@ -123,15 +123,6 @@
 "test_nllloss_NCd1d2d3d4d5_mean_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1d2d3d4d5_mean_weight_expanded", // Issue::Wrong output
 "test_nllloss_NCd1d2d3d4d5_none_no_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nonmaxsuppression_center_point_box_format", // Issue:: Layer does not exist (NonMaxSuppression)::Can't create layer "onnx_node_output_0!selected_indices" of type "NonMaxSuppression" in function 'getLayerInstance'
-"test_nonmaxsuppression_flipped_coordinates", // ---- same as above ---
-"test_nonmaxsuppression_identical_boxes", // ---- same as above ---
-"test_nonmaxsuppression_limit_output_size", // ---- same as above ---
-"test_nonmaxsuppression_single_box", // ---- same as above ---
-"test_nonmaxsuppression_suppress_by_IOU", // ---- same as above ---
-"test_nonmaxsuppression_suppress_by_IOU_and_scores", // ---- same as above ---
-"test_nonmaxsuppression_two_batches", // ---- same as above ---
-"test_nonmaxsuppression_two_classes", // ---- same as above ---
 "test_onehot_negative_indices", // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis", // ---- same as above ---
 "test_onehot_with_negative_axis", // ---- same as above ---
@@ -158,29 +149,8 @@
 "test_reduce_sum_negative_axes_keepdims_example",
 "test_reduce_sum_negative_axes_keepdims_random", // ---- same as above ---
 "test_reshape_allowzero_reordered", // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
-"test_resize_downsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
-"test_resize_downsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---
 "test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
-"test_resize_downsample_scales_linear", // ---- same as above ---
 "test_resize_downsample_scales_linear_align_corners", // ---- same as above ---
-"test_resize_downsample_scales_nearest", // ---- same as above ---
-"test_resize_downsample_sizes_cubic", // ---- same as above ---
-"test_resize_downsample_sizes_linear_pytorch_half_pixel", // ---- same as above ---
-"test_resize_downsample_sizes_nearest", // ---- same as above ---
-"test_resize_downsample_sizes_nearest_tf_half_pixel_for_nn", // ---- same as above ---
-"test_resize_tf_crop_and_resize", // ---- same as above ---
-"test_resize_upsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
-"test_resize_upsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---
-"test_resize_upsample_scales_cubic_align_corners", // ---- same as above ---
-"test_resize_upsample_scales_cubic_asymmetric", // ---- same as above ---
-"test_resize_upsample_scales_linear", // ---- same as above ---
-"test_resize_upsample_scales_linear_align_corners", // ---- same as above ---
-"test_resize_upsample_scales_nearest", // ---- same as above ---
-"test_resize_upsample_sizes_cubic", // ---- same as above ---
-"test_resize_upsample_sizes_nearest", // ---- same as above ---
-"test_resize_upsample_sizes_nearest_ceil_half_pixel", // ---- same as above ---
-"test_resize_upsample_sizes_nearest_floor_align_corners", // ---- same as above ---
-"test_resize_upsample_sizes_nearest_round_prefer_ceil_asymmetric", // ---- same as above ---
 "test_reversesequence_batch",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "ReverseSequence" in function 'getLayerInstance'
 "test_reversesequence_time", // ---- same as above ---
 "test_rnn_seq_length", // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
@@ -287,8 +257,3 @@
 "test_training_dropout_zero_ratio_mask",  // ---- same as above ---
 "test_tril_zero",  // ---- same as above ---
 "test_triu_zero",  // ---- same as above ---
-"test_unique_not_sorted_without_axis", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "Unique" in function 'getLayerInstance'
-"test_unique_sorted_with_axis",  // ---- same as above ---
-"test_unique_sorted_with_axis_3d",  // ---- same as above ---
-"test_unique_sorted_with_negative_axis",  // ---- same as above ---
-"test_unique_sorted_without_axis",  // ---- same as above ---

@@ -213,10 +213,12 @@ protected:
     void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseDet                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseSize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseUnique               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseResize2              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseShape                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -230,6 +232,7 @@ protected:
     void parseTranspose            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUnsqueeze            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNonMaxSuprression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
@@ -1537,13 +1540,12 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
 }
 
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
-void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
-    layerParams.type = "Resize";
+    layerParams.type = "Resize2";
     String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 
-    CV_Assert(interp_mode != "tf_crop_and_resize");
     bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
 
     layerParams.set("align_corners", interp_mode == "align_corners");
@@ -1565,16 +1567,39 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     if(scalesArg.idx > 0 && netimpl->isConstArg(scalesArg))
         scales = netimpl->argTensor(scalesArg);
 
-    if (ninputs >= 3 && interp_mode == "tf_crop_and_resize") {
-        int roiInputId = 1;
-        Arg roiArg = node_inputs[roiInputId];
-        if (!netimpl->isConstArg(roiArg)) {
-            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
+    if (interp_mode == "tf_crop_and_resize")
+    {
+        CV_Assert(ninputs >= 3);
+        Arg roiArg    = node_inputs[1];
+        bool hasSizes = (ninputs >= 4);
+        Arg sizesArg  = hasSizes ? node_inputs[3] : Arg();
+
+        bool staticRoi   = netimpl->isConstArg(roiArg);
+        bool staticSizes = hasSizes && netimpl->isConstArg(sizesArg);
+
+        if (staticRoi && (!hasSizes || staticSizes))
+        {
+            Mat roiMat = netimpl->argTensor(roiArg), roiF;
+            CV_CheckEQ(roiMat.total(), (size_t)4,
+                      "ONNX/Resize: ROI must have 4 values [y1,x1,y2,x2]");
+            roiMat.convertTo(roiF, CV_32F);
+            layerParams.set("y1", roiF.at<float>(0));
+            layerParams.set("x1", roiF.at<float>(1));
+            layerParams.set("y2", roiF.at<float>(2));
+            layerParams.set("x2", roiF.at<float>(3));
+
+            if (hasSizes && staticSizes)
+            {
+                Mat szMat = netimpl->argTensor(sizesArg), sz;
+                CV_CheckEQ(szMat.total(), (size_t)4,
+                          "ONNX/Resize: sizes must have 4 values [N,C,H,W]");
+                szMat.convertTo(sz, CV_32S);
+                layerParams.set("height", sz.at<int>(2));
+                layerParams.set("width",  sz.at<int>(3));
+            }
+            layerParams.set("dynamic_roi", false);
         }
-        Mat roi = netimpl->argTensor(roiArg);
-        if (!roi.empty()) {
-            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
-        }
+        else layerParams.set("dynamic_roi", true);
     }
 
     if (scales.total() == 4)
@@ -1598,8 +1623,28 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
             ninputs = 1;
         }
     }
+
+    for (int i_attr = 0; i_attr < node_proto.attribute_size(); ++i_attr)
+    {
+        const auto& a = node_proto.attribute(i_attr);
+        if (a.name() == "nearest_mode" && a.has_s())
+            layerParams.set("nearest_mode", String(a.s()));
+        else if (a.name() == "exclude_outside" && a.has_i())
+            layerParams.set("exclude_outside", static_cast<int>(a.i()) != 0);
+        else if (a.name() == "cubic_coeff_a" && a.has_f())
+            layerParams.set("cubic_coeff_a", static_cast<float>(a.f()));
+        else if (a.name() == "extrapolation_value" && a.has_f())
+            layerParams.set("extrapolation_value", static_cast<float>(a.f()));
+    }
+
     replaceLayerParam(layerParams, "mode", "interpolation");
     addLayer(layerParams, node_proto, ninputs);
+}
+
+void ONNXImporter2::parseUnique(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Unique";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1657,6 +1702,12 @@ void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodePr
 void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "GridSample";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseNonMaxSuprression(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NonMaxSuprression";
     addLayer(layerParams, node_proto);
 }
 
@@ -2494,8 +2545,9 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
     dispatch["If"] = &ONNXImporter2::parseIf;
-    dispatch["Resize"] = &ONNXImporter2::parseResize;
+    dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Size"] = &ONNXImporter2::parseSize;
+    dispatch["Unique"] = &ONNXImporter2::parseUnique;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
@@ -2503,6 +2555,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
+    dispatch["NonMaxSuprression"] = &ONNXImporter2::parseNonMaxSuprression;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;

@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # This file is part of OpenCV project.
 # It is subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
@@ -278,6 +280,7 @@ def showUndistorted(image_points, Ks, distortions, image_names, cam_ids):
 def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1,
                    K, dist_coeff, model, cam_idx, frame_idx, per_acc,
                    image=None):
+
     rvec2, tvec2 = cv.composeRT(rvec0, tvec0, rvec1, tvec1)[:2]
 
     if model == cv.CALIB_MODEL_FISHEYE:
@@ -365,6 +368,7 @@ def calibrateFromPoints(
         models,
         image_names=None,
         find_intrinsics_in_python=False,
+        use_stereo_init=False,
         Ks=None,
         distortions=None
     ):
@@ -384,9 +388,9 @@ def calibrateFromPoints(
     pinhole_flag = cv.CALIB_RATIONAL_MODEL
     fisheye_flag = cv.CALIB_RECOMPUTE_EXTRINSIC+cv.CALIB_FIX_SKEW
     if Ks is not None and distortions is not None:
-        USE_INTRINSICS_GUESS = True
+        useIntrinsics = True
     else:
-        USE_INTRINSICS_GUESS = find_intrinsics_in_python
+        useIntrinsics = find_intrinsics_in_python
         if find_intrinsics_in_python:
             Ks, distortions = [], []
             for c in range(num_cameras):
@@ -435,7 +439,8 @@ def calibrateFromPoints(
                 Ks=Ks,
                 distortions=distortions,
                 flagsForIntrinsics=np.array([pinhole_flag if models[x] == cv.CALIB_MODEL_PINHOLE else fisheye_flag for x in range(num_cameras)], dtype=int),
-                flags = cv.CALIB_USE_INTRINSIC_GUESS if USE_INTRINSICS_GUESS else 0
+                flags = (cv.CALIB_USE_INTRINSIC_GUESS if useIntrinsics else 0) +
+                        (cv.CALIB_STEREO_REGISTRATION if use_stereo_init else 0)
             )
 # [multiview_calib]
 #    except Exception as e:
@@ -478,7 +483,7 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
                      pattern_points, image_sizes, output_pairs, image_names, cam_ids):
     def _as_rvec(x):
         x = np.asarray(x)
-        return cv.Rodrigues(x)[0] if x.shape == (3, 3) else x.reshape(3, 1)
+        return cv.Rodrigues(x)[0] if x.shape == (3, 3) else x
     rvecs = [_as_rvec(R) for R in Rs]
     errors = errors_per_frame[errors_per_frame > 0]
     detection_mask_idxs = np.stack(np.where(detection_mask)) # 2 x M, first row is camera idx, second is frame idx
@@ -509,14 +514,13 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
             image = cv.cvtColor(cv.imread(image_names[cam_idx][frame_idx]), cv.COLOR_BGR2RGB)
         mask = insideImageMask(image_points[cam_idx][frame_idx].T,
                                image_sizes[cam_idx][0], image_sizes[cam_idx][1])
-        tvec_cam = np.asarray(Ts[cam_idx]).reshape(3,1)
         plotProjection(
             image_points[cam_idx][frame_idx][mask],
             pattern_points[mask],
             rvecs0[frame_idx],
-            tvecs0[frame_idx],
+            tvecs0[frame_idx].flatten(),
             rvecs[cam_idx],
-            tvec_cam,
+            Ts[cam_idx].flatten(),
             Ks[cam_idx],
             distortions[cam_idx],
             models[cam_idx],
@@ -538,11 +542,18 @@ def visualizeFromFile(file):
     read_keys = [
         'Rs', 'distortions', 'Ks', 'Ts', 'rvecs0', 'tvecs0',
         'errors_per_frame', 'output_pairs', 'image_points', 'models',
-        'image_sizes', 'pattern_points', 'detection_mask', 'cam_ids',
+        'image_sizes', 'pattern_points', 'detection_mask',
     ]
     input = {}
     for key in read_keys:
         input[key] = file_read.getNode(key).mat()
+
+    cam_ids_len = file_read.getNode('cam_ids').size()
+    input['cam_ids'] = np.array(
+        [file_read.getNode('cam_ids').at(i).string() for i in range(cam_ids_len)]
+    )
+
+    print("loaded camera ids: ", input['cam_ids'])
 
     im_names_len = file_read.getNode('image_names').size()
     input['image_names'] = np.array(
@@ -571,7 +582,7 @@ def saveToFile(path_to_save, **kwargs):
         if key == 'image_names':
             save_file.write('image_names', list(np.array(kwargs['image_names']).reshape(-1)))
         elif key == 'cam_ids':
-            save_file.write('cam_ids', list(kwargs['cam_ids']))
+            save_file.write('cam_ids', kwargs['cam_ids'])
         elif key == 'distortions':
             value = kwargs[key]
             save_file.write('distortions', np.concatenate([x.reshape([-1,]) for x in value],axis=0))
@@ -729,15 +740,17 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
                                        corners, winsize, (-1,-1), criteria)
 
     elif pattern_type.lower() == 'circles':
+        # Workaround: CALIB_CB_CLUSTERING does not allow pattern flip
         ret, corners = cv.findCirclesGrid(
-            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID
+            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID+cv.CALIB_CB_CLUSTERING
         )
         if ret:
             corners2 = corners / scale
 
     elif pattern_type.lower() == 'acircles':
+        # Workaround: CALIB_CB_CLUSTERING does not allow pattern flip
         ret, corners = cv.findCirclesGrid(
-            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID
+            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID+cv.CALIB_CB_CLUSTERING
         )
         if ret:
             corners2 = corners / scale
@@ -784,7 +797,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
 
 def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
                         dist_m, winsize, points_json_file, debug_corners,
-                        RESIZE_IMAGE, find_intrinsics_in_python,
+                        RESIZE_IMAGE, find_intrinsics_in_python, use_stereo_init,
                         is_parallel_detection=True, cam_ids=None, files_with_intrinsics=[], board_dict_path=None):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
@@ -946,6 +959,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
         models,
         all_images_names,
         find_intrinsics_in_python,
+        use_stereo_init,
         Ks=Ks,
         distortions=distortions,
     )
@@ -977,13 +991,15 @@ def calibrateFromJSON(json_file, find_intrinsics_in_python):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--log_level', type=str, choices=('', 'verbose', 'debug', 'info', 'warning', 'error', 'fatal', 'silent'), help='OpenCV log level to print more calibration process details')
     parser.add_argument('--json_file', type=str, default=None, help="json file with all data. Must have keys: 'object_points', 'image_points', 'image_sizes', 'is_fisheye'")
     parser.add_argument('--filenames', type=str, default=None, help='Txt files containing image lists, e.g., cam_1.txt,cam_2.txt,...,cam_N.txt for N cameras')
     parser.add_argument('--pattern_size', type=str, default=None, help='pattern size: width,height')
     parser.add_argument('--pattern_type', type=str, default=None, help='supported: checkerboard, circles, acircles, charuco')
     parser.add_argument('--is_fisheye', type=str, default=None, help='is_ mask, e.g., 0,1,...')
     parser.add_argument('--pattern_distance', type=float, default=None, help='distance between object / pattern points')
-    parser.add_argument('--find_intrinsics_in_python', required=False, action='store_true', help='calibrate intrinsics in Python sample instead of C++')
+    parser.add_argument('--find_intrinsics_in_python', required=False, action='store_true', help='calibrate intrinsics in Python sample instead of built-in version')
+    parser.add_argument('--use_stereo_init', required=False, action='store_true', help='use calibrateStereo instead of registerCameras for initial pairs registration')
     parser.add_argument('--winsize', type=str, default='5,5', help='window size for corners detection: w,h')
     parser.add_argument('--debug_corners', required=False, action='store_true', help='debug flag for corners detection visualization of images')
     parser.add_argument('--points_json_file', type=str, default='', help='if path is provided then image and object points will be saved to JSON file.')
@@ -998,6 +1014,21 @@ if __name__ == '__main__':
     params, _ = parser.parse_known_args()
     print("params.board_dict_path:", params.board_dict_path)
 
+    if params.log_level == "verbose":
+        cv.setLogLevel(6)
+    elif params.log_level == "debug":
+        cv.setLogLevel(5)
+    elif params.log_level == "info":
+        cv.setLogLevel(4)
+    elif params.log_level == "warning":
+        cv.setLogLevel(3)
+    elif params.log_level == "error":
+        cv.setLogLevel(2)
+    elif params.log_level == "fatal":
+        cv.setLogLevel(1)
+    elif params.log_level == "silent":
+        cv.setLogLevel(0)
+
     if params.visualize:
         assert os.path.exists(params.path_to_visualize), f'Path to result file does not exist: {params.path_to_visualize}'
         visualizeFromFile(params.path_to_visualize)
@@ -1009,6 +1040,16 @@ if __name__ == '__main__':
         print('Found camera filenames:', params.filenames)
         params.is_fisheye = ','.join('0' * len(cam_files))
         print('Fisheye parameters:', params.is_fisheye)  # TODO: Calculate it automatically
+
+    if params.use_stereo_init:
+        models=[int(v) for v in params.is_fisheye.split(',')]
+        not_the_same = False
+        for i in range (1, len(models)):
+            if models[i-1] != models[i]:
+                not_the_same = True
+        if not_the_same:
+            print("--use_stereo_init option is applicable only if all cameras are calibrated with the same model!")
+            sys.exit(0)
 
     if params.json_file is not None:
         output = calibrateFromJSON(params.json_file, params.find_intrinsics_in_python)
@@ -1033,6 +1074,7 @@ if __name__ == '__main__':
             debug_corners=params.debug_corners,
             RESIZE_IMAGE=params.resize_image_detection,
             find_intrinsics_in_python=params.find_intrinsics_in_python,
+            use_stereo_init=params.use_stereo_init,
             cam_ids=cam_ids,
             files_with_intrinsics=[x.strip() for x in (params.intrinsics or "").split(',') if x.strip()],
             board_dict_path=params.board_dict_path,
