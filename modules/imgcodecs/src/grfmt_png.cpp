@@ -919,6 +919,7 @@ PngEncoder::PngEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_support_metadata[IMAGE_METADATA_CICP] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
@@ -931,6 +932,7 @@ PngEncoder::PngEncoder()
     memset(palette, 0, sizeof(palette));
     memset(trns, 0, sizeof(trns));
     memset(op, 0, sizeof(op));
+    m_supported_encode_key = {IMWRITE_PNG_COMPRESSION, IMWRITE_PNG_STRATEGY, IMWRITE_PNG_BILEVEL, IMWRITE_PNG_FILTER, IMWRITE_PNG_ZLIBBUFFER_SIZE};
 }
 
 PngEncoder::~PngEncoder()
@@ -1001,26 +1003,61 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
+                    const int value = params[i+1];
                     switch (params[i])
                     {
                     case IMWRITE_PNG_COMPRESSION:
                         m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                        m_compression_level = params[i+1];
-                        m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
+                        m_compression_level = MIN(MAX(value, 0), Z_BEST_COMPRESSION);
+                        if(value != m_compression_level) {
+                            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_COMPRESSION must be between 0 to 9. It is fallbacked to %d", value, m_compression_level));
+                        }
                         set_compression_level = true;
                         break;
 
                     case IMWRITE_PNG_STRATEGY:
-                        m_compression_strategy = params[i+1];
-                        m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
+                        {
+                            switch(value) {
+                                case IMWRITE_PNG_STRATEGY_DEFAULT:
+                                case IMWRITE_PNG_STRATEGY_FILTERED:
+                                case IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY:
+                                case IMWRITE_PNG_STRATEGY_RLE:
+                                case IMWRITE_PNG_STRATEGY_FIXED:
+                                    m_compression_strategy = value;
+                                    break;
+                                default:
+                                    m_compression_strategy = IMWRITE_PNG_STRATEGY_RLE;
+                                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_STRATEGY must be one of ImwritePNGFlags. It is fallbacked to IMWRITE_PNG_STRATEGY_RLE", value));
+                                    break;
+                            }
+                        }
                         break;
 
                     case IMWRITE_PNG_BILEVEL:
-                        m_isBilevel = params[i+1] != 0;
+                        m_isBilevel = value != 0;
+                        if((value != 0) && (value != 1)) {
+                            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_BILEVEL must be 0 or 1. It is fallbacked to 1", value ));
+                        }
                         break;
 
                     case IMWRITE_PNG_FILTER:
-                        m_filter = params[i+1];
+                        {
+                            switch(value) {
+                                case IMWRITE_PNG_FILTER_NONE:
+                                case IMWRITE_PNG_FILTER_SUB:
+                                case IMWRITE_PNG_FILTER_UP:
+                                case IMWRITE_PNG_FILTER_AVG:
+                                case IMWRITE_PNG_FILTER_PAETH:
+                                case IMWRITE_PNG_FAST_FILTERS:
+                                case IMWRITE_PNG_ALL_FILTERS:
+                                    m_filter = value;
+                                    break;
+                                default:
+                                    m_filter = IMWRITE_PNG_FILTER_SUB;
+                                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_FILTER must be one of ImwritePNGFilterFlags. It is fallbacked to IMWRITE_PNG_FILTER_SUB", value ));
+                                    break;
+                            }
+                        }
                         set_filter = true;
                         break;
 
@@ -1029,11 +1066,16 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         // The minimum limit is 6, which is from from https://github.com/opencv/opencv/blob/4.12.0/3rdparty/libpng/pngset.c#L1600 .
                         // The maximum limit is 1 MiB, which has been provisionally set. libpng limitation is 2 GiB(INT32_MAX), but it is too large.
                         // For normal use, 128 or 256 KiB may be sufficient. See https://zlib.net/zlib_how.html .
-                        png_set_compression_buffer_size(png_ptr, MIN(MAX(params[i+1],6), 1024*1024));
+                        {
+                            const int zlen = MIN(MAX(value, 6), 1024*1024);
+                            if(value != zlen) {
+                                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_ZLIBBUFFER_SIZE must be between 6 to 1024*1024. It is fallbacked to %d", value , zlen));
+                            }
+                            png_set_compression_buffer_size(png_ptr, zlen);
+                        }
                         break;
 
                     default:
-                        CV_LOG_WARNING(NULL, "An unknown or unsupported ImwriteFlags value was specified and has been ignored.");
                         break;
                     }
                 }
@@ -1092,6 +1134,16 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                                 reinterpret_cast<png_charp>(iccp.data()),
 #endif
                                 static_cast<png_uint_32>(iccp.size()));
+                        }
+
+                        std::vector<uchar>& cicp = m_metadata[IMAGE_METADATA_CICP];
+                        if (!cicp.empty()) {
+#ifdef PNG_cICP_SUPPORTED
+                            CV_CheckEQ((size_t)4, cicp.size(), "The cICP chunk consists of four 1-byte unsigned integers");
+                            png_set_cICP(png_ptr, info_ptr, cicp[0], cicp[1], cicp[2], cicp[3]);
+#else
+                            CV_LOG_WARNING(NULL, "Libpng is too old and does not support cICP.");
+#endif
                         }
                     }
 

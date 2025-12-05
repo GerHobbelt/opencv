@@ -514,10 +514,34 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Reshape2Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS IsNaNLayer : public Layer
+    {
+    public:
+        static Ptr<IsNaNLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS IsInfLayer : public Layer
+    {
+    public:
+        static Ptr<IsInfLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS GridSampleLayer : public Layer
+    {
+    public:
+        static Ptr<GridSampleLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:
         static Ptr<FlattenLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS BitShiftLayer : public Layer
+    {
+    public:
+        static Ptr<BitShiftLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS SqueezeLayer : public Layer
@@ -1245,6 +1269,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ResizeLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS SizeLayer : public Layer
+    {
+    public:
+        static Ptr<SizeLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS DetLayer : public Layer
+    {
+    public:
+        static Ptr<DetLayer> create(const LayerParams &params);
+    };
+
     /**
      * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
      *
@@ -1336,6 +1372,12 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Expand2Layer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS NonZeroLayer : public Layer
+    {
+    public:
+        static Ptr<NonZeroLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS InstanceNormLayer : public Layer {

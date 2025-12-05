@@ -208,9 +208,15 @@ protected:
     void parsePRelu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReduce               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNonZero              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDet                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseShape                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -225,6 +231,7 @@ protected:
     void parseUnsqueeze            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -1595,12 +1602,62 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto, ninputs);
 }
 
+void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Size";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBitShift(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // ONNX spec: direction is required string attr: "LEFT" or "RIGHT"
+    // https://onnx.ai/onnx/operators/onnx__BitShift.html
+    layerParams.type = "BitShift";
+    String dir = layerParams.get<String>("direction", "");
+
+    CV_Assert(dir == "LEFT" || dir == "RIGHT");
+    CV_Assert(!dir.empty());
+
+    if (!dir.empty())
+    {
+        if (dir == "LEFT" || dir == "left")
+            layerParams.set("direction", 0);
+        else if (dir == "RIGHT" || dir == "right")
+            layerParams.set("direction", 1);
+    }
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseTrilu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
     layerParams.type = "Trilu";
     addLayer(layerParams, node_proto, ninputs);
 
+}
+
+void ONNXImporter2::parseIsNaN(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "IsNaN";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseIsInf(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "IsInf";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Det";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "GridSample";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1654,6 +1711,12 @@ void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::N
     }
     replaceLayerParam(layerParams, "mode", "interpolation");
     addLayer(layerParams, node_proto, n_inputs);
+}
+
+void ONNXImporter2::parseNonZero(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NonZero";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseSoftMax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2409,6 +2472,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Tanh"] = &ONNXImporter2::parseTanh;
     dispatch["Abs"] = &ONNXImporter2::parseAbs;
     dispatch["PRelu"] = &ONNXImporter2::parsePRelu;
+    dispatch["NonZero"] = &ONNXImporter2::parseNonZero;
     dispatch["LRN"] = &ONNXImporter2::parseLRN;
     dispatch["InstanceNormalization"] = &ONNXImporter2::parseInstanceNormalization;
     dispatch["BatchNormalization"] = &ONNXImporter2::parseBatchNormalization;
@@ -2431,8 +2495,14 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
     dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize;
+    dispatch["Size"] = &ONNXImporter2::parseSize;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
+    dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
+    dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
+    dispatch["Det"] = &ONNXImporter2::parseDet;
+    dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
+    dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;

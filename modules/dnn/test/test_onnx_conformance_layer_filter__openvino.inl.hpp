@@ -263,21 +263,21 @@ CASE(test_bernoulli_seed)
 CASE(test_bernoulli_seed_expanded)
     // no filter
 CASE(test_bitshift_left_uint16)
-    // no filter
+    SKIP;
 CASE(test_bitshift_left_uint32)
-    // no filter
+    SKIP;
 CASE(test_bitshift_left_uint64)
-    // no filter
+    SKIP;
 CASE(test_bitshift_left_uint8)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint16)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint32)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint64)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint8)
-    // no filter
+    SKIP;
 CASE(test_cast_BFLOAT16_to_FLOAT)
     // no filter
 CASE(test_cast_DOUBLE_to_FLOAT)
@@ -411,15 +411,15 @@ CASE(test_concat_3d_axis_negative_2)
 CASE(test_concat_3d_axis_negative_3)
     // no filter
 CASE(test_constant)
-    // no filter
+    SKIP;
 CASE(test_constant_pad)
-    // no filter
+    SKIP;
 CASE(test_constantofshape_float_ones)
-    // no filter
+    SKIP;
 CASE(test_constantofshape_int_shape_zero)
     // no filter
 CASE(test_constantofshape_int_zeros)
-    // no filter
+    SKIP;
 CASE(test_conv_with_autopad_same)
 #if SKIP_SET_1
     SKIP_MYRIAD;
@@ -507,9 +507,9 @@ CASE(test_dequantizelinear_axis)
 CASE(test_dequantizelinear_blocked)
     SKIP;
 CASE(test_det_2d)
-    // no filter
+    SKIP;
 CASE(test_det_nd)
-    // no filter
+    SKIP;
 CASE(test_div)
     // no filter
 CASE(test_div_bcast)
@@ -547,7 +547,7 @@ CASE(test_dynamicquantizelinear_min_adjusted)
 CASE(test_dynamicquantizelinear_min_adjusted_expanded)
     // no filter
 CASE(test_edge_pad)
-    // no filter
+    SKIP;
 CASE(test_einsum_batch_diagonal)
     SKIP;
 CASE(test_hardmax_axis_0)
@@ -723,21 +723,21 @@ CASE(test_greater_equal_bcast_expanded)
 CASE(test_greater_equal_expanded)
     // no filter
 CASE(test_gridsample)
-    // no filter
+    SKIP;
 CASE(test_gridsample_aligncorners_true)
-    // no filter
+    SKIP;
 CASE(test_gridsample_bicubic)
     // no filter
 CASE(test_gridsample_bilinear)
-    // no filter
+    SKIP;
 CASE(test_gridsample_border_padding)
-    // no filter
+    SKIP;
 CASE(test_gridsample_nearest)
-    // no filter
+    SKIP;
 CASE(test_gridsample_reflection_padding)
-    // no filter
+    SKIP;
 CASE(test_gridsample_zeros_padding)
-    // no filter
+    SKIP;
 CASE(test_group_normalization_epsilon)
     // no filter
 CASE(test_group_normalization_example)
@@ -791,13 +791,13 @@ CASE(test_instancenorm_epsilon)
 CASE(test_instancenorm_example)
     // no filter
 CASE(test_isinf)
-    // no filter
+    SKIP;
 CASE(test_isinf_negative)
-    // no filter
+    SKIP;
 CASE(test_isinf_positive)
-    // no filter
+    SKIP;
 CASE(test_isnan)
-    // no filter
+    SKIP;
 CASE(test_layer_normalization_2d_axis0)
     // no filter
 CASE(test_layer_normalization_2d_axis1)
@@ -911,13 +911,13 @@ CASE(test_lrn)
 CASE(test_lrn_default)
     // no filter
 CASE(test_lstm_batchwise)
-    // no filter
+    SKIP;
 CASE(test_lstm_defaults)
-    // no filter
+    SKIP;
 CASE(test_lstm_with_initial_bias)
-    // no filter
+    SKIP;
 CASE(test_lstm_with_peepholes)
-    // no filter
+    SKIP;
 CASE(test_matmul_2d)
     // no filter
 CASE(test_matmul_3d)
@@ -927,33 +927,33 @@ CASE(test_matmul_4d)
 CASE(test_matmulinteger)
     // no filter
 CASE(test_max_example)
-    // no filter
+    SKIP;
 CASE(test_max_float16)
-    // no filter
+    SKIP;
 CASE(test_max_float32)
-    // no filter
+    SKIP;
 CASE(test_max_float64)
-    // no filter
+    SKIP;
 CASE(test_max_int16)
-    // no filter
+    SKIP;
 CASE(test_max_int32)
-    // no filter
+    SKIP;
 CASE(test_max_int64)
     SKIP;
 CASE(test_max_int8)
     // no filter
 CASE(test_max_one_input)
-    // no filter
+    SKIP;
 CASE(test_max_two_inputs)
-    // no filter
+    SKIP;
 CASE(test_max_uint16)
-    // no filter
+    SKIP;
 CASE(test_max_uint32)
-    // no filter
+    SKIP;
 CASE(test_max_uint64)
-    // no filter
+    SKIP;
 CASE(test_max_uint8)
-    // no filter
+    SKIP;
 CASE(test_maxpool_1d_default)
 #if SKIP_SET_1
     SKIP_MYRIAD;
@@ -1021,47 +1021,47 @@ CASE(test_maxunpool_export_without_output_shape)
     SKIP;
 #endif
 CASE(test_mean_example)
-    // no filter
+    SKIP;
 CASE(test_mean_one_input)
-    // no filter
+    SKIP;
 CASE(test_mean_two_inputs)
-    // no filter
+    SKIP;
 CASE(test_min_example)
-    // no filter
+    SKIP;
 CASE(test_min_float16)
-    // no filter
+    SKIP;
 CASE(test_min_float32)
-    // no filter
+    SKIP;
 CASE(test_min_float64)
-    // no filter
+    SKIP;
 CASE(test_min_int16)
-    // no filter
+    SKIP;
 CASE(test_min_int32)
-    // no filter
+    SKIP;
 CASE(test_min_int64)
     SKIP;
 CASE(test_min_int8)
-    // no filter
+    SKIP;
 CASE(test_min_one_input)
-    // no filter
+    SKIP;
 CASE(test_min_two_inputs)
-    // no filter
+    SKIP;
 CASE(test_min_uint16)
-    // no filter
+    SKIP;
 CASE(test_min_uint32)
-    // no filter
+    SKIP;
 CASE(test_min_uint64)
-    // no filter
+    SKIP;
 CASE(test_min_uint8)
-    // no filter
+    SKIP;
 CASE(test_mish)
     // no filter
 CASE(test_mish_expanded)
     // no filter
 CASE(test_mod_broadcast)
-    // no filter
+    SKIP;
 CASE(test_mod_int64_fmod)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_float16)
     // no filter
     if (target == DNN_TARGET_OPENCL)
@@ -1084,21 +1084,21 @@ CASE(test_mod_mixed_sign_float64)
         default_lInf = 0.0016;  // Expected: (normInf) <= (lInf), actual: 0.00156251 vs 0.0001
     }
 CASE(test_mod_mixed_sign_int16)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_int32)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_int64)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_int8)
-    // no filter
+    SKIP;
 CASE(test_mod_uint16)
-    // no filter
+    SKIP;
 CASE(test_mod_uint32)
-    // no filter
+    SKIP;
 CASE(test_mod_uint64)
-    // no filter
+    SKIP;
 CASE(test_mod_uint8)
-    // no filter
+    SKIP;
 CASE(test_momentum)
     // no filter
 CASE(test_momentum_multiple)
@@ -1218,7 +1218,7 @@ CASE(test_nonmaxsuppression_two_batches)
 CASE(test_nonmaxsuppression_two_classes)
     // no filter
 CASE(test_nonzero_example)
-    // no filter
+    SKIP;
 CASE(test_not_2d)
     // no filter
 CASE(test_not_3d)
@@ -1266,23 +1266,23 @@ CASE(test_pow_bcast_scalar)
 CASE(test_pow_example)
     // no filter
 CASE(test_pow_types_float)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_int32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_int64)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_uint32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_uint64)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int32_float32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int32_int32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int64_float32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int64_int64)
     SKIP;
 CASE(test_prelu_broadcast)
@@ -1560,7 +1560,7 @@ CASE(test_reduce_sum_square_negative_axes_keepdims_random)
     }
 #endif
 CASE(test_reflect_pad)
-    // no filter
+    SKIP;
 CASE(test_relu)
     // no filter
 CASE(test_reshape_allowzero_reordered)
@@ -1868,9 +1868,9 @@ CASE(test_sinh)
 CASE(test_sinh_example)
     // no filter
 CASE(test_size)
-    // no filter
+    SKIP;
 CASE(test_size_example)
-    // no filter
+    SKIP;
 CASE(test_slice)
     SKIP;
 CASE(test_slice_default_axes)
@@ -2058,39 +2058,39 @@ CASE(test_transpose_all_permutations_5)
 CASE(test_transpose_default)
     // no filter
 CASE(test_tril)
-    // no filter
+    SKIP;
 CASE(test_tril_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_one_row_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_out_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_out_pos)
-    // no filter
+    SKIP;
 CASE(test_tril_pos)
-    // no filter
+    SKIP;
 CASE(test_tril_square)
-    // no filter
+    SKIP;
 CASE(test_tril_square_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_zero)
     // no filter
 CASE(test_triu)
-    // no filter
+    SKIP;
 CASE(test_triu_neg)
-    // no filter
+    SKIP;
 CASE(test_triu_one_row)
-    // no filter
+    SKIP;
 CASE(test_triu_out_neg_out)
-    // no filter
+    SKIP;
 CASE(test_triu_out_pos)
-    // no filter
+    SKIP;
 CASE(test_triu_pos)
-    // no filter
+    SKIP;
 CASE(test_triu_square)
-    // no filter
+    SKIP;
 CASE(test_triu_square_neg)
-    // no filter
+    SKIP;
 CASE(test_triu_zero)
     // no filter
 CASE(test_unique_not_sorted_without_axis)

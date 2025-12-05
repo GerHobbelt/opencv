@@ -94,11 +94,13 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Flatten,        FlattenLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Interp,         InterpLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Pad2,           Pad2Layer);
+    CV_DNN_REGISTER_LAYER_CLASS(NonZero,        NonZeroLayer);
     CV_DNN_REGISTER_LAYER_CLASS(QuantizeLinear, QuantizeLinearLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Range,          RangeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reshape,        ReshapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reshape2,       Reshape2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Resize,         ResizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Size,           SizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Shape,          ShapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Slice,          SliceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Slice2,         Slice2Layer);
@@ -108,6 +110,11 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Tile2,          Tile2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Transpose,      TransposeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Unsqueeze,      UnsqueezeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(IsNaN,          IsNaNLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(IsInf,          IsInfLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Det,            DetLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(BitShift,       BitShiftLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(GridSample,     GridSampleLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Convolution,    ConvolutionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Deconvolution,  DeconvolutionLayer);

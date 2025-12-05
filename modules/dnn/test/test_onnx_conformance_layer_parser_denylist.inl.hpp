@@ -15,14 +15,6 @@
 "test_bernoulli_expanded",  // ---- same as above ---
 "test_bernoulli_seed", // ---- same as above ---
 "test_bernoulli_seed_expanded",  // ---- same as above ---
-"test_bitshift_left_uint16", // Issue::Unsuppoted data type
-"test_bitshift_left_uint32", // Issue::Unsuppoted data type
-"test_bitshift_left_uint64", // Issue::Unsuppoted data type
-"test_bitshift_left_uint8", // Issues::Layer::Can't create layer "onnx_node_output_0!z" of type "BitShift" in function 'getLayerInstance'
-"test_bitshift_right_uint16", // Issue::Unsuppoted data type
-"test_bitshift_right_uint32", // Issue::Unsuppoted data type
-"test_bitshift_right_uint64", // Issue::Unsuppoted data type
-"test_bitshift_right_uint8", // Issues::Layer::Can't create layer "onnx_node_output_0!z" of type "BitShift" in function 'getLayerInstance'
 "test_cast_BFLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
 "test_cast_DOUBLE_to_FLOAT16", // Issue::Unsuppoted data type
 "test_cast_FLOAT16_to_DOUBLE", // Issue::Unsuppoted data type
@@ -52,11 +44,7 @@
 "test_compress_1", // ---- same as above ---
 "test_compress_default_axis", // ---- same as above ---
 "test_compress_negative_axis", // ---- same as above ---
-"test_constant",  // Issue::Wrong output
-"test_constant_pad",  // Issue:: Unkonwn error
-"test_constantofshape_float_ones", // Issue::Parser::Weights are required as inputs
 "test_constantofshape_int_shape_zero", // Issue::Parser::Weights are required as inputs
-"test_constantofshape_int_zeros", // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding", // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding", //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convtranspose", // Issue::Parser::Weights are required as inputs
@@ -69,8 +57,6 @@
 "test_convtranspose_pad", // Issue::Parser::Weights are required as inputs
 "test_convtranspose_pads", // Issue::Parser::Weights are required as inputs
 "test_convtranspose_with_kernel", // Issue::Parser::Weights are required as inputs
-"test_det_2d", // Issue:: Unkonwn error
-"test_det_nd", // Issue:: Unkonwn error
 "test_dropout_default_mask", // Issue::cvtest::norm::wrong data type
 "test_dropout_default_mask_ratio", // ---- same as above ---
 "test_dynamicquantizelinear", // Issue:: Unkonwn error
@@ -79,7 +65,6 @@
 "test_dynamicquantizelinear_max_adjusted_expanded",  // ---- same as above ---
 "test_dynamicquantizelinear_min_adjusted",  // ---- same as above ---
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
-"test_edge_pad", // Issue::Parser::Weights are required as inputs
 "test_einsum_inner_prod", // Issue::Output shape does not match with reference
 "test_elu_default_expanded_ver18",
 "test_elu_example_expanded_ver18",
@@ -91,14 +76,7 @@
 "test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_2_expanded", // parser: no corresponding layer for CastLike
-"test_gridsample", // Issues::Layer::Can't create layer "onnx_node_output_0!Y" of type "GridSample" in function 'getLayerInstance'
-"test_gridsample_aligncorners_true", // ---- same as above ---
 "test_gridsample_bicubic", // ---- same as above ---
-"test_gridsample_bilinear", // ---- same as above ---
-"test_gridsample_border_padding", // ---- same as above ---
-"test_gridsample_nearest", // ---- same as above ---
-"test_gridsample_reflection_padding", // ---- same as above ---
-"test_gridsample_zeros_padding", // ---- same as above ---
 "test_gru_batchwise", // Issues::Parser::node_proto.input_size() == 6 in function 'parseGRU'
 "test_gru_defaults", // ---- same as above ---
 "test_gru_seq_length", // ---- same as above ---
@@ -107,33 +85,10 @@
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if_opt", // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
 "test_if_seq", // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
-"test_isinf", // Issue::Can't create layer "onnx_node_output_0!y" of type "IsInf" in function 'getLayerInstance'
-"test_isinf_negative", //-- same as above ---
-"test_isinf_positive", //-- same as above ---
-"test_isnan", // -- same as above ---
 "test_loop11", // Issue::'Graph' is not supported in function 'getLayerParams'
 "test_loop13_seq", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_loop16_seq_none", // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
-"test_lstm_batchwise", // Issues::Parser:: !name.empty() && constBlobs.count(name) == 1 in function 'parseLSTM'
-"test_lstm_defaults", // ---- same as above ---
-"test_lstm_with_initial_bias", // ---- same as above ---
-"test_lstm_with_peepholes", // ---- same as above ---
 "test_matmulinteger", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
-"test_max_int16", // Issue:: Unsupported data type
-"test_max_uint16", // Issue:: Unsupported data type
-"test_max_uint32", // Issue:: Unsupported data type
-"test_max_uint64", // Issue:: Unsupported data type
-"test_mean_example", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!result" of type "Mean" in function 'getLayerInstance'
-"test_mean_one_input",  // ---- same as above ---
-"test_mean_two_inputs",  // ---- same as above ---
-"test_min_int16",  // Issue:: Unsupported data type
-"test_min_uint16", // Issue:: Unsupported data type
-"test_min_uint32", // Issue:: Unkonwn error
-"test_min_uint64", // Issue:: Unsupported data type
-"test_mod_mixed_sign_int16", // Issue:: Unkonwn error
-"test_mod_uint16", // Issue:: Unkonwn error
-"test_mod_uint32", // ---- same as above ---
-"test_mod_uint64", // ---- same as above ---
 "test_momentum", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple", // ---- same as above ---
 "test_mvn", // Issues::Wrong answer
@@ -177,7 +132,6 @@
 "test_nonmaxsuppression_suppress_by_IOU_and_scores", // ---- same as above ---
 "test_nonmaxsuppression_two_batches", // ---- same as above ---
 "test_nonmaxsuppression_two_classes", // ---- same as above ---
-"test_nonzero_example", // Issue::Can't create layer "onnx_node_output_0!result" of type "NonZero" in function 'getLayerInstance'
 "test_onehot_negative_indices", // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis", // ---- same as above ---
 "test_onehot_with_negative_axis", // ---- same as above ---
@@ -186,15 +140,6 @@
 "test_optional_get_element_sequence", // ---- same as above ---
 "test_optional_has_element", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_optional_has_element_empty", // ---- same as above ---
-"test_pow_types_float", // Issue:: Unsupported data type
-"test_pow_types_float32_int32", // ---- same as above ---
-"test_pow_types_float32_int64", // ---- same as above ---
-"test_pow_types_float32_uint32", // ---- same as above ---
-"test_pow_types_float32_uint64", // ---- same as above ---
-"test_pow_types_int", // Issue:: Unsupported data type
-"test_pow_types_int32_float32", // ---- same as above ---
-"test_pow_types_int32_int32", // ---- same as above ---
-"test_pow_types_int64_float32", // ---- same as above ---
 "test_prelu_broadcast", // Issue::Parser:Blob slope not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_prelu_example", // ---- same as above ---
 "test_qlinearconv", // Issue::Parser:  Blob x_scale not found in const blobs in function 'getBlob' (weights are required as inputs)
@@ -212,7 +157,6 @@
 "test_reduce_sum_keepdims_random", // ---- same as above ---
 "test_reduce_sum_negative_axes_keepdims_example",
 "test_reduce_sum_negative_axes_keepdims_random", // ---- same as above ---
-"test_reflect_pad", // Issue:: Parser:  Blob shape not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_reshape_allowzero_reordered", // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
 "test_resize_downsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
 "test_resize_downsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---
@@ -320,8 +264,6 @@
 "test_simple_rnn_batchwise", // Issue:: Parser: Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 "test_simple_rnn_defaults", // ---- same as above ---
 "test_simple_rnn_with_initial_bias", // ---- same as above ---
-"test_size", // Issue:: Parser:  Can't create layer "onnx_node_output_0!y" of type "Size" in function 'getLayerInstance'
-"test_size_example", // ---- same as above ---
 "test_slice_start_out_of_bounds",
 "test_split_zero_size_splits",  // ---- incompatible type of input tensor #0 'input': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput' ---
 "test_strnormalizer_export_monday_casesensintive_lower", // 'Strings' (1) are not supported in function 'getLayerParams'
@@ -343,23 +285,7 @@
 "test_training_dropout_mask",  // ---- same as above ---
 "test_training_dropout_zero_ratio",  // ---- same as above ---
 "test_training_dropout_zero_ratio_mask",  // ---- same as above ---
-"test_tril", // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "Trilu" in function 'getLayerInstance'
-"test_tril_neg",  // ---- same as above ---
-"test_tril_one_row_neg",  // ---- same as above ---
-"test_tril_out_neg",  // ---- same as above ---
-"test_tril_out_pos",  // ---- same as above ---
-"test_tril_pos",  // ---- same as above ---
-"test_tril_square",  // ---- same as above ---
-"test_tril_square_neg",  // ---- same as above ---
 "test_tril_zero",  // ---- same as above ---
-"test_triu",  // ---- same as above ---
-"test_triu_neg",  // ---- same as above ---
-"test_triu_one_row",  // ---- same as above ---
-"test_triu_out_neg_out",  // ---- same as above ---
-"test_triu_out_pos",  // ---- same as above ---
-"test_triu_pos",  // ---- same as above ---
-"test_triu_square",  // ---- same as above ---
-"test_triu_square_neg",  // ---- same as above ---
 "test_triu_zero",  // ---- same as above ---
 "test_unique_not_sorted_without_axis", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "Unique" in function 'getLayerInstance'
 "test_unique_sorted_with_axis",  // ---- same as above ---
