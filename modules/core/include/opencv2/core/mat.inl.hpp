@@ -686,7 +686,7 @@ Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
     : flags((int)MAGIC_VAL + traits::Type<_Tp>::value + (int)CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
       datastart(0), dataend(0), allocator(0), u(0), size(&rows)
 {
-    *this = commaInitializer.operator Mat_<_Tp>();
+    *this = commaInitializer.template operator Mat_<_Tp>();
 }
 
 inline
