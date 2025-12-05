@@ -276,7 +276,7 @@ TEST(CalcHistMask, CheckMask)
     mask(roi).setTo(255);
 
     Mat mask_bool = Mat::zeros(gray.size(), CV_BoolC1);
-    mask_bool(roi).setTo(255);
+    mask_bool(roi).setTo(1);
     Mat gray_roi = gray(roi);
 
     const std::vector<int> channels(1, 0);
