@@ -139,6 +139,9 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
 #if CV_TRY_AVX2
     bool useAVX2;
 #endif
+#if CV_TRY_NEON
+    bool useNEON;
+#endif
 
     // CUDA needs input blobs to be rearranged in a specific way, but some transformations
     // in ONNXImporter are destructive, so we keep a copy.
@@ -153,6 +156,9 @@ public:
 #endif
 #if CV_TRY_AVX2
           , useAVX2(checkHardwareSupport(CPU_AVX2))
+#endif
+#if CV_TRY_NEON
+          , useNEON(checkHardwareSupport(CPU_NEON))
 #endif
     {
         setParamsFrom(params);
@@ -491,6 +497,14 @@ public:
                 && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F
                 && Wh.cols >= 8;
 #endif
+#if CV_TRY_NEON
+            bool canUseNeon = gates.isContinuous() && bias.isContinuous()
+                && Wx.depth() == CV_32F && gates.depth() == CV_32F
+                && bias.depth() == CV_32F && Wx.cols >= 4;
+            bool canUseNeon_hInternal = hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous()
+                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F
+                && Wh.cols >= 4;
+#endif
 
             int tsStart, tsEnd, tsInc;
             if (reverse || i == 1) {
@@ -542,6 +556,23 @@ public:
                 }
                 else
 #endif
+#if CV_TRY_NEON
+                if (useNEON && canUseNeon && xCurr.isContinuous())
+                {
+                    for (int n = 0; n < xCurr.rows; n++) {
+                        opt_NEON::fastGEMM1T(
+                            xCurr.ptr<float>(n),
+                            Wx.ptr<float>(),
+                            Wx.step1(),
+                            bias.ptr<float>(),
+                            gates.ptr<float>(n),
+                            Wx.rows,
+                            Wx.cols
+                        );
+                    }
+                }
+                else
+#endif
                 {
                     gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
                     gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
@@ -569,6 +600,23 @@ public:
                 {
                     for (int n = 0; n < hInternal.rows; n++) {
                         opt_AVX::fastGEMM1T(
+                            hInternal.ptr<float>(n),
+                            Wh.ptr<float>(),
+                            Wh.step1(),
+                            gates.ptr<float>(n),
+                            gates.ptr<float>(n),
+                            Wh.rows,
+                            Wh.cols
+                        );
+                    }
+                }
+                else
+#endif
+#if CV_TRY_NEON
+                if (useNEON && canUseNeon_hInternal)
+                {
+                    for (int n = 0; n < hInternal.rows; n++) {
+                        opt_NEON::fastGEMM1T(
                             hInternal.ptr<float>(n),
                             Wh.ptr<float>(),
                             Wh.step1(),

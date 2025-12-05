@@ -239,6 +239,8 @@ protected:
     void parseNonMaxSuprression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -1056,7 +1058,7 @@ void ONNXImporter2::parseGlobalPool(LayerParams &layerParams, const opencv_onnx:
 
 void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Reduce";
+    layerParams.type = "Reduce2";
     const auto& op_type = node_proto.op_type();
     String reduce_type;
     if (op_type == "ReduceMax")
@@ -1082,27 +1084,6 @@ void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::Nod
     else
         CV_Error(Error::StsNotImplemented, "DNN/ONNX: " + op_type + " is not supported.");
     layerParams.set("reduce", reduce_type);
-
-    int num_inputs = node_proto.input_size();
-    CV_Check(num_inputs, num_inputs >= 1 && num_inputs <= 2, "DNN/ONNX: Reduce layers should have at least one input and at most two inputs");
-
-    bool const_axis_input = false;
-    if (num_inputs >= 2) {
-        CV_CheckTrue(net.isConstArg(node_inputs[1]), "Reduce layer doesn't support non contant axes");
-        const_axis_input = true;
-    }
-
-    // "axes" is turned to one of the inputs since opset 18,
-    // except for ReduceSum, which has "axes" input since opset 13.
-    if (const_axis_input) {
-        Mat mat_axes = net.argTensor(node_inputs[1]);
-        int num_axes = (int)mat_axes.total();
-        std::vector<int> axes(num_axes);
-        for (int i = 0; i < num_axes; ++i)
-            axes[i] = mat_axes.at<int64_t>(i);
-        layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
-    }
-
     addLayer(layerParams, node_proto);
 }
 
@@ -1126,8 +1107,51 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
 {
     CV_Assert(node_inputs.empty());
     CV_Assert(node_outputs.size() == 1);
-    CV_Assert(layerParams.blobs.size() == 1);
-    Mat m = layerParams.blobs[0];
+
+    Mat m;
+    if (!layerParams.blobs.empty())
+    {
+        CV_Assert(layerParams.blobs.size() == 1);
+        m = layerParams.blobs[0];
+    }
+    else
+    {
+        if (layerParams.has("value_float"))
+        {
+            float v = layerParams.get<float>("value_float");
+            int sizes[] = { 1 };
+            m.create(1, sizes, CV_32F);
+            m.at<float>(0) = v;
+        }
+        else if (layerParams.has("value_int"))
+        {
+            int v = layerParams.get<int>("value_int");
+            int sizes[] = { 1 };
+            m.create(1, sizes, CV_32S);
+            m.at<int>(0) = v;
+        }
+        else if (layerParams.has("value_floats"))
+        {
+            const DictValue& arr = layerParams.get("value_floats");
+            int n = (int)arr.size();
+            int sizes[] = { n };
+            m.create(1, sizes, CV_32F);
+            for (int i = 0; i < n; ++i) m.at<float>(i) = (float)arr.getRealValue(i);
+        }
+        else if (layerParams.has("value_ints"))
+        {
+            const DictValue& arr = layerParams.get("value_ints");
+            int n = (int)arr.size();
+            int sizes[] = { n };
+            m.create(1, sizes, CV_32S);
+            for (int i = 0; i < n; ++i) m.at<int>(i) = arr.get<int>(i);
+        }
+        else
+        {
+            CV_Error(Error::StsBadArg, "DNN/ONNX: Constant node has no supported attributes");
+        }
+    }
+
     Arg out = node_outputs[0];
     ArgData& data = netimpl->args.at(out.idx);
     data.kind = DNN_ARG_CONST;
@@ -1677,6 +1701,27 @@ void ONNXImporter2::parseBitShift(LayerParams& layerParams, const opencv_onnx::N
         else if (dir == "RIGHT" || dir == "right")
             layerParams.set("direction", 1);
     }
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBitwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    const std::string& op_type = node_proto.op_type();
+    layerParams.type = "NaryEltwise";
+    if (op_type == "BitwiseAnd")
+        layerParams.set("operation", String("bitwise_and"));
+    else if (op_type == "BitwiseOr")
+        layerParams.set("operation", String("bitwise_or"));
+    else if (op_type == "BitwiseXor")
+        layerParams.set("operation", String("bitwise_xor"));
+    else
+        CV_Error(Error::StsNotImplemented, String("Unsupported bitwise op: ") + op_type);
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBitwiseNot(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Not";
     addLayer(layerParams, node_proto);
 }
 
@@ -2563,6 +2608,10 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
+    dispatch["BitwiseAnd"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseOr"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseXor"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseNot"] = &ONNXImporter2::parseBitwiseNot;
     dispatch["NonMaxSuprression"] = &ONNXImporter2::parseNonMaxSuprression;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
