@@ -218,7 +218,10 @@ protected:
     void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCenterCropPad        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNegativeLogLikelihoodLoss(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSoftmaxCrossEntropyLoss  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUnique               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1672,6 +1675,14 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
     addLayer(layerParams, node_proto, ninputs);
 }
 
+void ONNXImporter2::parseCenterCropPad(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int ninputs = node_proto.input_size();
+    CV_Assert(ninputs >= 2);
+    layerParams.type = "CenterCropPad";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseUnique(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Unique";
@@ -1760,6 +1771,20 @@ void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx:
 void ONNXImporter2::parseNonMaxSuprression(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "NonMaxSuprression";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseNegativeLogLikelihoodLoss(LayerParams& layerParams,
+                                                   const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NegativeLogLikelihoodLoss";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseSoftmaxCrossEntropyLoss(LayerParams& layerParams,
+                                                 const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "SoftmaxCrossEntropyLoss";
     addLayer(layerParams, node_proto);
 }
 
@@ -2604,6 +2629,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
+    dispatch["CenterCropPad"] = &ONNXImporter2::parseCenterCropPad;
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
@@ -2621,6 +2647,8 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
+    dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
+    dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =

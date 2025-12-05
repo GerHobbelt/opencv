@@ -1305,10 +1305,43 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DetLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CenterCropPadLayer : public Layer
+    {
+    public:
+        static Ptr<CenterCropPadLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS Resize2Layer : public Layer
     {
     public:
         static Ptr<Resize2Layer> create(const LayerParams& params);
+    };
+
+    // Shared reduction enum for DNN loss layers
+    enum LossReduction
+    {
+        LOSS_REDUCTION_NONE = 0,
+        LOSS_REDUCTION_MEAN = 1,
+        LOSS_REDUCTION_SUM = 2
+    };
+
+    class CV_EXPORTS NegativeLogLikelihoodLossLayer : public Layer
+    {
+    public:
+        LossReduction reduction;
+        int ignoreIndex;
+
+        static Ptr<NegativeLogLikelihoodLossLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS SoftmaxCrossEntropyLossLayer : public Layer
+    {
+    public:
+        static Ptr<SoftmaxCrossEntropyLossLayer> create(const LayerParams& params);
+        LossReduction reduction;
+        int ignoreIndex;
+        float labelSmoothing;
+        bool softLabel;
     };
 
     /**
