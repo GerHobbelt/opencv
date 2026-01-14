@@ -587,6 +587,13 @@ opencv_module(
 opencv_module(
     name = "flann",
     deps = [":core"],
+    copts = select({
+        "@platforms//os:android": [
+            # workaround for bug in NDK r29 generating incorrect code for miniflann.cpp when using -fvisibility=hidden on Android in release build
+            "-fvisibility=default",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 opencv_module(
