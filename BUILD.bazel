@@ -488,7 +488,14 @@ opencv_module(
     deps = [":core"],
     copts = [
         "-fno-exceptions",
-    ],
+    ]
+    # workaround for bug in NDK r29 generating incorrect code for miniflann.cpp when using -fvisibility=hidden on Android in release build
+    + select({
+        "@platforms//os:android": [
+            "-fvisibility=default",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 opencv_module(
