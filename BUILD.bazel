@@ -591,7 +591,7 @@ opencv_module(
     local_defines = select({
         "@platforms//os:macos": ["HAVE_AVFOUNDATION=1"],
         "@platforms//os:ios": ["HAVE_AVFOUNDATION=1"],
-        "@platforms//os:linux": ["HAVE_CAMV4L=1"],
+        "@platforms//os:linux": ["HAVE_CAMV4L=1", "HAVE_CAMV4L2=1"],
         "@platforms//os:windows": ["HAVE_DSHOW=1"],
         "//conditions:default": [],
     }),
