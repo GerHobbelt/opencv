@@ -213,6 +213,7 @@ MODULES_COMMON = [
     "imgcodecs",
     "imgproc",
     "objdetect",
+    "photo",
 ]
 
 MODULES_DESKTOP = MODULES_COMMON + [
@@ -227,6 +228,7 @@ CONFIG_BASE = {
         "features2d",
         "calib3d",
         "objdetect",
+        "photo",
     ],
     "contains_src_headers": [
         "imgproc",

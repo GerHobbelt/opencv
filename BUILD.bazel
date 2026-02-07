@@ -571,6 +571,14 @@ objc_library(
 )
 
 opencv_module(
+    name = "photo",
+    deps = [
+        ":core",
+        ":imgproc",
+    ],
+)
+
+opencv_module(
     name = "videoio",
     deps = [
         ":imgproc",
