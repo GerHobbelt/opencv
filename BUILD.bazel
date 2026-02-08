@@ -34,7 +34,7 @@ exports_files([
 write_file(
     name = "_private/version_string.inc",
     out = "private/version_string.inc",
-    content = ["\"4.12.0\""],
+    content = ["\"4.13.0\""],
 )
 
 write_file(

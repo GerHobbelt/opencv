@@ -30,3 +30,5 @@ bazel-*
 Session.vim
 .tasks.json
 compile_commands.json
+
+MODULE.bazel.lock
