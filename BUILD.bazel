@@ -503,6 +503,13 @@ opencv_module(
 
 opencv_module(
     name = "imgcodecs",
+    local_defines = [
+        "HAVE_IMGCODEC_PXM",
+        "HAVE_IMGCODEC_PFM",
+        "HAVE_IMGCODEC_HDR",
+        "HAVE_IMGCODEC_SUNRASTER",
+        "HAVE_IMGCODEC_GIF",
+    ],
     deps = [
         ":imgproc",
         "@libjpeg_turbo//:jpeg",
@@ -516,6 +523,14 @@ opencv_module(
         ":calib3d",
         ":imgproc",
         ":core",
+    ],
+)
+
+opencv_module(
+    name = "video",
+    deps = [
+        ":calib3d",
+        ":imgproc",
     ],
 )
 

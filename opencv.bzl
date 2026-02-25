@@ -214,6 +214,7 @@ MODULES_COMMON = [
     "imgproc",
     "objdetect",
     "photo",
+    "video",
 ]
 
 MODULES_DESKTOP = MODULES_COMMON + [
@@ -229,6 +230,7 @@ CONFIG_BASE = {
         "calib3d",
         "objdetect",
         "photo",
+        "video",
     ],
     "contains_src_headers": [
         "imgproc",
