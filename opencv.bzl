@@ -240,6 +240,7 @@ CONFIG_BASE = {
         "features2d",
         "calib3d",
         "videoio",
+        "dnn",
     ],
     "contains_3rdparty": [
         "features2d",
@@ -277,9 +278,14 @@ def opencv_module(
     Args:
         name: The name of the module.
         dispatched_files: A mapping of keys to a list of operators.
+        force_dispatch: If enabled, all optimizations for the files in dispatched_files will be forced to be dispatched, even if they are included in baseline.
         deps: A list of dependencies for the module.
         copts: Additional compiler options.
         linkopts: Additional linker options.
+        local_defines: A list of preprocessor definitions to be added to the module.
+        compatible_with: A list of labels that specify the platforms compatible with this module.
+        srcs_excludes_globs: A list of glob patterns to exclude from the module's sources.
+        sources: A list of sources for the module. If None, sources will be determined by globbing the src directory. This is useful for modules that need to explicitly list their sources, such as videoio or highgui.
     """
     prefix = "modules/{}".format(name)
     extra_headers = []
