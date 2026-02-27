@@ -573,7 +573,7 @@ opencv_module(
         ],
     },
     deps = [
-        ":features2d",
+        ":imgproc",
         ":dnn_caffe_msgs",
         ":dnn_onnx_msgs",
         ":dnn_tf_msgs",
@@ -634,6 +634,7 @@ opencv_module(
     deps = [
         ":calib3d",
         ":imgproc",
+        ":dnn",
     ],
 )
 
