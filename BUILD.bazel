@@ -1,10 +1,12 @@
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
-load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@bazel_skylib//lib:selects.bzl", "selects")
-load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
 load("@rules_license//rules:license.bzl", "license")
 
 load(
@@ -478,6 +480,106 @@ opencv_module(
     ],
 )
 
+proto_library(
+    name = "dnn_tf_msgs_proto",
+    srcs = glob([
+        "modules/dnn/src/tensorflow/**/*.proto",
+    ]),
+    strip_import_prefix = "modules/dnn/src/tensorflow",
+)
+
+cc_proto_library(
+    name = "dnn_tf_msgs",
+    deps = [ ":dnn_tf_msgs_proto" ],
+)
+
+proto_library(
+    name = "dnn_caffe_msgs_proto",
+    srcs = glob([
+        "modules/dnn/src/caffe/**/*.proto",
+    ]),
+    strip_import_prefix = "modules/dnn/src/caffe",
+)
+
+cc_proto_library(
+    name = "dnn_caffe_msgs",
+    deps = [ ":dnn_caffe_msgs_proto" ],
+)
+
+proto_library(
+    name = "dnn_onnx_msgs_proto",
+    srcs = glob([
+        "modules/dnn/src/onnx/**/*.proto",
+    ]),
+    strip_import_prefix = "modules/dnn/src/onnx",
+)
+
+cc_proto_library(
+    name = "dnn_onnx_msgs",
+    deps = [ ":dnn_onnx_msgs_proto" ],
+)
+
+opencv_module(
+    name = "dnn",
+    copts = [
+        "-Wno-deprecated-enum-float-conversion",
+        "-Wno-deprecated-volatile",
+    ],
+    local_defines = [
+        "HAVE_PROTOBUF=1",
+    ],
+    srcs_excludes_globs = [
+        "modules/dnn/src/ocl4dnn/**",
+        "modules/dnn/src/cuda4dnn/**",
+    ],
+    force_dispatch = True,
+    dispatched_files = {
+        "layers/layers_common": [
+            "avx",
+            "avx2",
+            "avx512_skx",
+            "rvv",
+            "lasx",
+        ],
+        "int8layers/layers_common": [
+            "avx2",
+            "avx512_skx",
+            "rvv",
+            "lasx",
+        ],
+        "layers/cpu_kernels/conv_block": [
+            "avx",
+            "avx2",
+            "neon",
+            "neon_fp16",
+        ],
+        "layers/cpu_kernels/conv_depthwise": [
+            "avx",
+            "avx2",
+            "rvv",
+            "lasx",
+        ],
+        "layers/cpu_kernels/conv_winograd_f63": [
+            "avx",
+            "avx2",
+            "neon",
+            "neon_fp16",
+        ],
+        "layers/cpu_kernels/fast_gemm_kernels": [
+            "avx",
+            "avx2",
+            "neon",
+            "lasx",
+        ],
+    },
+    deps = [
+        ":features2d",
+        ":dnn_caffe_msgs",
+        ":dnn_onnx_msgs",
+        ":dnn_tf_msgs",
+    ],
+)
+
 opencv_module(
     name = "flann",
     deps = [":core"],
@@ -520,6 +622,7 @@ opencv_module(
 opencv_module(
     name = "objdetect",
     deps = [
+        ":dnn",
         ":calib3d",
         ":imgproc",
         ":core",
