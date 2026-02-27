@@ -171,11 +171,15 @@ _KNOWN_OPTS = {
     },
 }
 
-def _arch_for_opt(opt):
+def _arches_for_opt(opt):
+    arches = []
     for arch, opts in _KNOWN_OPTS.items():
         if opt in opts:
-            return arch
-    fail("Unknown optimization: {}".format(opt))
+            arches.append(arch)
+    if len(arches) == 0:
+        fail("Unknown optimization: {}".format(opt))
+    else:
+        return arches
 
 
 # Optimizations that will always be enabled for a given architecture
@@ -210,6 +214,7 @@ MODULES_COMMON = [
     "calib3d",
     "core",
     "features2d",
+    "dnn",
     "flann",
     "imgcodecs",
     "imgproc",
@@ -257,11 +262,13 @@ CONFIG_NON_DESKTOP = _merge_dicts(CONFIG_BASE, {
 def opencv_module(
         name,
         dispatched_files = {},
+        force_dispatch = False,
         deps = [],
         copts = [],
         linkopts = [],
         local_defines = [],
         compatible_with = [],
+        srcs_excludes_globs = [],
         sources = None,  # reserved for modules that list sources explicitly, such as videoio or highgui
     ):
     """
@@ -275,7 +282,6 @@ def opencv_module(
         linkopts: Additional linker options.
     """
     prefix = "modules/{}".format(name)
-    dispatched_files = dispatched_files
     extra_headers = []
 
     glob_hdrs = [
@@ -346,13 +352,14 @@ def opencv_module(
             "loongarch64": [],
         }
         for opt in opts:
-            arch = _arch_for_opt(opt)
-            if opt not in ENABLED_OPTS[arch]["baseline"]:
-                simd_opts[arch] += [
-                    "#define CV_CPU_DISPATCH_MODE {}".format(opt.upper()),
-                    "#include \"opencv2/core/private/cv_cpu_include_simd_declarations.hpp\"",
-                ]
-                dispatch_simd[arch] += [opt]
+            arches = _arches_for_opt(opt)
+            for arch in arches:
+                if force_dispatch or opt not in ENABLED_OPTS[arch]["baseline"]:
+                    simd_opts[arch] += [
+                        "#define CV_CPU_DISPATCH_MODE {}".format(opt.upper()),
+                        "#include \"opencv2/core/private/cv_cpu_include_simd_declarations.hpp\"",
+                    ]
+                    dispatch_simd[arch] += [opt]
 
         dispatch_modes_simd = {}
         dispatch_modes_empty = [
@@ -366,7 +373,7 @@ def opencv_module(
 
                 # also, create a cc_library for each dispatched file and add it to list of deps
                 for opt in dispatched_opts:
-                    simd_cpp_file = "{}/src/{}.{}.cpp".format(prefix, fname, opt)
+                    simd_cpp_file = "{}/src/{}.{}.{}.cpp".format(prefix, fname, opt, arch)
 
                     write_file(
                         name = "_{}".format(simd_cpp_file),
@@ -455,6 +462,7 @@ def opencv_module(
 
     # exclude handcrafted SIMD files from the main srcs and include them only in their respective cc_library
     srcs_excludes = []
+    srcs_excludes += srcs_excludes_globs
     # however, for baseline optimizations, any handcrafted SIMD files should be included back in the main srcs
     srcs_baseline_includes = []
 
