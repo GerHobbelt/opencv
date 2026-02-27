@@ -540,12 +540,15 @@ opencv_module(
             "avx512_skx",
             "rvv",
             "lasx",
+            "neon",
+            "sve"
         ],
         "int8layers/layers_common": [
             "avx2",
             "avx512_skx",
             "rvv",
             "lasx",
+            "neon",
         ],
         "layers/cpu_kernels/conv_block": [
             "avx",

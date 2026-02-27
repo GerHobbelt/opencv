@@ -135,6 +135,10 @@ _KNOWN_OPTS = {
             "copts": ["-march=armv8.2-a+bf16"],
             "implies": ["neon"],
         },
+        "sve": {
+            "copts": ["-march=armv8.2-a+sve"],
+            "implies": [],
+        }
     },
     "mips64": {
         "msa": {
