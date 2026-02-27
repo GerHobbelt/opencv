@@ -529,6 +529,7 @@ opencv_module(
     copts = [
         "-Wno-deprecated-enum-float-conversion",
         "-Wno-deprecated-volatile",
+        "-fno-exceptions",
     ],
     local_defines = [
         "HAVE_PROTOBUF=1",
@@ -634,6 +635,7 @@ opencv_module(
 opencv_module(
     name = "objdetect",
     copts = [
+        "-fno-exceptions",
     ],
     deps = [
         ":dnn",

@@ -448,7 +448,9 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         opencv_onnx::AttributeProto attribute_proto = node_proto.attribute(i);
         std::string attribute_name = attribute_proto.name();
 
+#ifdef __cpp_exceptions
         try
+#endif
         {
             if(attribute_name == "kernel_shape")
             {
@@ -569,6 +571,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
                 CV_Error(Error::StsNotImplemented, cv::format("DNN/ONNX/Attribute[%s]: unsupported attribute format", attribute_name.c_str()));
             }
         }
+#ifdef __cpp_exceptions
         catch (const cv::Exception& e)
         {
             CV_UNUSED(e);
@@ -580,6 +583,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             }
             throw;
         }
+#endif
     }
     return lp;
 }
@@ -986,7 +990,9 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
     }
 
     LayerParams layerParams;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         // FIXIT not all cases can be repacked into "LayerParams". Importer should handle such cases directly for each "layer_type"
         layerParams = getLayerParams(node_proto);
@@ -1007,6 +1013,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
             parseCustomLayer(layerParams, node_proto);
         }
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         if (DNN_DIAGNOSTICS_RUN)
@@ -1057,6 +1064,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
         else
             CV_Error(Error::StsError, cv::format("Node [%s@%s]:(%s) parse error: %s", layer_type.c_str(), layer_type_domain.c_str(), name.c_str(), e.what()));
     }
+#endif
 }
 
 void ONNXImporter::parseArg(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

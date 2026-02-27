@@ -70,7 +70,11 @@ public:
         }else if(dis_type == DisType::FR_NORM_L2){
             return norm(face_feature1, face_feature2);
         }else{
+#ifdef __cpp_exceptions
             throw std::invalid_argument("invalid parameter " + std::to_string(dis_type));
+#else
+            CV_Error(cv::Error::StsBadArg, "invalid parameter " + std::to_string(dis_type));
+#endif
         }
 
     }

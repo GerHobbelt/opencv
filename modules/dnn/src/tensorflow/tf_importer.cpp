@@ -2921,7 +2921,9 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
 
         //CV_LOG_DEBUG(NULL, "DNN/TF: layer_id=" << li << " - '" << name << "' @ " << type);
 
+#ifdef __cpp_exceptions
         try
+#endif
         {
             if (type == "Dequantize")
             {
@@ -2980,11 +2982,13 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
             }
             layers_to_ignore.insert(name);
         }
+#ifdef __cpp_exceptions
         catch (const std::exception& e)
         {
             CV_LOG_ERROR(NULL, "DNN/TF: Can't handle node='" << name << "'. Exception: " << e.what());
             throw;
         }
+#endif
     }
     CV_LOG_DEBUG(NULL, "DNN/TF: layers_to_ignore.size() = " << layers_to_ignore.size());
 }
@@ -3090,7 +3094,9 @@ void TFImporter::populateNet()
 
         CV_LOG_DEBUG(NULL, "DNN/TF: node(" << i << " - '" << name << "') propagating layout...");
 
+#ifdef __cpp_exceptions
         try
+#endif
         {
             DataLayout layout = getDataLayout(layer);
             std::map<String, DataLayout>::iterator it = data_layouts.find(name);
@@ -3131,11 +3137,13 @@ void TFImporter::populateNet()
                     data_layouts[name] = layout;
             }
         }
+#ifdef __cpp_exceptions
         catch (const std::exception& e)
         {
             CV_LOG_ERROR(NULL, "DNN/TF: Can't propagate layout for node='" << name << "'. Exception: " << e.what());
             throw;
         }
+#endif
     }
 
     addConstNodes(netBin, value_id, layers_to_ignore);
@@ -3189,7 +3197,9 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
     const std::string& type = layer.op();
 
     LayerParams layerParams;
+#ifdef __cpp_exceptions
     try
+#endif
     {
 
         if (layers_to_ignore.find(name) != layers_to_ignore.end())
@@ -3211,6 +3221,7 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
             parseCustomLayer(net, layer, layerParams);
         }
     }
+#ifdef __cpp_exceptions
     catch (const std::exception& e)
     {
         CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "' of type='" << type
@@ -3225,6 +3236,7 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
             throw;
         }
     }
+#endif
 }
 
 TFLayerHandler::TFLayerHandler(TFImporter* importer_) : importer(importer_) {}

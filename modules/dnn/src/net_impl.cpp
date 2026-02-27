@@ -1157,10 +1157,13 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     const Ptr<Layer>& l = getLayerInstance(layerData);
     CV_Assert(l);
     bool layerSupportInPlace = false;
+#ifdef __cpp_exceptions
     try
+#endif
     {
         layerSupportInPlace = l->getMemoryShapes(is, requiredOutputs, os, ints);
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "OPENCV/DNN: [" << l->type << "]:(" << l->name << "): getMemoryShapes() throws exception." <<
@@ -1182,9 +1185,12 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
         CV_LOG_ERROR(NULL, "Exception message: " << e.what());
         throw;
     }
+#endif
     layerShapes.supportInPlace = layerSupportInPlace;
 
+#ifdef __cpp_exceptions
     try
+#endif
     {
         for (int i = 0; i < ints.size(); i++)
             CV_CheckGT(total(ints[i]), 0, "");
@@ -1192,6 +1198,7 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
         for (int i = 0; i < os.size(); i++)
             CV_CheckGT(total(os[i]), 0, "");
     }
+#ifdef __cpp_exceptions
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "OPENCV/DNN: [" << l->type << "]:(" << l->name << "): getMemoryShapes() post validation failed." <<
@@ -1214,6 +1221,7 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
         CV_LOG_ERROR(NULL, "Exception message: " << e.what());
         throw;
     }
+#endif
 }
 
 void Net::Impl::getLayersShapes(
@@ -2106,12 +2114,15 @@ void Net::Impl::dumpNetworkToFile() const
 #ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
     string dumpFileNameBase = getDumpFileNameBase();
     string dumpFileName = dumpFileNameBase + ".pbtxt";
+#ifdef __cpp_exceptions
     try
+#endif
     {
         string dumpStr = dumpToPbtxt();
         std::ofstream out(dumpFileName.c_str(), std::ios::out | std::ios::binary);
         out << dumpStr;
     }
+#ifdef __cpp_exceptions
     catch (const std::exception& e)
     {
         std::ofstream out((dumpFileName + ".error").c_str(), std::ios::out);
@@ -2122,6 +2133,7 @@ void Net::Impl::dumpNetworkToFile() const
         std::ofstream out((dumpFileName + ".error").c_str(), std::ios::out);
         out << "Can't dump: unknown exception" << std::endl;
     }
+#endif
 #endif
 }
 
