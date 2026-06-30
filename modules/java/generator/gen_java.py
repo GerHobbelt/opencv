@@ -23,6 +23,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 config = None
 ROOT_DIR = None
 USE_CLEANERS = True
+USE_FINALIZE = False
+CLEANING_API = "cleaner"
 FILES_REMAP = {}
 def checkFileRemap(path):
     path = os.path.realpath(path)
@@ -1230,8 +1232,17 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${jmodule}_${clazz}_$fname
                 ci.cpp_code.write("\n".join(fn["cpp_code"]))
 
         if ci.name != self.Module or ci.base:
+            # Explicit close() for manual Java native resource management.
+            if CLEANING_API == "manual":
+                ci.j_code.write(
+"""
+    public void close() throws Throwable {
+        delete(nativeObj);
+    }
+""" )
+
             # finalize() for old Java
-            if not USE_CLEANERS:
+            if USE_FINALIZE:
                 ci.j_code.write(
 """
     @Override
@@ -1242,15 +1253,15 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${jmodule}_${clazz}_$fname
 
             ci.jn_code.write(
 """
-    // native support for java finalize() or cleaner
+    // native support for java native resource cleanup
     private static native void delete(long nativeObj);
 """ )
 
-            # native support for java finalize()
+            # native support for java native resource cleanup
             ci.cpp_code.write(
 """
 //
-//  native support for java finalize() or cleaner
+//  native support for java native resource cleanup
 //  static void %(cls)s::delete( __int64 self )
 //
 JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete(JNIEnv*, jclass, jlong);
@@ -1471,11 +1482,15 @@ if __name__ == "__main__":
     FILES_REMAP = { os.path.realpath(os.path.join(ROOT_DIR, f['src'])): f['target'] for f in config['files_remap'] }
     logging.info("\nRemapped configured files (%d):\n%s", len(FILES_REMAP), pformat(FILES_REMAP))
 
-    USE_CLEANERS = config['support_cleaners']
+    CLEANING_API = config.get('cleaning_api', 'cleaner' if config['support_cleaners'] else 'finalize')
+    USE_CLEANERS = CLEANING_API == 'cleaner'
+    USE_FINALIZE = CLEANING_API == 'finalize'
     if (USE_CLEANERS):
         logging.info("\nUse Java 9+ cleaners\n")
-    else:
+    elif (USE_FINALIZE):
         logging.info("\nUse old style Java finalize()\n")
+    else:
+        logging.info("\nUse manual Java native resource cleanup\n")
 
     dstdir = "./gen"
     jni_path = os.path.join(dstdir, 'cpp'); mkdir_p(jni_path)
@@ -1567,11 +1582,13 @@ if __name__ == "__main__":
         else:
             logging.info("No generated code for module: %s", module)
 
-    # Copy Cleaner / finalize() related files
+    # Copy native resource cleanup related files
     if USE_CLEANERS:
         cleaner_src = os.path.join(SCRIPT_DIR, "src", "java9", "CleanableMat.java")
-    else:
+    elif USE_FINALIZE:
         cleaner_src = os.path.join(SCRIPT_DIR, "src", "java_classic", "CleanableMat.java")
+    else:
+        cleaner_src = os.path.join(SCRIPT_DIR, "src", "java_manual", "CleanableMat.java")
 
     cleaner_dst = os.path.join(java_base_path, "org", "opencv", "core", "CleanableMat.java")
     print("cleaner_dst: ", cleaner_dst)

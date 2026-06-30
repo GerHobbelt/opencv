@@ -65,18 +65,25 @@ ocv_bindings_generator_populate_preprocessor_definitions(
 if(OPENCV_JAVA_CLEANING_API)
   if(OPENCV_JAVA_CLEANING_API STREQUAL "finalize")
     set(opencv_supported_cleaners "false")
+    set(opencv_java_cleaning_api "finalize")
   elseif(OPENCV_JAVA_CLEANING_API STREQUAL "cleaner")
     set(opencv_supported_cleaners "true")
+    set(opencv_java_cleaning_api "cleaner")
+  elseif(OPENCV_JAVA_CLEANING_API STREQUAL "manual")
+    set(opencv_supported_cleaners "false")
+    set(opencv_java_cleaning_api "manual")
   else()
-    message(FATAL_ERROR "OPENCV_JAVA_CLEANING_API should be one of \"finalize\" or \"cleaner\"")
+    message(FATAL_ERROR "OPENCV_JAVA_CLEANING_API should be one of \"finalize\", \"cleaner\", or \"manual\"")
   endif()
 else()
   if(ANDROID OR (Java_VERSION VERSION_LESS 9))
     message(STATUS "Set Cleaners to False")
     set(opencv_supported_cleaners "false")
+    set(opencv_java_cleaning_api "finalize")
   else()
   message(STATUS "Set Cleaners to True")
     set(opencv_supported_cleaners "true")
+    set(opencv_java_cleaning_api "cleaner")
   endif()
 endif(OPENCV_JAVA_CLEANING_API)
 
@@ -93,7 +100,8 @@ ${opencv_preprocessor_defs}
   \"files_remap\": [
 ${__remap_config}
   ],
-  \"support_cleaners\": ${opencv_supported_cleaners}
+  \"support_cleaners\": ${opencv_supported_cleaners},
+  \"cleaning_api\": \"${opencv_java_cleaning_api}\"
 }
 ")
 if(EXISTS "${CONFIG_FILE}")
